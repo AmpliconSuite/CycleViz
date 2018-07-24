@@ -1,5 +1,4 @@
 import sys
-# sys.path.insert(0, "/home/jens/Dropbox/BafnaLab/bionano_analysis/method_development/BioNanoCycleBuilder")
 import os
 import bisect
 import argparse
@@ -11,7 +10,6 @@ import matplotlib.patches as mpatches
 from matplotlib import colors as mcolors
 from matplotlib.collections import PatchCollection
 from intervaltree import Interval, IntervalTree
-# from bionanoUtil import *
 
 contig_spacing = 0.01
 seg_spacing = 0.01
