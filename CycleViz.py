@@ -19,10 +19,17 @@ contig_spacing = 0.01
 seg_spacing = 0.01
 bar_width = 2.0/3
 global_rot = 90.0
+center_hole = 0.75
+outer_bar = 10 
+bed_spacing = .5
 
-outer_bar = 10.5 
-bar_spacing = 1.5
-bed_track_height = 3
+gene_to_locations = defaultdict(list)
+
+def round_to_1_sig(x):
+    if x == 0:
+        return 0.
+
+    return round(x, -int(np.floor(np.log10(abs(x)))))
 
 def cart2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
@@ -64,13 +71,12 @@ def rel_genes(chrIntTree,pTup):
     chrom = pTup[0]
     overlappingT = chrIntTree[pTup[1]:pTup[2]]
     for i in overlappingT:
-        #print i.data
         gene = i.data[-4].rsplit("-")[0]
         tstart = int(i.data[4])
         tend = int(i.data[5])
         e_s_posns = [int(x) for x in i.data[9].rsplit(",") if x]
         e_e_posns = [int(x) for x in i.data[10].rsplit(",") if x]
-        if not (gene.startswith("LOC") or gene.startswith("LINC")):
+        if not gene.startswith("LOC"):
             if gene not in relGenes:
                 relGenes[gene] = (tstart,tend,zip(e_s_posns,e_e_posns))
 
@@ -86,7 +92,7 @@ def rel_genes(chrIntTree,pTup):
     
     return relGenes
 
-#need to add functionality for plotting exon posns
+#must return positions of transcribed regions of genes here
 def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand):
     for ind,i in enumerate(relGenes):
         truncStart = False
@@ -106,9 +112,11 @@ def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand
         start_angle = normStart/total_length_with_spacing*360
         end_angle = normEnd/total_length_with_spacing*360
         text_angle = (start_angle + end_angle)/2.0
+        gene_to_locations[i].append((start_angle/360.,end_angle/360.))
         if end_angle < 0 and start_angle > 0:
             end_angle+=360
-            
+        
+    
         patches.append(mpatches.Wedge((0,0), outer_bar, end_angle, start_angle, width=bar_width/2.0))
         f_color_v.append('k')
         e_color_v.append('k')
@@ -121,11 +129,11 @@ def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand
         if text_angle < -90 and text_angle > -360:
             text_angle+=180  
             ax.text(x_t,y_t,i,color='grey',rotation=text_angle,
-                ha='right',fontsize=4,rotation_mode='anchor')
+                ha='right',fontsize=6.5,rotation_mode='anchor')
         
         else:
              ax.text(x_t,y_t,i,color='grey',rotation=text_angle,
-                ha='left',fontsize=4,rotation_mode='anchor')
+                ha='left',fontsize=6.5,rotation_mode='anchor')
 
         for exon in e_posns:
             if exon[1] > pTup[1] and exon[0] < pTup[2]:
@@ -148,7 +156,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand
                 lw_v.append(0)
         
 #plot the reference genome
-def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,imputed_status,bed_feat_list=[]):
+def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,imputed_status,label_segs=True):
     font0 = FontProperties()
     seg_posns = []
     global_start = total_length_with_spacing*(global_rot/360.0)
@@ -176,7 +184,6 @@ def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,im
             posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(start_point,start_point-lens[ind]-1,-1))
 
         tick_freq = max(10000,10000*int(np.floor(total_length_with_spacing/1000000)))
-        print tick_freq
         for j in posns:
             if j[0] % tick_freq == 0:
                 text_angle = j[1]/total_length_with_spacing*360
@@ -194,10 +201,11 @@ def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,im
                     txt = " " + str(int(round((j[0])/10000)))
 
                 ax.text(x_t,y_t,txt,color='grey',rotation=text_angle,
-                ha=ha,fontsize=2.5,rotation_mode='anchor')
+                ha=ha,fontsize=4,rotation_mode='anchor')
     
         gene_tree = parse_genes(seg_coord_tup[0])
         relGenes = rel_genes(gene_tree,seg_coord_tup)
+        #plot the gene track
         plot_gene_track(start_point,relGenes,seg_coord_tup,total_length_with_spacing,cycle[ind][1])
 
         #label the segments by number in cycle
@@ -205,7 +213,6 @@ def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,im
         text_angle = mid_sp/total_length*360.
         x,y = pol2cart(outer_bar-0.9,(text_angle/360.*2.*np.pi))
         font = font0.copy()
-        print ind,imputed_status
         if imputed_status[ind]:
             font.set_style('italic')
             font.set_weight('bold')
@@ -217,59 +224,170 @@ def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,im
         else:
             ha = "right"
 
-        ax.text(x,y,cycle[ind][0]+cycle[ind][1],color='grey',rotation=text_angle,
-                ha=ha,fontsize=3,fontproperties=font,rotation_mode='anchor')
-        
-        #plot bed files
-        ####THIS IS NOT DESIGNED TO HANDLE REVERSED SEGS YET!!!!!
-        ##BUMP INTO SEPARATE METHOD
+        if label_segs:
+            ax.text(x,y,cycle[ind][0]+cycle[ind][1],color='grey',rotation=text_angle,
+                ha=ha,fontsize=5,fontproperties=font,rotation_mode='anchor')
+
+#plot gene transcript info
+#transcipt count info is log-2
+def plot_gene_transcript(r,feat_min,feat_scaling,total_length_with_spacing):
+    print gene_to_locations
+    for gene,pos_list in gene_to_locations.iteritems():
+        try:
+            value = np.log2(transcript_dict[gene])
+            print gene,value,pos_list
+            for pos_tup in pos_list:
+                curr_rad = r+(value-feat_min)/feat_scaling
+                # x_s,y_s = pol2cart(curr_rad,pos_tup[0]*2*np.pi)
+                # x_e,y_e = pol2cart(curr_rad,pos_tup[1]*2*np.pi)
+                lstart,lend = tuple(sorted(pos_tup))
+                print lstart,lend
+                line_points = np.arange(lstart*2*np.pi,lend*2*np.pi,0.001)
+                x_vals,y_vals = polar_series_to_cartesians(line_points,curr_rad)
+                ax.plot(x_vals,y_vals,color='k',linewidth=1)
+
+        except KeyError:
+            pass
+
+#plot genomic features
+def bed_feat_bounds(bed_feat_list,n_guides):
+    #get min and max vals for each feature
+    #set bar heights
+    feat_to_min_max = {x:(0,0) for x in bed_feat_list}
+    feat_to_bar_vals = {x:[] for x in bed_feat_list}
+    for bar_level,curr_feat in enumerate(bed_feat_list):
+        feat_min,feat_max = float('inf'),-float('inf')
+        if curr_feat in transcript_set:
+            for i in gene_to_locations:
+                try:
+                    val = np.log2(transcript_dict[i])
+                    if val > feat_max:
+                        feat_max = val
+                    elif val < feat_min:
+                        feat_min = val
+
+                except KeyError:
+                    print "couldn't find gene " + i
+                    continue
+
+        else:
+            for chrom in bed_feat_dict[curr_feat]:
+                for x in bed_feat_dict[curr_feat][chrom]:
+                    if x[2] > feat_max:
+                        feat_max = x[2]
+                    elif x[2] < feat_min:
+                        feat_min = x[2]
+
+        print curr_feat,feat_min,feat_max
+        #guide bars
+        diff = (feat_max - feat_min)/n_guides
+        top = int(round(feat_max))
+        bottom = int(round(feat_min))
+        if bottom < feat_min: feat_min = bottom
+        if feat_max < top: feat_max = top
+        for i in range(bottom,top+1):
+            feat_to_bar_vals[curr_feat].append(i)
+
+        feat_to_min_max[curr_feat] = (feat_min,feat_max)
+
+    return feat_to_min_max,feat_to_bar_vals
+
+#plot bed files of genomic features
+def plot_bed_features(start_points,lens,cycle,total_length_with_spacing,segSeqD,bed_feat_list):
+    n_guides = 5
+    n_feats = float(len(bed_feat_list))
+    interior_space = outer_bar - (bar_width+0.1) - center_hole
+    space_per_bed = interior_space/(n_feats + bed_spacing*(n_feats-1))
+    seg_posns = []
+    global_start = total_length_with_spacing*(global_rot/360.0)
+    top_bar_base = outer_bar - (bar_width+0.1)
+    #get min and max vals for each feature and set bar heights
+    feat_to_min_max,feat_to_bar_vals = bed_feat_bounds(bed_feat_list,n_guides)
+
+    #plot transcribed stuff
+    for i in transcript_set:
+        feat_min,feat_max = feat_to_min_max[i]
+        for ind,j in enumerate(bed_feat_list):
+            if j == i: bar_level = ind
+
+        r = top_bar_base - (bar_level+1)*(space_per_bed + bed_spacing)
+        feat_scaling = float(feat_max-feat_min)/space_per_bed
+        plot_gene_transcript(r,feat_min,feat_scaling,total_length_with_spacing)
+
+
+    for ind,sp in enumerate(start_points):
+        print cycle[ind]
+        start_point = int(global_start - sp)
+        start_angle = start_point/total_length_with_spacing*360
+        end_angle = (start_point - lens[ind])/total_length_with_spacing*360
+
+        seg_coord_tup = segSeqD[cycle[ind][0]]
+        text_angle = (start_angle + end_angle)/2.0  
+        if end_angle < 0 and start_angle > 0:
+            end_angle+=360
+
         for bar_level,curr_feat in enumerate(bed_feat_list):
             print curr_feat
-            r = outer_bar - bed_track_height*(bar_level+1) - 0.5
-            full_feat_list = bed_feat_dict[curr_feat][seg_coord_tup[0]]
-            s_posns = [x[0] for x in full_feat_list]
-            left_start = bisect.bisect_left(s_posns,seg_coord_tup[1])
-            right_end = bisect.bisect_right(s_posns,seg_coord_tup[2])
-            #left overhang
-            curr_feat_list = full_feat_list[left_start:right_end]
-            print len(full_feat_list),len(curr_feat_list)
-            print "done bisecting"
-            if curr_feat_list[0][0] < seg_coord_tup[1]:
-                curr_feat_list[0][0] = seg_coord_tup[1]
+            feat_min,feat_max = feat_to_min_max[curr_feat]
+            feat_scaling = float(feat_max-feat_min)/space_per_bed
+            # r = curr_bar_base - diff - bed_spacing
+            r = top_bar_base - (bar_level+1)*(space_per_bed + bed_spacing)
 
-            curr_feat_list[-1][1] = seg_coord_tup[2]
+            if curr_feat not in transcript_set:
+                full_feat_list = bed_feat_dict[curr_feat][seg_coord_tup[0]]
+                s_posns = [x[0] for x in full_feat_list]
+                left_start = bisect.bisect_left(s_posns,seg_coord_tup[1])
+                right_end = bisect.bisect_right(s_posns,seg_coord_tup[2])
+                #left overhang
+                curr_feat_list = full_feat_list[left_start:right_end]
+                if curr_feat_list[0][0] < seg_coord_tup[1]:
+                    curr_feat_list[0][0] = seg_coord_tup[1]
 
-            #to do:
-            #plot the guide lines
-            #get the min, max etc
-            #figure out how large thick the track should be
-            #get the ints between min and max and plot the guide line
+                curr_feat_list[-1][1] = seg_coord_tup[2]
 
-            print "plotting lines"
-            x_values = []
-            y_values = []
-            colors = []
-            for x_ind,x in enumerate(curr_feat_list):
-                # print curr_feat
-                mid = (x[1] + x[0])/2.0
-                shifted_mid = start_point - (mid - seg_coord_tup[1])
-                color = x[3].rsplit("=")[-1]
-                value = x[2]
-                x_s,y_s = pol2cart(r+value,shifted_mid/total_length_with_spacing*2*np.pi)
+                print "plotting feature"
+                x_values = []
+                y_values = []
+                colors = []
+                #the value for a region in the bed is its midpoint
+                for x_ind,x in enumerate(curr_feat_list):
+                    lstart = start_point - (x[0] - seg_coord_tup[1])
+                    lend = start_point - (x[1] - seg_coord_tup[1])
+                    curr_rad = r+(x[2]-feat_min)/feat_scaling
+                    x_s,y_s = pol2cart(curr_rad,lstart/total_length_with_spacing*2*np.pi)
+                    x_e,y_e = pol2cart(curr_rad,lend/total_length_with_spacing*2*np.pi)
+                    x_values.extend([x_s,x_e])
+                    y_values.extend([y_s,y_e])
 
-                x_values.append(x_s)
-                y_values.append(y_s)
-                colors.append(color)
+                ax.plot(x_values,y_values,color='k',linewidth=0.3)
             
-            x_p = zip(x_values[:-1],x_values[1:])
-            y_p = zip(y_values[:-1],y_values[1:])
+            #plot guide bars
+            for i in feat_to_bar_vals[curr_feat]:
+                curr_rad = r+(i-feat_min)/feat_scaling
+                patches.append(mpatches.Wedge((0,0), curr_rad, end_angle, start_angle, width=0.05))
+                f_color_v.append('lightgrey')
+                e_color_v.append('grey')
+                lw_v.append(0)
 
-            for point_ind,col in enumerate(colors[:-1]):
-                if not point_ind % 1000:
-                    print point_ind
-                ax.plot(x_p[point_ind],y_p[point_ind],color=col,linewidth=0.3)
+        # break
 
-            print "done plotting points"
+    #write tick mark indicators
+    for bar_level,curr_feat in enumerate(bed_feat_list):
+        for i in feat_to_bar_vals[curr_feat]:
+            feat_min,feat_max = feat_to_min_max[curr_feat]
+            feat_scaling = float(feat_max-feat_min)/space_per_bed
+            scaled_i = (i-feat_min)/feat_scaling
+            r = top_bar_base - (bar_level+1)*(space_per_bed + bed_spacing)
+            curr_rad = r+scaled_i
+            x,y = pol2cart(curr_rad,end_angle/360*2*np.pi)
+            bar_label = round_to_1_sig(10**i) if curr_feat in log10_set else 2**i
+            print i,bar_label
+            if bar_label >= 1:
+                bar_label = int(bar_label)
+
+            ax.text(x,y,str(bar_label),color='grey',
+                    ha="left",fontsize=4,rotation_mode='anchor')
+
 
 #plot cmap track
 def plot_cmap_track(start_points,aln_nums,total_length,cycle,bar_height,color,cmap_vects,seg_text = None):
@@ -319,7 +437,7 @@ def plot_cmap_track(start_points,aln_nums,total_length,cycle,bar_height,color,cm
                 ha = "right"
 
             ax.text(x,y,seg_text,color='grey',rotation=text_angle,
-                    ha=ha,fontsize=3,rotation_mode='anchor')
+                    ha=ha,fontsize=5,rotation_mode='anchor')
 
 
     return cycle_label_locs
@@ -336,7 +454,7 @@ def plot_alignment(segment_lab_locs,contig_lab_loc_dict,aln_vect,segs_base,conti
         x_s,y_s = pol2cart(segs_base,s_l_loc)
         ax.plot([x_c, x_s], [y_c, y_s], color="grey",linewidth=0.2)
 
-
+#segment is imputed by AR or not
 def imputed_status_from_aln(aln_vect,cycle_len):
     imputed_status = [int(aln_vect[0]["imputed"])]
     curr_seg_aln_number = 0
@@ -378,6 +496,7 @@ def parse_alnfile(path_aln_file):
 def parse_cycles_file(cycles_file):
     cycles = {}
     segSeqD = {}
+    isCircular = True
     with open(cycles_file) as infile:
         for line in infile:
             if line.startswith("Segment"):
@@ -399,15 +518,27 @@ def parse_cycles_file(cycles_file):
                         strand = i[-1]
                         curr_cycle.append((seg,strand))
 
+                    else:
+                        isCircular = False
+
                 cycles[lineD["Cycle"]] = curr_cycle
                     
 
-    return cycles,segSeqD
+    return cycles,segSeqD,isCircular
+
+#format refGeneID ENSG value
+def parse_transcript_data(transcript_file):
+    transcript_data = {}
+    with open(transcript_file) as infile:
+        for line in infile:
+            fields = line.rstrip().rsplit()
+            transcript_data[fields[0]] = float(fields[2])
+
+    return transcript_data
 
 #parse bed file
 def parse_bed_file(bed_file):
     bed_list = []
-    print "f",bed_file
     with open(bed_file) as infile:
         for line in infile:
             fields = line.rstrip().split()
@@ -418,6 +549,7 @@ def parse_bed_file(bed_file):
 
     return bed_list
 
+#locations of each bionano contig on the figure
 def get_contig_locs(aln_vect,start_points,cycle,total_length):
     # #go through the seg_seq and calculate total lengths of alignments
     contig_list = []
@@ -466,11 +598,21 @@ def get_contig_locs(aln_vect,start_points,cycle,total_length):
         elif len(contig_list)==1:
             curr_sp+=half_rot
 
+        elif ind == 0:
+            if curr_sp > 0:
+                curr_sp-=half_rot
+            else:
+                curr_sp+=half_rot
+
         contig_start_points.append(curr_sp)
         last_end = contig_start_points[-1] + contig_cmap_vect[i[0]][-1]
 
     #don't want contig hanging over at the end and overlapping with first contig
-    if curr_sp + contig_cmap_vect[i[0]][-1] > total_contig_length:
+    if (curr_sp + contig_cmap_vect[i[0]][-1] > total_contig_length) and not isCircular:
+        total_contig_length = curr_sp + contig_cmap_vect[i[0]][-1]
+
+
+    elif (curr_sp + contig_cmap_vect[i[0]][-1] > total_contig_length + contig_start_points[0]):
         total_contig_length = curr_sp + contig_cmap_vect[i[0]][-1]
 
     return dict(zip(contig_list,contig_start_points)),total_contig_length
@@ -478,18 +620,37 @@ def get_contig_locs(aln_vect,start_points,cycle,total_length):
 #get start locations for a cycle
 def get_seg_locs_from_cycle(cycle,segSeqD):
     lens = []
+    consecutives = set()
+    print "debug print for cycle"
     for i in cycle:
+        print segSeqD[i[0]]
         curr_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
         lens.append(curr_len)
 
+    for i in range(len(cycle)-1):
+        k1 = cycle[i]
+        k2 = cycle[i+1]
+        if abs(segSeqD[k1[0]][2] - segSeqD[k2[0]][1]) == 1 and segSeqD[k1[0]][0] == segSeqD[k2[0]][0]:
+            consecutives.add(i)
+
+    if abs(segSeqD[k2[0]][2] - segSeqD[cycle[0][0]][1]) == 1 and segSeqD[k2[0]][0] == segSeqD[cycle[0][0]][0]:
+            consecutives.add(i+1)
+
+    print consecutives
+
     total_seg_len = sum(lens)
-    seg_padding = seg_spacing*total_seg_len
+    seg_padding = seg_spacing*(total_seg_len-len(consecutives))
 
     start_points = [0]
-    for i in lens[:-1]:
-        start_points.append(start_points[-1] + i + seg_padding)
+    total_broken = 0
+    for ind,i in enumerate(lens[:-1]):
+        #check if i and i+1 adjacent
+        curr_padding = seg_padding if ind not in consecutives else 0
+        start_points.append(start_points[-1] + i + curr_padding)
 
-    total_length = start_points[-1] + lens[-1] + seg_padding
+    print ind+1
+    curr_padding = seg_padding if ind+1 not in consecutives else 0 
+    total_length = start_points[-1] + lens[-1] + curr_padding
 
     return start_points,lens,float(total_length)
 
@@ -512,11 +673,14 @@ parser.add_argument("--cycles_file",help="cycles file",required=True)
 parser.add_argument("--cycle",help="cycle number to visualize",required=True)
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("-s", "--segs", help="segments cmap file")
-# parser.add_argument("-k", "--keyfile", help="segments cmap key file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--sname", help="output prefix")
-parser.add_argument("--bed_files",help="bed file list",nargs="+")
-parser.add_argument("--feature_labels",help="bed feature names",nargs="+")
+parser.add_argument("--label_segs",help="label segs with graph IDs",action='store_true')
+parser.add_argument("--feature_files",help="bed file list",nargs="+")
+parser.add_argument("--feature_labels",help="bed feature names",nargs="+",default=[])
+parser.add_argument("--log10_features",help="features which have been log10 scaled",nargs="+")
+parser.add_argument("--transcript_features",help="features which are transcript info",nargs="+")
+
 args = parser.parse_args()
 
 if not args.sname:
@@ -526,6 +690,31 @@ else:
 
 fname = samp_name + "cycle_" + args.cycle
 
+log10_set = set(args.log10_features) if args.log10_features else set()
+transcript_set = set(args.transcript_features) if args.transcript_features else set()
+transcript_dict = {}
+
+bed_feat_dict = {}
+transcript_data = {}
+if args.feature_files:
+    for i,j in zip(args.feature_files,args.feature_labels):
+        print j,i
+        #feature name -> chromosome -> ordered list of positions
+        if i.endswith(".bed"):
+            bed_list = parse_bed_file(i)
+            bed_feat_dict[j] = feat_bed_to_lookup(bed_list)
+        elif j in transcript_set:
+            transcript_dict = parse_transcript_data(i)
+            bed_feat_dict[j] = []
+
+#SET COLORS
+to_add = plt.cm.get_cmap(None, 4).colors[1:]
+color_vect = ["silver","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
+             to_add[2],"#017374","#734a65","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
+             "xkcd:purpley","xkcd:topaz","lavender","darkseagreen","powderblue","#ff073a",to_add[1],"magenta"]
+
+chromosome_colors = dict(zip(["chr" + str(i) for i in range(1,24)],color_vect))
+
 plt.clf()
 fig, ax = plt.subplots()
 patches = []
@@ -533,33 +722,7 @@ f_color_v = []
 e_color_v = []
 lw_v = []
 
-to_add = plt.cm.get_cmap(None, 4).colors[1:]
-
-# chromosome_colors = dict(zip(["chr" + str(i) for i in range(1,24)],plt.cm.get_cmap(None, 23).colors))
-color_vect = ["silver","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
-             to_add[2],"#017374","#734a65","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
-             "xkcd:purpley","xkcd:topaz","lavender","darkseagreen","powderblue","#ff073a",to_add[1],"magenta"]
-
-# chromosome_colors = ["silver","indianred","salmon","burlywood","darkyellow",] + plt.cm.get_cmap(None, 4).colors[::-1] + [] 
-
-chromosome_colors = dict(zip(["chr" + str(i) for i in range(1,24)],color_vect))
-#chromosome_colors = dict(zip(["chr" + str(i) for i in range(1,24)],plt.cm.get_cmap(None, 23).colors))
-
-bed_feat_dict = {}
-if args.bed_files:
-    for i,j in zip(args.bed_files,args.feature_labels):
-        print j,i
-        #feature name -> chromosome -> ordered list of positions
-        bed_list = parse_bed_file(i)
-        bed_feat_dict[j] = feat_bed_to_lookup(bed_list)
-
-outer_bar = max(bed_track_height*(len(bed_feat_dict)+2),10)
-
-if not args.feature_labels:
-    args.feature_labels = []
-
-
-cycles,segSeqD = parse_cycles_file(args.cycles_file)
+cycles,segSeqD,isCircular = parse_cycles_file(args.cycles_file)
 cycle_num = args.cycle
 cycle = cycles[cycle_num]
 
@@ -582,13 +745,12 @@ if args.bionano_alignments:
     if not args.feature_labels:
         outside = False
     #plot contigs
-    if not args.feature_labels:
-        contig_bar_height = -13/3
-        segment_bar_height = -8.0/3
+    contig_bar_height = -13/3
+    segment_bar_height = -8.0/3
 
-    else:
-        contig_bar_height = 4
-        segment_bar_height = 8.0/3
+    #outside
+    #contig_bar_height = 4
+    #segment_bar_height = 8.0/3
 
     contig_lab_dict = {}
     for c_tup,start_posn in contig_locs.iteritems():
@@ -599,7 +761,6 @@ if args.bionano_alignments:
         contig_label_posns = plot_cmap_track([start_posn],[0],total_length,contig_cycle,outer_bar+contig_bar_height,
             "cornflowerblue",contig_vect,seg_text)
         contig_lab_dict[c_tup[0]] = contig_label_posns[0]
-        # print contig_label_posns[0]
 
     #plot segs
     aln_nums = range(0,len(cycle))
@@ -614,17 +775,11 @@ if args.bionano_alignments:
 
     lens = [seg_cmap_vects[x[0]][-1] for x in cycle]
 
-#handles basic (non-bionano case)
-# else:
-    # start_points,lens,total_length = get_seg_locs_from_cycle(cycle,segSeqD)
 
 imputed_status = imputed_status_from_aln(aln_vect,len(cycle))
-print imputed_status
 
-plot_ref_genome(start_points,lens,cycle,total_length,segSeqD,imputed_status,args.feature_labels)
+plot_ref_genome(start_points,lens,cycle,total_length,segSeqD,imputed_status,args.label_segs)
 
-if args.bionano_alignments:
-    outer_bar+=5
 ax.set_xlim(-(outer_bar+1), (outer_bar+1))
 ax.set_ylim(-(outer_bar+1), (outer_bar+1))
 chrom_set = set()
@@ -640,7 +795,7 @@ legend_patches = []
 for chrom,color in zip(sorted_chrom,sorted_chrom_colors):
     legend_patches.append(mpatches.Patch(color=color,label=chrom))
 
-plt.legend(handles=legend_patches,fontsize=5)
+plt.legend(handles=legend_patches,fontsize=8,loc=3,bbox_to_anchor=(-.3,.15))
 
 p = PatchCollection(patches)
 p.set_facecolor(f_color_v)
@@ -650,5 +805,39 @@ ax.add_collection(p)
 ax.set_aspect(1.0)
 plt.axis('off')
 plt.savefig(fname + '.png',dpi=600)
+plt.savefig(fname + '.pdf',format='pdf')
+
 plt.close()
-print "done"
+print "done plotting bionano"
+
+#handles basic (non-bionano case)
+if args.feature_labels:
+    #make a separate figure
+    plt.clf()
+    fig, ax = plt.subplots()
+    patches = []
+    f_color_v = []
+    e_color_v = []
+    lw_v = []
+    ax.set_xlim(-(outer_bar+1), (outer_bar+1))
+    ax.set_ylim(-(outer_bar+1), (outer_bar+1))
+
+    plot_ref_genome(start_points,lens,cycle,total_length,segSeqD,imputed_status,args.label_segs)
+    #plot the bed-files
+    plot_bed_features(start_points,lens,cycle,total_length,segSeqD,args.feature_labels)
+
+
+    plt.legend(handles=legend_patches,fontsize=8,loc=3,bbox_to_anchor=(-.3,.15))
+    
+    # plt.legend(handles=legend_patches,fontsize=5)
+    p = PatchCollection(patches)
+    p.set_facecolor(f_color_v)
+    p.set_edgecolor(e_color_v)
+    p.set_linewidth(lw_v)
+    ax.add_collection(p)
+    ax.set_aspect(1.0)
+    plt.axis('off')
+    plt.savefig(fname + '_genomic_features.png',dpi=600)
+    plt.savefig(fname + '_genomic_features.pdf',format='pdf')
+    plt.close()
+    
