@@ -16,7 +16,7 @@ from intervaltree import Interval, IntervalTree
 from bionanoUtil import *
 
 contig_spacing = 0.01
-seg_spacing = 0.01
+seg_spacing = 0.0075
 bar_width = 2.0/3
 global_rot = 90.0
 center_hole = 0.75
@@ -126,13 +126,15 @@ def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand
         x_t,y_t = pol2cart(outer_bar + bar_width + 0.7,(text_angle/360*2*np.pi))
         #ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.4)
         
-        if text_angle < -90 and text_angle > -360:
-            text_angle+=180  
+        if (abs(text_angle) > 90 and abs(text_angle) < 360):
+            text_angle+=180 
+            print text_angle,i 
             ax.text(x_t,y_t,i,color='grey',rotation=text_angle,
                 ha='right',fontsize=6.5,rotation_mode='anchor')
         
         else:
-             ax.text(x_t,y_t,i,color='grey',rotation=text_angle,
+            print text_angle,i,"norot"
+            ax.text(x_t,y_t,i,color='grey',rotation=text_angle,
                 ha='left',fontsize=6.5,rotation_mode='anchor')
 
         for exon in e_posns:
@@ -166,7 +168,7 @@ def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,im
         end_angle = (start_point - lens[ind])/total_length_with_spacing*360
 
         seg_coord_tup = segSeqD[cycle[ind][0]]
-        text_angle = (start_angle + end_angle)/2.0  
+        # text_angle = (start_angle + end_angle)/2.0  
         if end_angle < 0 and start_angle > 0:
             end_angle+=360
         
@@ -191,7 +193,7 @@ def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,im
                 x_t,y_t = pol2cart(outer_bar + 0.2,(text_angle/360*2*np.pi))
                 ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.2)
                 
-                if text_angle < -90 and text_angle > -360:
+                if (abs(text_angle) > 90 and abs(text_angle) < 360):
                     text_angle-=180
                     ha = "right"
                     txt = str(int(round((j[0])/10000))) + " "
@@ -217,7 +219,7 @@ def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,im
             font.set_style('italic')
             font.set_weight('bold')
 
-        if text_angle < -90 and text_angle > -360:
+        if (abs(text_angle) > 90 and abs(text_angle) < 360):
             text_angle-=180
             ha = "left"
 
@@ -231,17 +233,14 @@ def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,im
 #plot gene transcript info
 #transcipt count info is log-2
 def plot_gene_transcript(r,feat_min,feat_scaling,total_length_with_spacing):
-    print gene_to_locations
     for gene,pos_list in gene_to_locations.iteritems():
         try:
             value = np.log2(transcript_dict[gene])
-            print gene,value,pos_list
             for pos_tup in pos_list:
                 curr_rad = r+(value-feat_min)/feat_scaling
                 # x_s,y_s = pol2cart(curr_rad,pos_tup[0]*2*np.pi)
                 # x_e,y_e = pol2cart(curr_rad,pos_tup[1]*2*np.pi)
                 lstart,lend = tuple(sorted(pos_tup))
-                print lstart,lend
                 line_points = np.arange(lstart*2*np.pi,lend*2*np.pi,0.001)
                 x_vals,y_vals = polar_series_to_cartesians(line_points,curr_rad)
                 ax.plot(x_vals,y_vals,color='k',linewidth=1)
@@ -278,7 +277,6 @@ def bed_feat_bounds(bed_feat_list,n_guides):
                     elif x[2] < feat_min:
                         feat_min = x[2]
 
-        print curr_feat,feat_min,feat_max
         #guide bars
         diff = (feat_max - feat_min)/n_guides
         top = int(round(feat_max))
@@ -316,7 +314,6 @@ def plot_bed_features(start_points,lens,cycle,total_length_with_spacing,segSeqD,
 
 
     for ind,sp in enumerate(start_points):
-        print cycle[ind]
         start_point = int(global_start - sp)
         start_angle = start_point/total_length_with_spacing*360
         end_angle = (start_point - lens[ind])/total_length_with_spacing*360
@@ -379,9 +376,8 @@ def plot_bed_features(start_points,lens,cycle,total_length_with_spacing,segSeqD,
             scaled_i = (i-feat_min)/feat_scaling
             r = top_bar_base - (bar_level+1)*(space_per_bed + bed_spacing)
             curr_rad = r+scaled_i
-            x,y = pol2cart(curr_rad,end_angle/360*2*np.pi)
+            x,y = pol2cart(curr_rad,global_rot/360*2*np.pi)
             bar_label = round_to_1_sig(10**i) if curr_feat in log10_set else 2**i
-            print i,bar_label
             if bar_label >= 1:
                 bar_label = int(bar_label)
 
@@ -429,7 +425,7 @@ def plot_cmap_track(start_points,aln_nums,total_length,cycle,bar_height,color,cm
             text_angle = mid_sp/total_length*360.
             x,y = pol2cart(bar_height-0.7,(text_angle/360.*2.*np.pi))
             
-            if text_angle < -90 and text_angle > -360:
+            if (abs(text_angle) > 90 and abs(text_angle) < 360):
                 text_angle-=180
                 ha = "left"
 
@@ -447,7 +443,6 @@ def plot_alignment(segment_lab_locs,contig_lab_loc_dict,aln_vect,segs_base,conti
     for a_d in aln_vect:
         contig_label_dict = contig_lab_loc_dict[a_d["contig_id"]]
         seg_label_dict = segment_lab_locs[a_d["seg_aln_number"]]
-        # print contig_label_dict,a_d["contig_label"]
         c_l_loc = contig_label_dict[a_d["contig_label"]]
         s_l_loc = seg_label_dict[a_d["seg_label"]]
         x_c,y_c = pol2cart(contigs_top,c_l_loc)
@@ -489,6 +484,9 @@ def parse_alnfile(path_aln_file):
             fields_dict["seg_aln_number"] = int(fields_dict["seg_aln_number"])
             aln_vect.append(fields_dict)
 
+    # while aln_vect[0]["seg_aln_number"] != 0:
+    #     aln_vect = aln_vect[1:] + [aln_vect[0]]
+
     return aln_vect,meta_dict,
 
 #parse cycles file
@@ -522,7 +520,6 @@ def parse_cycles_file(cycles_file):
                         isCircular = False
 
                 cycles[lineD["Cycle"]] = curr_cycle
-                    
 
     return cycles,segSeqD,isCircular
 
@@ -652,6 +649,10 @@ def get_seg_locs_from_cycle(cycle,segSeqD):
     curr_padding = seg_padding if ind+1 not in consecutives else 0 
     total_length = start_points[-1] + lens[-1] + curr_padding
 
+    rot_len = start_points[args.rot]
+    print "rotation len ",rot_len
+    start_points = [x - rot_len for x in start_points]
+
     return start_points,lens,float(total_length)
 
 def feat_bed_to_lookup(bed_list):
@@ -675,6 +676,7 @@ parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("-s", "--segs", help="segments cmap file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--sname", help="output prefix")
+parser.add_argument("--rot", help="number of segments to rotate counterclockwise",type=int,default=0)
 parser.add_argument("--label_segs",help="label segs with graph IDs",action='store_true')
 parser.add_argument("--feature_files",help="bed file list",nargs="+")
 parser.add_argument("--feature_labels",help="bed feature names",nargs="+",default=[])
