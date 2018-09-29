@@ -51,6 +51,15 @@ def polar_series_to_cartesians(line_points,r):
         
     return x_list,y_list
 
+def start_end_angle(normStart,normEnd,total_length_with_spacing):
+    start_angle = normStart/total_length_with_spacing*360
+    end_angle = normEnd/total_length_with_spacing*360
+    text_angle = (start_angle + end_angle)/2.0
+    if end_angle < 0 and start_angle > 0:
+        end_angle+=360
+
+    return start_angle,end_angle,text_angle
+
 def parse_genes(chrom):
     print("Building interval tree for chrom " + chrom)
     t = IntervalTree()
@@ -147,10 +156,8 @@ def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand
                     normEnd = currStart - min(pTup[2]-pTup[1],pTup[2]-exon[0])
                     normStart = currStart - max(1,pTup[2] - exon[1])
 
-                start_angle = normStart/total_length_with_spacing*360
-                end_angle = normEnd/total_length_with_spacing*360
-                if end_angle < 0 and start_angle > 0:
-                    end_angle+=360
+                start_angle, end_angle, _ = start_end_angle(normStart,normEnd,total_length_with_spacing)
+
 
                 patches.append(mpatches.Wedge((0,0), outer_bar-bar_width/2.0, end_angle, start_angle, width=bar_width/2.0))
                 f_color_v.append('k')
@@ -164,13 +171,8 @@ def plot_ref_genome(start_points,lens,cycle,total_length_with_spacing,segSeqD,im
     global_start = total_length_with_spacing*(global_rot/360.0)
     for ind,sp in enumerate(start_points):
         start_point = int(global_start - sp)
-        start_angle = start_point/total_length_with_spacing*360
-        end_angle = (start_point - lens[ind])/total_length_with_spacing*360
-
         seg_coord_tup = segSeqD[cycle[ind][0]]
-        # text_angle = (start_angle + end_angle)/2.0  
-        if end_angle < 0 and start_angle > 0:
-            end_angle+=360
+        start_angle, end_angle, _ = start_end_angle(start_point,start_point - lens[ind],total_length_with_spacing)
         
         #makes the reference genome wedges    
         patches.append(mpatches.Wedge((0,0), outer_bar, end_angle, start_angle, width=bar_width))
@@ -315,13 +317,8 @@ def plot_bed_features(start_points,lens,cycle,total_length_with_spacing,segSeqD,
 
     for ind,sp in enumerate(start_points):
         start_point = int(global_start - sp)
-        start_angle = start_point/total_length_with_spacing*360
-        end_angle = (start_point - lens[ind])/total_length_with_spacing*360
-
         seg_coord_tup = segSeqD[cycle[ind][0]]
-        text_angle = (start_angle + end_angle)/2.0  
-        if end_angle < 0 and start_angle > 0:
-            end_angle+=360
+        start_angle, end_angle, text_angle = start_end_angle(start_point,start_point - lens[ind],total_length_with_spacing)
 
         for bar_level,curr_feat in enumerate(bed_feat_list):
             print curr_feat
@@ -394,10 +391,7 @@ def plot_cmap_track(start_points,aln_nums,total_length,cycle,bar_height,color,cm
         start_point = (global_start - start_point)
         curr_seg_cmap_vect = cmap_vects[seg_tup[0]]
         seg_cmap_lab_order = range(1,len(curr_seg_cmap_vect))
-        start_angle = start_point/total_length*360
-        end_angle = (start_point - curr_seg_cmap_vect[-1])/total_length*360
-        if end_angle < 0 and start_angle >0:
-            end_angle+=360
+        start_angle, end_angle, _ = start_end_angle(start_point,start_point - curr_seg_cmap_vect[-1],total_length)
 
         patches.append(mpatches.Wedge((0,0), bar_height + bar_width, end_angle, start_angle, width=bar_width))
         f_color_v.append(color)
@@ -408,7 +402,6 @@ def plot_cmap_track(start_points,aln_nums,total_length,cycle,bar_height,color,cm
         if seg_tup[1] == '-':
             seg_len = cmap_vects[seg_tup[0]][-1]
             curr_seg_cmap_vect = [seg_len - x for x in curr_seg_cmap_vect]
-
 
         lab_locs = {}
         for lab_id,i in zip(seg_cmap_lab_order,curr_seg_cmap_vect[:-1]):
