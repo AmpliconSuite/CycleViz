@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
 import sys
-sys.path.insert(0, "/home/jens/Dropbox/BafnaLab/bionano_analysis/method_development/BioNanoCycleBuilder")
 import os
 import copy
 import bisect
 import argparse
 import numpy as np
 from collections import defaultdict
-# import matplotlib.path as mpath
 from matplotlib import pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import colors as mcolors
@@ -16,6 +14,15 @@ import matplotlib._color_data as mcd
 from matplotlib.collections import PatchCollection
 from matplotlib.font_manager import FontProperties
 from intervaltree import Interval, IntervalTree
+
+try:
+    sys.path.insert(0,os.environ['AR_SRC'])
+
+except KeyError:
+    sys.stderr.write("AmpliconReconstructor source directory bash variable ($AR_SRC) not found.\n")
+    sys.stderr.write("Is AmpliconReconstructor configured?")
+    sys.exit()
+
 from bionanoUtil import *
 
 contig_spacing = 0.015
