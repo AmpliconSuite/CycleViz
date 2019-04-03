@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 sys.path.insert(0, "/home/jens/Dropbox/BafnaLab/bionano_analysis/method_development/BioNanoCycleBuilder")
 import os
@@ -132,17 +134,15 @@ def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand
         lw_v.append(0)
 
         # x,y = pol2cart(outer_bar+(bar_width/2.0),(text_angle/360*2*np.pi))
-        x_t,y_t = pol2cart(outer_bar + bar_width + 0.7,(text_angle/360*2*np.pi))
+        x_t,y_t = pol2cart(outer_bar + bar_width + 0.75,(text_angle/360*2*np.pi))
         #ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.4)
         
         if (abs(text_angle) > 90 and abs(text_angle) < 360):
             text_angle+=180 
-            print text_angle,i 
             ax.text(x_t,y_t,i,color='grey',rotation=text_angle,
                 ha='right',fontsize=6.5,rotation_mode='anchor')
         
         else:
-            print text_angle,i,"norot"
             ax.text(x_t,y_t,i,color='grey',rotation=text_angle,
                 ha='left',fontsize=6.5,rotation_mode='anchor')
 
@@ -321,7 +321,6 @@ def plot_bed_features(start_points,lens,cycle,total_length_with_spacing,segSeqD,
         start_angle, end_angle, text_angle = start_end_angle(start_point,start_point - lens[ind],total_length_with_spacing)
 
         for bar_level,curr_feat in enumerate(bed_feat_list):
-            print curr_feat
             feat_min,feat_max = feat_to_min_max[curr_feat]
             feat_scaling = float(feat_max-feat_min)/space_per_bed
             # r = curr_bar_base - diff - bed_spacing
@@ -339,7 +338,6 @@ def plot_bed_features(start_points,lens,cycle,total_length_with_spacing,segSeqD,
 
                 curr_feat_list[-1][1] = seg_coord_tup[2]
 
-                print "plotting feature"
                 x_values = []
                 y_values = []
                 colors = []
@@ -487,7 +485,7 @@ def parse_alnfile(path_aln_file):
 def parse_cycles_file(cycles_file):
     cycles = {}
     segSeqD = {}
-    isCircular = True
+    circular_D = {}
     with open(cycles_file) as infile:
         for line in infile:
             if line.startswith("Segment"):
@@ -499,6 +497,7 @@ def parse_cycles_file(cycles_file):
                 segSeqD[segNum] = (chrom,lowerBound,upperBound)
 
             elif "Cycle=" in line:
+                isCircular = True
                 curr_cycle = []
                 fields = line.rstrip().rsplit(";")
                 lineD = {x.rsplit("=")[0]:x.rsplit("=")[1] for x in fields}
@@ -513,8 +512,9 @@ def parse_cycles_file(cycles_file):
                         isCircular = False
 
                 cycles[lineD["Cycle"]] = curr_cycle
+                circular_D[lineD["Cycle"]] = isCircular
 
-    return cycles,segSeqD,isCircular
+    return cycles,segSeqD,circular_D
 
 #format refGeneID ENSG value
 def parse_transcript_data(transcript_file):
@@ -558,8 +558,11 @@ def get_contig_locs(aln_vect,start_points,cycle,total_length):
     total_contig_length+=spacing
 
     no_rot = False
-    if total_contig_length < 3.0/4.0*total_length:
+    if total_contig_length < 0.9*total_length:
+        print "no rotation"
         no_rot = True
+
+    half_rot = seg_spacing*total_length*len(cycle)/2.0 if not no_rot else 0
 
     contig_start_points = []
     last_end = 0
@@ -577,7 +580,6 @@ def get_contig_locs(aln_vect,start_points,cycle,total_length):
         else:
             zero_shifted_start+=(contig_cmap_vect[i[0]][-1]-contig_cmaps[i[0]][a_d["contig_label"]])
 
-        half_rot = seg_spacing*total_length*len(cycle)/2.0 if not no_rot else 0
         curr_sp = zero_shifted_start
         print curr_sp,last_end
         if last_end:
@@ -597,6 +599,7 @@ def get_contig_locs(aln_vect,start_points,cycle,total_length):
         contig_start_points.append(curr_sp)
         last_end = contig_start_points[-1] + contig_cmap_vect[i[0]][-1]
 
+    print "circle " + str(isCircular)
     #don't want contig hanging over at the end and overlapping with first contig
     if (curr_sp + contig_cmap_vect[i[0]][-1] > total_contig_length) and not isCircular:
         total_contig_length = curr_sp + contig_cmap_vect[i[0]][-1]
@@ -605,15 +608,17 @@ def get_contig_locs(aln_vect,start_points,cycle,total_length):
     elif (curr_sp + contig_cmap_vect[i[0]][-1] > total_contig_length + contig_start_points[0]):
         total_contig_length = curr_sp + contig_cmap_vect[i[0]][-1]
 
+    elif isCircular and (last_end < total_contig_length + contig_start_points[0]):
+        total_contig_length = last_end - contig_start_points[0] - half_rot
+
+
     return dict(zip(contig_list,contig_start_points)),total_contig_length
 
 #get start locations for a cycle
 def get_seg_locs_from_cycle(cycle,segSeqD):
     lens = []
     consecutives = set()
-    print "debug print for cycle"
     for i in cycle:
-        print segSeqD[i[0]]
         curr_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
         lens.append(curr_len)
 
@@ -626,7 +631,6 @@ def get_seg_locs_from_cycle(cycle,segSeqD):
     if abs(segSeqD[k2[0]][2] - segSeqD[cycle[0][0]][1]) == 1 and segSeqD[k2[0]][0] == segSeqD[cycle[0][0]][0]:
             consecutives.add(i+1)
 
-    print consecutives
 
     total_seg_len = sum(lens)
     seg_padding = seg_spacing*(total_seg_len-len(consecutives))
@@ -638,12 +642,10 @@ def get_seg_locs_from_cycle(cycle,segSeqD):
         curr_padding = seg_padding if ind not in consecutives else 0
         start_points.append(start_points[-1] + i + curr_padding)
 
-    print ind+1
     curr_padding = seg_padding if ind+1 not in consecutives else 0 
     total_length = start_points[-1] + lens[-1] + curr_padding
 
     rot_len = start_points[args.rot]
-    print "rotation len ",rot_len
     start_points = [x - rot_len for x in start_points]
 
     return start_points,lens,float(total_length)
@@ -683,7 +685,7 @@ if not args.sname:
 else:
     samp_name = args.sname.rsplit("/")[-1]
 
-fname = samp_name + "cycle_" + args.cycle
+fname = samp_name + "_cycle_" + args.cycle
 
 log10_set = set(args.log10_features) if args.log10_features else set()
 transcript_set = set(args.transcript_features) if args.transcript_features else set()
@@ -693,7 +695,6 @@ bed_feat_dict = {}
 transcript_data = {}
 if args.feature_files:
     for i,j in zip(args.feature_files,args.feature_labels):
-        print j,i
         #feature name -> chromosome -> ordered list of positions
         if i.endswith(".bed"):
             bed_list = parse_bed_file(i)
@@ -704,7 +705,7 @@ if args.feature_files:
 
 #SET COLORS
 to_add = plt.cm.get_cmap(None, 4).colors[1:]
-color_vect = ["silver","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
+color_vect = ["#f2bfca","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
              to_add[2],"#017374","#734a65","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
              "xkcd:purpley","xkcd:topaz","lavender","darkseagreen","powderblue","#ff073a",to_add[1],"magenta"]
 
@@ -717,17 +718,20 @@ f_color_v = []
 e_color_v = []
 lw_v = []
 
-cycles,segSeqD,isCircular = parse_cycles_file(args.cycles_file)
+cycles,segSeqD,circular_D = parse_cycles_file(args.cycles_file)
 cycle_num = args.cycle
+isCircular = circular_D[cycle_num]
 cycle = cycles[cycle_num]
 
 start_points,lens,total_length = get_seg_locs_from_cycle(cycle,segSeqD)
 if args.bionano_alignments:
     #unfinished utility for bionano
     #parse cmaps
+    # ref_cmaps = parse_cmap("/home/jens/Dropbox/BafnaLab/bionano_analysis/method_development/BioNanoCycleBuilder/hg19_BspQI.cmap")
     seg_cmaps = parse_cmap(args.segs,True)
     seg_cmap_vects = vectorize_cmaps(seg_cmaps)
     contig_cmaps = parse_cmap(args.contigs,True)
+
     contig_cmap_vect = vectorize_cmaps(contig_cmaps)
     #get cmap lens
     aln_vect,meta_dict = parse_alnfile(args.path_alignment)
@@ -735,6 +739,7 @@ if args.bionano_alignments:
     contig_cmap_lens = get_cmap_lens(args.contigs)
     contig_locs,contig_total_length = get_contig_locs(aln_vect,start_points,cycle,total_length)
     if contig_total_length > total_length:
+        print "setting total length to contig total length"
         total_length = contig_total_length
 
     if not args.feature_labels:
