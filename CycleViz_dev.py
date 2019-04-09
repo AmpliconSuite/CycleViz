@@ -6,12 +6,12 @@ import copy
 import bisect
 import argparse
 import numpy as np
+import matplotlib
 from collections import defaultdict
 from matplotlib import pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import colors as mcolors
 import matplotlib._color_data as mcd
-import matplotlib
 # from matplotlib.collections import PatchCollection
 # from matplotlib.font_manager import FontProperties
 from intervaltree import Interval, IntervalTree
