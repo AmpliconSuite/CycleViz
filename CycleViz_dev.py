@@ -618,8 +618,6 @@ args = parser.parse_args()
 
 if not args.sname:
     samp_name = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
-else:
-    samp_name = args.sname.rsplit("/")[-1]
 
 fname = samp_name + "_cycle_" + args.cycle
 
