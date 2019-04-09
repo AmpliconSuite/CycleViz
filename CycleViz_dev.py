@@ -15,6 +15,9 @@ from matplotlib.collections import PatchCollection
 from matplotlib.font_manager import FontProperties
 from intervaltree import Interval, IntervalTree
 
+#non-interactive backend
+matplotlib.use('Agg')
+
 try:
     sys.path.insert(0,os.environ['AR_SRC'])
 
