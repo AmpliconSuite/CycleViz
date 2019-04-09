@@ -621,7 +621,7 @@ if not args.sname:
 
 outdir = os.path.dirname(args.sname)
 if outdir and not os.path.exists(outdir):
-    os.path.makedirs(outdir)
+    os.makedirs(outdir)
 
 fname = args.sname + "_cycle_" + args.cycle
 
