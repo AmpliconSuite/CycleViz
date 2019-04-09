@@ -124,7 +124,7 @@ class CycleVizElemObj(object):
 def parse_genes(chrom):
     print("Building interval tree for chrom " + chrom)
     t = IntervalTree()
-    with open("refGene.txt") as infile:
+    with open(os.environ['AR_SRC'] + "/hg19_refGene.txt") as infile:
         for line in infile:
             fields = line.rsplit("\t")
             #gene = fields[-2]
