@@ -617,9 +617,9 @@ parser.add_argument("--oncogenes_only",help="only show oncogenes in the annotati
 args = parser.parse_args()
 
 if not args.sname:
-    samp_name = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
+    args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
 
-fname = samp_name + "_cycle_" + args.cycle
+fname = args.sname + "_cycle_" + args.cycle
 
 chromosome_colors = get_chr_colors()
 plt.clf()
