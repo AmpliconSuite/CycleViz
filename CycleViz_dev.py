@@ -619,6 +619,10 @@ args = parser.parse_args()
 if not args.sname:
     args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
 
+outdir = os.path.dirname(args.sname)
+if outdir and not os.path.exists(outdir):
+    os.path.makedirs(outdir)
+
 fname = args.sname + "_cycle_" + args.cycle
 
 chromosome_colors = get_chr_colors()
