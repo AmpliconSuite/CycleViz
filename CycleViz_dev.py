@@ -7,6 +7,7 @@ import bisect
 import argparse
 import numpy as np
 import matplotlib
+matplotlib.use('Agg')
 from collections import defaultdict
 from matplotlib import pyplot as plt
 import matplotlib.patches as mpatches
@@ -17,7 +18,6 @@ import matplotlib._color_data as mcd
 from intervaltree import Interval, IntervalTree
 
 #non-interactive backend
-matplotlib.use('Agg')
 
 try:
     sys.path.insert(0,os.environ['AR_SRC'])
