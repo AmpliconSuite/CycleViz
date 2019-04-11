@@ -383,6 +383,8 @@ def parse_alnfile(path_aln_file):
 
 #determine segments linearly adjacent in ref genome
 def adjacent_segs(cycle,segSeqD,isCircular):
+    print "checking adjacency"
+    print cycle
     prev_seg_index_is_adj = [False]*len(cycle)
     p_end = segSeqD[cycle[0][0]][2] if cycle[0][1] == "+" else segSeqD[cycle[0][0]][1]
     p_chrom = segSeqD[cycle[0][0]][0]
@@ -403,6 +405,7 @@ def adjacent_segs(cycle,segSeqD,isCircular):
         if p_chrom == curr_chrom and abs(init_start - p_end) == 1:
             prev_seg_index_is_adj[0] = True
 
+    print prev_seg_index_is_adj
     return prev_seg_index_is_adj
 
 def get_raw_cycle_length(cycle,segSeqD,isCircular,prev_seg_index_is_adj):
@@ -414,25 +417,28 @@ def get_raw_cycle_length(cycle,segSeqD,isCircular,prev_seg_index_is_adj):
 
     return raw_cycle_length
 
-def get_seg_locs_from_cycle(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj):
-    spacing_bp = seg_spacing*raw_cycle_length
-    start_points = [0]
-    for ind,i in enumerate(cycle[:-1]):
-        seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
-        # seg_len = seg_cmap_lens[i[0]]
-        if not prev_seg_index_is_adj[ind+1]:
-            seg_len+=spacing_bp
+# def get_seg_locs_from_cycle(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj):
+#     spacing_bp = seg_spacing*raw_cycle_length
+#     start_points = [spacing_bp/2.]
+#     print "start points"
+#     for ind,i in enumerate(cycle[:-1]):
+#         print ind,i
+#         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
+#         # seg_len = seg_cmap_lens[i[0]]
+#         if not prev_seg_index_is_adj[ind+1]:
+#             print "adding spacing to ",cycle[ind+1]
+#             seg_len+=spacing_bp
 
-        start_points.append(start_points[-1] + seg_len)
-        # print start_points[-1],seg_len
+#         start_points.append(start_points[-1] + seg_len)
+#         # print start_points[-1],seg_len
 
-    last_len = segSeqD[cycle[-1][0]][2] - segSeqD[cycle[-1][0]][1]
-    # last_len = lens[cycle[-1][0]]
-    endpoint = start_points[-1] + last_len
-    if not prev_seg_index_is_adj[0]:
-        endpoint+=spacing_bp
+#     last_len = segSeqD[cycle[-1][0]][2] - segSeqD[cycle[-1][0]][1]
+#     # last_len = lens[cycle[-1][0]]
+#     endpoint = start_points[-1] + last_len
+#     if not prev_seg_index_is_adj[0]:
+#         endpoint+=spacing_bp
 
-    return start_points,endpoint
+#     return start_points,endpoint
 
 #segment is imputed by AR or not
 def imputed_status_from_aln(aln_vect,cycle_len):
@@ -560,19 +566,28 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
             seg_end_l_pos = total_length + seg_end_l_pos
 
         #compute scaling
-        scaled_seg_dist  = abs(seg_end_l_pos - seg_start_l_pos)*(1-contig_spacing/2.)
+        scaled_seg_dist  = abs(seg_end_l_pos - seg_start_l_pos)*(1-contig_spacing/2)
         scaling_factor = scaled_seg_dist/(abs(cc_vect[cal_f-1] - cc_vect[cal_l-1]))
         #SET CONTIG SCALING FACTOR
         curr_contig_struct.scaling_factor = scaling_factor
-        print scaling_factor
+        print scaling_factor,c_id
 
-        if contig_dir == "+":
-            abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
-            abs_end_pos = seg_end_l_pos + (cc_vect[-1] - cc_vect[cal_l-1])*scaling_factor
+        abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
+        abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
+        
+        # if contig_dir == "+":
+        #     abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
+        #     # abs_end_pos = abs_start_pos + (cc_vect[-2] + (cc_vect[-1] - cc_vect[cal_l-1]))*scaling_factor
+        #     abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
 
-        else:
-            abs_start_pos = seg_end_l_pos - (cc_vect[-1] - cc_vect[cal_l-1])*scaling_factor
-            abs_end_pos = seg_start_l_pos + (cc_vect[cal_f-1])*scaling_factor
+        # else:
+        #     # abs_start_pos = seg_end_l_pos - (cc_vect[-1] - cc_vect[cal_l-1])*scaling_factor
+        #     abs_start_pos = seg_end_l_pos - (cc_vect[cal_f-1])*scaling_factor
+        #     # abs_start_pos = seg_end_l_pos - (cc_vect[-1])*scaling_factor
+        #     # abs_end_pos = seg_start_l_pos + (cc_vect[cal_f-1])*scaling_factor
+        #     abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
+        #     # abs_end_pos = seg_start_l_pos + cc_vect[cal_f-1]*scaling_factor
+        #     # abs_start_pos = (abs_end_pos - cc_vect[-2])*scaling_factor
 
         #s,t unset until label posns computed
         print "dists"
