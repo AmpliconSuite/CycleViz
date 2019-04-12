@@ -12,7 +12,7 @@ from collections import defaultdict
 from matplotlib import pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import colors as mcolors
-import matplotlib._color_data as mcd
+# import matplotlib._color_data as mcd
 from matplotlib.collections import PatchCollection
 from matplotlib.font_manager import FontProperties
 from intervaltree import Interval, IntervalTree
@@ -122,7 +122,7 @@ class CycleVizElemObj(object):
         return "{}{} | Start: {} | End: {} | scaling {}".format(self.id,self.direction,str(self.abs_start_pos),str(self.abs_end_pos),str(self.scaling_factor))
 
 def parse_genes(chrom):
-    print("Building interval tree for chrom " + chrom)
+    # print("Building interval tree for chrom " + chrom)
     t = IntervalTree()
     with open(os.environ['AR_SRC'] + "/hg19_refGene.txt") as infile:
         for line in infile:
@@ -232,9 +232,9 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
     rot_sp = global_rot/360.*total_length
     for ind,refObj in ref_placements.iteritems():
         seg_coord_tup = segSeqD[cycle[ind][0]]
-        print(refObj.to_string())
+        # print(refObj.to_string())
         start_angle, end_angle = start_end_angle(refObj.abs_end_pos,refObj.abs_start_pos,total_length)
-        print start_angle,end_angle
+        # print start_angle,end_angle
         
         #makes the reference genome wedges    
         patches.append(mpatches.Wedge((0,0), outer_bar, end_angle, start_angle, width=bar_width))
@@ -290,11 +290,11 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
     cycle_label_locs = defaultdict(list)
     for ind,segObj in seg_placements.iteritems():
         bar_height = unadj_bar_height + segObj.track_height_shift
-        print "cmap_plot"
-        print segObj.id
-        print segObj.abs_end_pos,segObj.abs_start_pos
+        # print "cmap_plot"
+        # print segObj.id
+        # print segObj.abs_end_pos,segObj.abs_start_pos
         start_angle, end_angle = start_end_angle(segObj.abs_end_pos,segObj.abs_start_pos,total_length)
-        print start_angle,end_angle
+        # print start_angle,end_angle
         patches.append(mpatches.Wedge((0,0), bar_height + bar_width, end_angle, start_angle, width=bar_width))
         f_color_v.append(color)
         e_color_v.append('k')
@@ -384,7 +384,6 @@ def parse_alnfile(path_aln_file):
 #determine segments linearly adjacent in ref genome
 def adjacent_segs(cycle,segSeqD,isCircular):
     print "checking adjacency"
-    print cycle
     prev_seg_index_is_adj = [False]*len(cycle)
     p_end = segSeqD[cycle[0][0]][2] if cycle[0][1] == "+" else segSeqD[cycle[0][0]][1]
     p_chrom = segSeqD[cycle[0][0]][0]
@@ -405,7 +404,7 @@ def adjacent_segs(cycle,segSeqD,isCircular):
         if p_chrom == curr_chrom and abs(init_start - p_end) == 1:
             prev_seg_index_is_adj[0] = True
 
-    print prev_seg_index_is_adj
+    # print prev_seg_index_is_adj
     return prev_seg_index_is_adj
 
 def get_raw_cycle_length(cycle,segSeqD,isCircular,prev_seg_index_is_adj):
@@ -482,6 +481,7 @@ def get_chr_colors():
 #TEMP SOLUTION (will break if too many consecutive overlaps)
 def set_contig_height_shifts(contig_placements,contig_list):
     print "SETTING HEIGHTS"
+    prev_offset = 0
     for ind,i in enumerate(contig_list[1:]):
         prevObj = contig_placements[contig_list[ind]]
         currObj = contig_placements[i]
@@ -490,9 +490,13 @@ def set_contig_height_shifts(contig_placements,contig_list):
         print "t",currObj.abs_start_pos,currObj.abs_end_pos
 
         if currObj.abs_start_pos < prevObj.abs_end_pos:
-            print "hit"
-            #TODO: ROBUST FIX
-            currObj.track_height_shift = prevObj.track_height_shift - 1.6
+            shift_mult = -1 if prev_offset == 0 else 0
+            currObj.track_height_shift = shift_mult*1.5
+            prev_offset = shift_mult
+
+        else:
+            prev_offset = 0
+
 
 def construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular):
     spacing_bp = seg_spacing*raw_cycle_length
@@ -504,7 +508,7 @@ def construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index
         curr_obj = CycleVizElemObj(i[0],i[1],curr_start,seg_end)
         cycle_ref_placements[ind] = curr_obj
         next_start = seg_end
-        mod_ind = ind % (len(prev_seg_index_is_adj)-1)
+        mod_ind = (ind+1) % (len(prev_seg_index_is_adj))
         if not prev_seg_index_is_adj[mod_ind]:
             next_start+=spacing_bp
 
@@ -572,8 +576,18 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
         curr_contig_struct.scaling_factor = scaling_factor
         print scaling_factor,c_id
 
-        abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
-        abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
+        if contig_dir == "+":
+            abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
+            abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
+
+        else:
+            abs_start_pos = seg_start_l_pos - (cc_vect[cal_l-1])*scaling_factor
+            abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
+
+
+        print "SEG PLACEMENT ",c_id
+        print abs_start_pos,abs_end_pos
+        print seg_start_l_pos,abs_start_pos
         
         # if contig_dir == "+":
         #     abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
