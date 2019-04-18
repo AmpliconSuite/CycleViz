@@ -38,7 +38,7 @@ outer_bar = 10
 bed_spacing = .5
 contig_bar_height = -14/3
 segment_bar_height = -8.0/3
-unaligned_cutoff_frac = 1./12
+unaligned_cutoff_frac = 1./30
 
 gene_to_locations = defaultdict(list)
 
@@ -121,6 +121,39 @@ class CycleVizElemObj(object):
     def to_string(self):
         return "{}{} | Start: {} | End: {} | scaling {}".format(self.id,self.direction,str(self.abs_start_pos),str(self.abs_end_pos),str(self.scaling_factor))
 
+    def trim_obj_ends(self):
+        #use the .end_trim,.start_trim to chop off.
+        #overhang should go to 1/3 of the unaligned cutoff threshold
+
+        if self.start_trim:
+            if self.direction == "+":
+                self.abs_start_pos = self.aln_bound_posns[0] - unaligned_cutoff_frac*total_length/4.
+
+            else:
+                self.abs_end_pos = self.aln_bound_posns[-1] + unaligned_cutoff_frac*total_length/4.
+
+        if self.end_trim:
+            if self.direction == "+":
+                self.abs_end_pos = self.aln_bound_posns[-1] + unaligned_cutoff_frac*total_length/4.
+
+            else:
+                self.abs_start_pos = self.aln_bound_posns[0] - unaligned_cutoff_frac*total_length/4.
+
+#parse the breakpoint graph to indicate for two endpoints if there is an edge.
+def parse_BPG(BPG_file):
+    bidirectional_edge_dict = defaultdict(set)
+    with open(BPG_file) as infile:
+        for line in infile:
+            fields = line.rstrip().rsplit()
+            if fields[0] in ["concordant","discordant"]:
+                e_rep = fields[1].rsplit("->")
+                start = e_rep[0][:-1]
+                end = e_rep[1][:-1]
+                bidirectional_edge_dict[start].add(end)
+                bidirectional_edge_dict[end].add(start)
+
+    return bidirectional_edge_dict
+
 def parse_genes(chrom):
     # print("Building interval tree for chrom " + chrom)
     t = IntervalTree()
@@ -156,7 +189,7 @@ def rel_genes(chrIntTree,pTup):
         tend = int(i.data[5])
         e_s_posns = [int(x) for x in i.data[9].rsplit(",") if x]
         e_e_posns = [int(x) for x in i.data[10].rsplit(",") if x]
-        if not gene.startswith("LOC"):
+        if not gene.startswith("LOC") and not gene.startswith("LINC"):
             if gene not in relGenes:
                 relGenes[gene] = (tstart,tend,zip(e_s_posns,e_e_posns))
 
@@ -318,12 +351,17 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
     return cycle_label_locs
 
 #plot the connecting lines for the bionano track
-def plot_alignment(contig_locs,segment_locs,total_length):
+def plot_alignment(contig_locs,segment_locs,total_length,contig_placements):
     segs_base = outer_bar+segment_bar_height
     for a_d in aln_vect:
-        contig_label_vect = contig_locs[a_d["contig_id"]].label_posns
+        c_id = a_d["contig_id"]
+        contig_label_vect = contig_locs[c_id].label_posns
         seg_label_vect = segment_locs[a_d["seg_aln_number"]].label_posns
-        c_l_loc = contig_label_vect[a_d["contig_label"]-1]/total_length*2.*np.pi
+        c_l_pos = contig_label_vect[a_d["contig_label"]-1]
+        if c_l_pos > contig_placements[c_id].abs_end_pos or c_l_pos < contig_placements[c_id].abs_start_pos:
+            continue
+
+        c_l_loc = c_l_pos/total_length*2.*np.pi
         s_l_loc = seg_label_vect[a_d["seg_label"]-1]/total_length*2.*np.pi
         contig_top = outer_bar + contig_bar_height + contig_locs[a_d["contig_id"]].track_height_shift + bar_width
         x_c,y_c = pol2cart(contig_top,c_l_loc)
@@ -457,16 +495,20 @@ def imputed_status_from_aln(aln_vect,cycle_len):
 
     return imputed_status
 
-#TODO: Implement contig end trimming
-def trim_contigs(contig_cmap_vects,contig_placements,total_length):
+#check contig end trimming
+def decide_trim_contigs(contig_cmap_vects,contig_placements,total_length):
     for cObj in contig_placements:
         cmap_vect = contig_cmap[vects[cObj.id]]
         first_lab,last_lab = cObj.aln_lab_ends
-        if cmap_vect[first_lab-1] - cmap_vect[0] > unaligned_cutoff_frac*total_length:
+
+        if (cmap_vect[first_lab-1] - cmap_vect[0])*cObj.scaling_factor > unaligned_cutoff_frac*total_length:
             cObj.start_trim = True
 
-        if cmap_vect[-1] - cmap_vect[last_lab-1] > unaligned_cutoff_frac*total_length:
+        if (cmap_vect[-1] - cmap_vect[last_lab-1])*cObj.scaling_factor > unaligned_cutoff_frac*total_length:
             cObj.end_trim = True
+
+        if cObj.start_trim or cObj.end_trim:
+            cObj.trim_obj_ends()
 
 #SET COLORS
 def get_chr_colors():
@@ -498,7 +540,7 @@ def set_contig_height_shifts(contig_placements,contig_list):
             prev_offset = 0
 
 
-def construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular):
+def construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular,aln_vect = []):
     spacing_bp = seg_spacing*raw_cycle_length
     cycle_ref_placements = {}
     curr_start = 0.0 if isCircular else spacing_bp
@@ -669,21 +711,33 @@ cycle = cycles[cycle_num]
 prev_seg_index_is_adj = adjacent_segs(cycle,segSeqD,isCircular)
 raw_cycle_length = get_raw_cycle_length(cycle,segSeqD,isCircular,prev_seg_index_is_adj)
 # start_points,total_length = get_seg_locs_from_cycle(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj)
-ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular)
+if not args.om_alignments:
+    ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular)
 
-if args.om_alignments:
+else:
     seg_cmaps = parse_cmap(args.segs,True)
     seg_cmap_vects = vectorize_cmaps(seg_cmaps)
     seg_cmap_lens = get_cmap_lens(args.segs)
+    aln_vect,meta_dict = parse_alnfile(args.path_alignment)
+
+    ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular,aln_vect)
     cycle_seg_placements = place_cycle_segs_and_labels(cycle,ref_placements,seg_cmap_vects)
 
     contig_cmaps = parse_cmap(args.contigs,True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
 
-    aln_vect,meta_dict = parse_alnfile(args.path_alignment)
+    
+
+    ###
+    #TRIM REF SEGS
+    ###
+
+
+
     contig_cmap_lens = get_cmap_lens(args.contigs)
     #cycle_seg_placements,aln_vect,total_length,contig_cmap_vects
     contig_placements,contig_list = place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_cmap_vects)
+    decide_trim_contigs(contig_cmap_vects,contig_placements,total_length)
 
     if not args.feature_labels:
         outside = False
