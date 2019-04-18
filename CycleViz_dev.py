@@ -351,19 +351,19 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
     return cycle_label_locs
 
 #plot the connecting lines for the bionano track
-def plot_alignment(contig_locs,segment_locs,total_length,contig_placements):
+def plot_alignment(contig_locs,segment_locs,total_length):
     segs_base = outer_bar+segment_bar_height
     for a_d in aln_vect:
         c_id = a_d["contig_id"]
         contig_label_vect = contig_locs[c_id].label_posns
         seg_label_vect = segment_locs[a_d["seg_aln_number"]].label_posns
         c_l_pos = contig_label_vect[a_d["contig_label"]-1]
-        if c_l_pos > contig_placements[c_id].abs_end_pos or c_l_pos < contig_placements[c_id].abs_start_pos:
+        if c_l_pos > contig_locs[c_id].abs_end_pos or c_l_pos < contig_locs[c_id].abs_start_pos:
             continue
 
         c_l_loc = c_l_pos/total_length*2.*np.pi
         s_l_loc = seg_label_vect[a_d["seg_label"]-1]/total_length*2.*np.pi
-        contig_top = outer_bar + contig_bar_height + contig_locs[a_d["contig_id"]].track_height_shift + bar_width
+        contig_top = outer_bar + contig_bar_height + contig_locs[c_id].track_height_shift + bar_width
         x_c,y_c = pol2cart(contig_top,c_l_loc)
         x_s,y_s = pol2cart(segs_base,s_l_loc)
         ax.plot([x_c, x_s], [y_c, y_s], color="grey",linewidth=0.2)
