@@ -497,7 +497,7 @@ def imputed_status_from_aln(aln_vect,cycle_len):
 
 #check contig end trimming
 def decide_trim_contigs(contig_cmap_vects,contig_placements,total_length):
-    for cObj in contig_placements:
+    for cObj in contig_placements.values():
         cmap_vect = contig_cmap_vects[cObj.id]
         first_lab,last_lab = cObj.aln_lab_ends
 
