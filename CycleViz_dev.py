@@ -498,7 +498,7 @@ def imputed_status_from_aln(aln_vect,cycle_len):
 #check contig end trimming
 def decide_trim_contigs(contig_cmap_vects,contig_placements,total_length):
     for cObj in contig_placements:
-        cmap_vect = contig_cmap[vects[cObj.id]]
+        cmap_vect = contig_cmap_vects[cObj.id]
         first_lab,last_lab = cObj.aln_lab_ends
 
         if (cmap_vect[first_lab-1] - cmap_vect[0])*cObj.scaling_factor > unaligned_cutoff_frac*total_length:
