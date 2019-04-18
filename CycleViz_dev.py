@@ -38,7 +38,7 @@ outer_bar = 10
 bed_spacing = .5
 contig_bar_height = -14/3
 segment_bar_height = -8.0/3
-unaligned_cutoff_frac = 1./30
+unaligned_cutoff_frac = 1./45
 
 gene_to_locations = defaultdict(list)
 
@@ -497,15 +497,19 @@ def imputed_status_from_aln(aln_vect,cycle_len):
 
 #check contig end trimming
 def decide_trim_contigs(contig_cmap_vects,contig_placements,total_length):
+    print "DECIDING TRIMMING"
     for cObj in contig_placements.values():
+        print cObj.id
         cmap_vect = contig_cmap_vects[cObj.id]
         first_lab,last_lab = cObj.aln_lab_ends
 
         if (cmap_vect[first_lab-1] - cmap_vect[0])*cObj.scaling_factor > unaligned_cutoff_frac*total_length:
             cObj.start_trim = True
+            print "start_trim true"
 
         if (cmap_vect[-1] - cmap_vect[last_lab-1])*cObj.scaling_factor > unaligned_cutoff_frac*total_length:
             cObj.end_trim = True
+            print "end_trim true"
 
         if cObj.start_trim or cObj.end_trim:
             cObj.trim_obj_ends()
@@ -528,8 +532,8 @@ def set_contig_height_shifts(contig_placements,contig_list):
         prevObj = contig_placements[contig_list[ind]]
         currObj = contig_placements[i]
 
-        print "s",prevObj.abs_start_pos,prevObj.abs_end_pos
-        print "t",currObj.abs_start_pos,currObj.abs_end_pos
+        #print "s",prevObj.abs_start_pos,prevObj.abs_end_pos
+        #print "t",currObj.abs_start_pos,currObj.abs_end_pos
 
         if currObj.abs_start_pos < prevObj.abs_end_pos:
             shift_mult = -1 if prev_offset == 0 else 0
@@ -584,8 +588,8 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
 
     contig_span_dict = {}
     for c_id,i_list in contig_aln_dict.iteritems():
-        print "placing contigs computation step"
-        print c_id
+        #print "placing contigs computation step"
+        #print c_id
         cc_vect = contig_cmap_vects[c_id]
         san_f = i_list[0]["seg_aln_number"]
         sal_f = i_list[0]["seg_label"]
@@ -594,8 +598,8 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
         sal_l = i_list[-1]["seg_label"]
         cal_l = i_list[-1]["contig_label"]
         contig_dir = i_list[0]["contig_dir"]
-        print san_f,sal_f,cal_f
-        print san_l,sal_l,cal_l
+        #print san_f,sal_f,cal_f
+        #print san_l,sal_l,cal_l
         curr_contig_struct = CycleVizElemObj(c_id,contig_dir,None,None,cc_vect)
 
         #look up aln posns from cycle_seg_placements
@@ -608,7 +612,6 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
         seg_end_l_pos = segObj_end.label_posns[sal_l-1]
 
         if seg_end_l_pos < seg_start_l_pos:
-            print "hit add len"
             seg_end_l_pos = total_length + seg_end_l_pos
 
         #compute scaling
@@ -616,7 +619,7 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
         scaling_factor = scaled_seg_dist/(abs(cc_vect[cal_f-1] - cc_vect[cal_l-1]))
         #SET CONTIG SCALING FACTOR
         curr_contig_struct.scaling_factor = scaling_factor
-        print scaling_factor,c_id
+        #print scaling_factor,c_id
 
         if contig_dir == "+":
             abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
@@ -646,10 +649,10 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
         #     # abs_start_pos = (abs_end_pos - cc_vect[-2])*scaling_factor
 
         #s,t unset until label posns computed
-        print "dists"
-        print cc_vect[cal_f-1] - cc_vect[cal_l-1]
-        print seg_end_l_pos - seg_start_l_pos
-        print abs_end_pos - abs_start_pos
+        # print "dists"
+        # print cc_vect[cal_f-1] - cc_vect[cal_l-1]
+        # print seg_end_l_pos - seg_start_l_pos
+        # print abs_end_pos - abs_start_pos
 
         curr_contig_struct.abs_start_pos = abs_start_pos
         curr_contig_struct.abs_end_pos = abs_end_pos
@@ -710,6 +713,7 @@ isCircular = circular_D[cycle_num]
 cycle = cycles[cycle_num]
 prev_seg_index_is_adj = adjacent_segs(cycle,segSeqD,isCircular)
 raw_cycle_length = get_raw_cycle_length(cycle,segSeqD,isCircular,prev_seg_index_is_adj)
+bpg_dict = parse_BPG(args.graph) if args.graph else {}
 # start_points,total_length = get_seg_locs_from_cycle(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj)
 if not args.om_alignments:
     ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular)
