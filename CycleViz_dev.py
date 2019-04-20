@@ -59,18 +59,28 @@ def pol2cart(rho, phi):
     return(x, y)
 
 def polar_series_to_cartesians(line_points,r):
-    x_list = []
-    y_list = []
-    for i in line_points:
-        x,y = pol2cart(r,i)
-        x_list.append(x)
-        y_list.append(y)
+    #homer brain
+    # x_list = []
+    # y_list = []
+    # for i in line_points:
+    #     x,y = pol2cart(r,i)
+    #     x_list.append(x)
+    #     y_list.append(y)
+
+    # return x_list,y_list
+
+    #better
+    # xy_tups = [pol2cart(r,i) for i in line_points]
+    # return zip(*xy_tups) 
+
+    #"galaxy brain"
+    return zip(*[pol2cart(r,i) for i in line_points])
+
         
-    return x_list,y_list
     
-def start_end_angle(normStart,normEnd,total_length_with_spacing):
-    start_angle = normStart/total_length_with_spacing*360
-    end_angle = normEnd/total_length_with_spacing*360
+def start_end_angle(normStart,normEnd,total_length):
+    start_angle = normStart/total_length*360
+    end_angle = normEnd/total_length*360
     # print start_angle,end_angle
     # text_angle = (start_angle + end_angle)/2.0
     if end_angle < 0 and start_angle > 0:
@@ -93,7 +103,6 @@ class CycleVizElemObj(object):
         self.start_trim = False
         self.end_trim = False
 
-
     def compute_label_posns(self):
         if self.direction == "+":
             if self.abs_start_pos == None:
@@ -115,8 +124,12 @@ class CycleVizElemObj(object):
             rev_cmap_vect = [self.cmap_vect[-1] - x for x in self.cmap_vect[::-1][1:]] #does not include length value
             for i in rev_cmap_vect:
                 self.label_posns.append(self.scaling_factor*i + self.abs_start_pos)
+            # for i in self.cmap_vect[:-1]:
+            #     self.label_posns.append(self.scaling_factor*i + self.abs_start_pos)
 
             self.label_posns = self.label_posns[::-1]
+            # if self.id == "161":
+            #     print self.label_posns[self.aln_lab_ends[0]:self.aln_lab_ends[-1] + 1]
 
     def to_string(self):
         return "{}{} | Start: {} | End: {} | scaling {}".format(self.id,self.direction,str(self.abs_start_pos),str(self.abs_end_pos),str(self.scaling_factor))
@@ -126,25 +139,58 @@ class CycleVizElemObj(object):
         #overhang should go to 1/3 of the unaligned cutoff threshold
 
         if self.start_trim:
-            if self.direction == "+":
-                self.abs_start_pos = self.aln_bound_posns[0] - unaligned_cutoff_frac*total_length/4.
+            p_abs_start = self.abs_start_pos
+            print "DOING s TRIM on " + self.id
+            self.abs_start_pos = self.aln_bound_posns[0] - unaligned_cutoff_frac*total_length/4.
+            # if self.direction == "+":
+            #     self.abs_start_pos = self.aln_bound_posns[0] - unaligned_cutoff_frac*total_length/4.
 
-            else:
-                self.abs_end_pos = self.aln_bound_posns[-1] + unaligned_cutoff_frac*total_length/4.
+            # else:
+            #     self.abs_start_pos = self.aln_bound_posns[0] - unaligned_cutoff_frac*total_length/4.
+
+            if self.direction == "-":
+                self.update_label_posns(p_abs_start - self.abs_start_pos)
+            print "now",self.abs_start_pos
+
+
 
         if self.end_trim:
-            if self.direction == "+":
-                self.abs_end_pos = self.aln_bound_posns[-1] + unaligned_cutoff_frac*total_length/4.
+            p_abs_end = self.abs_end_pos
+            print "DOING e TRIM on " + self.id
+            print self.aln_bound_posns
+            self.abs_end_pos = self.aln_bound_posns[-1] + unaligned_cutoff_frac*total_length/4.
+            # if self.direction == "+":
+            #     self.abs_end_pos = self.aln_bound_posns[-1] + unaligned_cutoff_frac*total_length/4.
 
-            else:
-                self.abs_start_pos = self.aln_bound_posns[0] - unaligned_cutoff_frac*total_length/4.
+            # else:
+            #     self.abs_end_pos = self.aln_bound_posns[-1] + unaligned_cutoff_frac*total_length/4.
+            if self.direction == "-":
+                self.update_label_posns(p_abs_end - self.abs_end_pos)
+
+            print "now",self.abs_end_pos
+
+        #UPDATE ALL LABEL POSNS
+
+        # self.compute_label_posns()
+
+    def update_label_posns(self,s_diff):
+        print "diff",s_diff
+        for ind in range(len(self.label_posns)):
+            self.label_posns[ind]-=s_diff
+
+
 
 #parse the breakpoint graph to indicate for two endpoints if there is an edge.
 def parse_BPG(BPG_file):
     bidirectional_edge_dict = defaultdict(set)
+    seg_end_pos_d = {}
+    seqnum = 0
     with open(BPG_file) as infile:
         for line in infile:
             fields = line.rstrip().rsplit()
+            if not fields:
+                continue
+
             if fields[0] in ["concordant","discordant"]:
                 e_rep = fields[1].rsplit("->")
                 start = e_rep[0][:-1]
@@ -152,7 +198,11 @@ def parse_BPG(BPG_file):
                 bidirectional_edge_dict[start].add(end)
                 bidirectional_edge_dict[end].add(start)
 
-    return bidirectional_edge_dict
+            elif fields[0] == "sequence":
+                seqnum+=1
+                seg_end_pos_d[str(seqnum)] = (fields[1][:-1],fields[2][:-1])
+
+    return bidirectional_edge_dict,seg_end_pos_d
 
 def parse_genes(chrom):
     # print("Building interval tree for chrom " + chrom)
@@ -189,7 +239,7 @@ def rel_genes(chrIntTree,pTup):
         tend = int(i.data[5])
         e_s_posns = [int(x) for x in i.data[9].rsplit(",") if x]
         e_e_posns = [int(x) for x in i.data[10].rsplit(",") if x]
-        if not gene.startswith("LOC") and not gene.startswith("LINC"):
+        if not gene.startswith("LOC") and not gene.startswith("LINC") and not gene.startswith("MIR"):
             if gene not in relGenes:
                 relGenes[gene] = (tstart,tend,zip(e_s_posns,e_e_posns))
 
@@ -205,8 +255,32 @@ def rel_genes(chrIntTree,pTup):
     
     return relGenes
 
+def pair_is_edge(a_id,b_id,a_dir,b_dir,bpg_dict,seg_end_pos_d):
+    rObj1_end = seg_end_pos_d[a_id][-1] if a_dir == "+" else seg_end_pos_d[a_id][0]
+    rObj2_start = seg_end_pos_d[b_id][0] if b_dir == "+" else seg_end_pos_d[b_id][-1]
+    return rObj1_end in bpg_dict[rObj2_start]
+
+def plot_bpg_connection(ref_placements,cycle,total_length,prev_seg_index_is_adj,bpg_dict,seg_end_pos_d):
+    connect_width = bar_width/2.
+    for ind,refObj in ref_placements.iteritems():
+        next_ind = (ind+1) % len(ref_placements)
+        next_refObj = ref_placements[next_ind]
+        if not prev_seg_index_is_adj[next_ind]: #or next_ind == 0 to try and close
+            bpg_adjacency = pair_is_edge(refObj.id, next_refObj.id,refObj.direction, next_refObj.direction, 
+                bpg_dict, seg_end_pos_d)
+
+            if not bpg_adjacency:
+                continue
+
+            start_angle, end_angle = start_end_angle(next_refObj.abs_start_pos,refObj.abs_end_pos,total_length)
+            #makes the reference genome wedges
+            patches.append(mpatches.Wedge((0,0), outer_bar - bar_width/4, end_angle, start_angle, width=connect_width))
+            f_color_v.append('grey')
+            e_color_v.append('grey')
+            lw_v.append(0.2)
+
 #must return positions of transcribed regions of genes here
-def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand):
+def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
     for ind,i in enumerate(relGenes):
         truncStart = False
         truncEnd = False
@@ -224,8 +298,8 @@ def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand
         # print max(0,tstart-pTup[1]),min(seg_len,tend-pTup[1]),seg_len
         # print i,normStart,normEnd, currStart, currStart+seg_len,tstart,tend,strand
 
-        start_angle = normStart/total_length_with_spacing*360
-        end_angle = normEnd/total_length_with_spacing*360
+        start_angle = normStart/total_length*360
+        end_angle = normEnd/total_length*360
         text_angle = (start_angle + end_angle)/2.0
         gene_to_locations[i].append((start_angle/360.,end_angle/360.))
         if end_angle < 0 and start_angle > 0:
@@ -253,7 +327,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length_with_spacing, strand
                     normEnd = currStart + min(pTup[2]-pTup[1],pTup[2]-exon[0])
                     normStart = currStart + max(1,pTup[2] - exon[1])
 
-                start_angle, end_angle = start_end_angle(normStart,normEnd,total_length_with_spacing)
+                start_angle, end_angle = start_end_angle(normStart,normEnd,total_length)
                 patches.append(mpatches.Wedge((0,0), outer_bar-bar_width/2.0, start_angle, end_angle, width=bar_width/2.0))
                 f_color_v.append('k')
                 e_color_v.append('k')
@@ -290,7 +364,7 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
                 text_angle = j[1]/total_length*360
                 x,y = pol2cart(outer_bar,(text_angle/360*2*np.pi))
                 x_t,y_t = pol2cart(outer_bar + 0.2,(text_angle/360*2*np.pi))
-                ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.2)
+                ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.25)
                 
                 text_angle,ha = correct_text_angle(text_angle)
                 txt = " " + str(int(round((j[0])/10000))) if ha == "left" else str(int(round((j[0])/10000))) + " "
@@ -333,11 +407,17 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
         e_color_v.append('k')
         lw_v.append(0)
 
+        # print "linewidth alt",0.2*1000000/total_length
+        linewidth = min(0.25*total_length/2000000,0.25)
         for i in segObj.label_posns:
+            if i > segObj.abs_end_pos or i < segObj.abs_start_pos:
+                continue
+
             label_rads = i/total_length*2*np.pi
             x,y = pol2cart(bar_height,label_rads)
             x_t,y_t = pol2cart(bar_height+bar_width,label_rads)
-            ax.plot([x,x_t],[y,y_t],color='k',alpha=0.9,linewidth=0.2)
+            # linewidth = min(0.2*2000000/total_length,0.2)
+            ax.plot([x,x_t],[y,y_t],color='k',alpha=0.9,linewidth=linewidth)
 
         if seg_id_labels:
             mid_sp = (segObj.abs_end_pos + segObj.abs_start_pos)/2
@@ -353,20 +433,30 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
 #plot the connecting lines for the bionano track
 def plot_alignment(contig_locs,segment_locs,total_length):
     segs_base = outer_bar+segment_bar_height
+    linewidth = min(0.25*total_length/2000000,0.25)
+    print "linewidth",linewidth,total_length
     for a_d in aln_vect:
         c_id = a_d["contig_id"]
+        c_num_dir = int(a_d["contig_dir"]+"1")
+        # s_num_dir = int(a_d["seg_dir"]+"1")
+        # s_num_dir_alt = int(segment_locs[a_d["seg_aln_number"]].direction+"1")
+
         contig_label_vect = contig_locs[c_id].label_posns
         seg_label_vect = segment_locs[a_d["seg_aln_number"]].label_posns
+        # c_l_pos = contig_label_vect[a_d["contig_label"]-1]
+        # c_l_pos = contig_label_vect[c_num_dir*a_d["contig_label"]-(c_num_dir+1)/2]
+        # if s_num_dir == -1 and c_num_dir == -1:
+        #     c_l_pos = contig_label_vect[-1*a_d["contig_label"]]
+        # else:
         c_l_pos = contig_label_vect[a_d["contig_label"]-1]
-        if c_l_pos > contig_locs[c_id].abs_end_pos or c_l_pos < contig_locs[c_id].abs_start_pos:
-            continue
-
         c_l_loc = c_l_pos/total_length*2.*np.pi
-        s_l_loc = seg_label_vect[a_d["seg_label"]-1]/total_length*2.*np.pi
+        # s_l_pos = seg_label_vect[s_num_dir*a_d["seg_label"]-(s_num_dir+1)/2]
+        s_l_pos = seg_label_vect[a_d["seg_label"]-1]
+        s_l_loc = s_l_pos/total_length*2.*np.pi
         contig_top = outer_bar + contig_bar_height + contig_locs[c_id].track_height_shift + bar_width
         x_c,y_c = pol2cart(contig_top,c_l_loc)
         x_s,y_s = pol2cart(segs_base,s_l_loc)
-        ax.plot([x_c, x_s], [y_c, y_s], color="grey",linewidth=0.2)
+        ax.plot([x_c, x_s], [y_c, y_s], color="grey",linewidth=linewidth)
 
 def parse_cycles_file(cycles_file):
     cycles = {}
@@ -632,27 +722,7 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
 
         print "SEG PLACEMENT ",c_id
         print abs_start_pos,abs_end_pos
-        print seg_start_l_pos,abs_start_pos
-        
-        # if contig_dir == "+":
-        #     abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
-        #     # abs_end_pos = abs_start_pos + (cc_vect[-2] + (cc_vect[-1] - cc_vect[cal_l-1]))*scaling_factor
-        #     abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
-
-        # else:
-        #     # abs_start_pos = seg_end_l_pos - (cc_vect[-1] - cc_vect[cal_l-1])*scaling_factor
-        #     abs_start_pos = seg_end_l_pos - (cc_vect[cal_f-1])*scaling_factor
-        #     # abs_start_pos = seg_end_l_pos - (cc_vect[-1])*scaling_factor
-        #     # abs_end_pos = seg_start_l_pos + (cc_vect[cal_f-1])*scaling_factor
-        #     abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
-        #     # abs_end_pos = seg_start_l_pos + cc_vect[cal_f-1]*scaling_factor
-        #     # abs_start_pos = (abs_end_pos - cc_vect[-2])*scaling_factor
-
-        #s,t unset until label posns computed
-        # print "dists"
-        # print cc_vect[cal_f-1] - cc_vect[cal_l-1]
-        # print seg_end_l_pos - seg_start_l_pos
-        # print abs_end_pos - abs_start_pos
+        print seg_start_l_pos,seg_end_l_pos,scaling_factor
 
         curr_contig_struct.abs_start_pos = abs_start_pos
         curr_contig_struct.abs_end_pos = abs_end_pos
@@ -662,6 +732,8 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
 
         csl = min(i_list[-1]["contig_label"],i_list[0]["contig_label"])
         cel = max(i_list[-1]["contig_label"],i_list[0]["contig_label"])
+        print "CSL/CEL",csl,cel
+        print ""
         #SET FIRST AND LAST LABEL ALIGNED IN THE CONTIG
         curr_contig_struct.aln_lab_ends = (csl,cel)
         curr_contig_struct.compute_label_posns()
@@ -713,7 +785,18 @@ isCircular = circular_D[cycle_num]
 cycle = cycles[cycle_num]
 prev_seg_index_is_adj = adjacent_segs(cycle,segSeqD,isCircular)
 raw_cycle_length = get_raw_cycle_length(cycle,segSeqD,isCircular,prev_seg_index_is_adj)
-bpg_dict = parse_BPG(args.graph) if args.graph else {}
+
+bpg_dict,seg_end_pos_d = {},{}
+if args.graph:
+    bpg_dict,seg_end_pos_d = parse_BPG(args.graph)
+
+# for i,k in seg_end_pos_d.iteritems():
+#     print i,k
+
+# print ""
+# for i,k in bpg_dict.iteritems():
+#     print i,k
+
 # start_points,total_length = get_seg_locs_from_cycle(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj)
 if not args.om_alignments:
     ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular)
@@ -781,6 +864,9 @@ else:
 imputed_status = imputed_status_from_aln(aln_vect,len(cycle))
 #plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,label_segs=True)
 plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,args.label_segs)
+
+if args.graph:
+    plot_bpg_connection(ref_placements,cycle,total_length,prev_seg_index_is_adj,bpg_dict,seg_end_pos_d)
 
 ax.set_xlim(-(outer_bar+1.25), (outer_bar+1.25))
 ax.set_ylim(-(outer_bar+1.25), (outer_bar+1.25))
