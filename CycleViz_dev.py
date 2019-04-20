@@ -876,7 +876,7 @@ chrom_set = set()
 for i in cycle:
     chrom_set.add(segSeqD[i[0]][0])
 
-sorted_chrom = sorted(chrom_set,key=lambda x:int(x.rsplit("chr")[-1]))
+sorted_chrom = sorted(chrom_set,key=lambda x:x.rsplit("chr")[-1])
 sorted_chrom_colors = [chromosome_colors[x] for x in sorted_chrom]
 legend_patches = []
 for chrom,color in zip(sorted_chrom,sorted_chrom_colors):
