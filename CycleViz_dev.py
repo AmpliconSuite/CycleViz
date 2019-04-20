@@ -607,11 +607,13 @@ def decide_trim_contigs(contig_cmap_vects,contig_placements,total_length):
 #SET COLORS
 def get_chr_colors():
     to_add = plt.cm.get_cmap(None, 4).colors[1:]
-    color_vect = ["#f2bfca","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
+    color_vect = ["#ffe8ed","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
                  to_add[2],"#017374","#734a65","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
-                 "xkcd:purpley","xkcd:topaz","lavender","darkseagreen","powderblue","#ff073a",to_add[1],"magenta"]
+                 "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","#ff073a",to_add[1],
+                 "magenta"]
 
-    chromosome_colors = dict(zip(["chr" + str(i) for i in range(1,24)],color_vect))
+    chrnames = [str(i) for i in (range(1,22) + ["X","Y"])]
+    chromosome_colors = dict(zip(["chr" + i for i in chrnames],color_vect))
     return chromosome_colors
 
 #TEMP SOLUTION (will break if too many consecutive overlaps)
