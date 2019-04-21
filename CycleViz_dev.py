@@ -607,12 +607,17 @@ def decide_trim_contigs(contig_cmap_vects,contig_placements,total_length):
 #SET COLORS
 def get_chr_colors():
     to_add = plt.cm.get_cmap(None, 4).colors[1:]
-    color_vect = ["#ffe8ed","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
-                 to_add[2],"#017374","#734a65","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
-                 "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","#ff073a",to_add[1],
-                 "magenta"]
+    # color_vect = ["#ffe8ed","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
+    #              to_add[2],"#017374","#734a65","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
+    #              "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","#ff073a",to_add[1],
+    #              "magenta","plum"]
 
-    chrnames = [str(i) for i in (range(1,22) + ["X","Y"])]
+    color_vect= ["aqua","gainsboro","salmon","bisque",'goldenrod',"xkcd:algae",to_add[0],"darkslateblue",
+                 "yellow","sienna","purple","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
+                 "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","crimson",to_add[1],
+                 "fuchsia","pink"]
+
+    chrnames = [str(i) for i in (range(1,23) + ["X","Y"])]
     chromosome_colors = dict(zip(["chr" + i for i in chrnames],color_vect))
     return chromosome_colors
 
