@@ -29,7 +29,7 @@ except KeyError:
 
 from bionanoUtil import *
 
-contig_spacing = 0.01
+contig_spacing = 0.02
 seg_spacing = 0.009
 bar_width = 2.5/3
 global_rot = 90.0
