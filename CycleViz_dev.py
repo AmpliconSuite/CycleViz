@@ -29,7 +29,7 @@ except KeyError:
 
 from bionanoUtil import *
 
-contig_spacing = 0.015
+contig_spacing = 0.01
 seg_spacing = 0.009
 bar_width = 2.5/3
 global_rot = 90.0
@@ -707,11 +707,15 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
             seg_end_l_pos = total_length + seg_end_l_pos
 
         #compute scaling
-        scaled_seg_dist  = abs(seg_end_l_pos - seg_start_l_pos)*(1-contig_spacing/2)
+        scaled_seg_dist  = abs(seg_end_l_pos - seg_start_l_pos)*(1-contig_spacing)
         scaling_factor = scaled_seg_dist/(abs(cc_vect[cal_f-1] - cc_vect[cal_l-1]))
         #SET CONTIG SCALING FACTOR
         curr_contig_struct.scaling_factor = scaling_factor
         #print scaling_factor,c_id
+
+        #bump it by spacing/2
+        seg_start_l_pos = (1+contig_spacing/2)*seg_start_l_pos
+        seg_end_l_pos = (1+contig_spacing/2)*seg_end_l_pos
 
         if contig_dir == "+":
             abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
