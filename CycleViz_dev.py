@@ -29,7 +29,7 @@ except KeyError:
 
 from bionanoUtil import *
 
-contig_spacing = 0.02
+contig_spacing = 0.0
 seg_spacing = 0.009
 bar_width = 2.5/3
 global_rot = 90.0
@@ -169,16 +169,12 @@ class CycleVizElemObj(object):
 
             print "now",self.abs_end_pos
 
-        #UPDATE ALL LABEL POSNS
-
-        # self.compute_label_posns()
-
+        
+    #update label positions after trimming contigs
     def update_label_posns(self,s_diff):
         print "diff",s_diff
         for ind in range(len(self.label_posns)):
             self.label_posns[ind]-=s_diff
-
-
 
 #parse the breakpoint graph to indicate for two endpoints if there is an edge.
 def parse_BPG(BPG_file):
@@ -203,6 +199,19 @@ def parse_BPG(BPG_file):
                 seg_end_pos_d[str(seqnum)] = (fields[1][:-1],fields[2][:-1])
 
     return bidirectional_edge_dict,seg_end_pos_d
+
+#extract oncogenes from the bushman lab file, assumes refseq name in last column
+def parse_gene_subset_file(gene_list_file):
+    gene_set = set()
+    with open(gene_list_file) as infile:
+        for line in infile:
+            fields = line.rstrip().split()
+            if not fields:
+                continue
+
+            gene_set.add(fields[-1].strip("\""))
+
+    return gene_set
 
 def parse_genes(chrom):
     # print("Building interval tree for chrom " + chrom)
@@ -229,17 +238,22 @@ def correct_text_angle(text_angle):
 
     return text_angle,ha
 
-def rel_genes(chrIntTree,pTup):    
+def rel_genes(chrIntTree,pTup, gene_set = set()):    
     relGenes = {}
     chrom = pTup[0]
     overlappingT = chrIntTree[pTup[1]:pTup[2]]
+    gene_set_only = (len(gene_set) == 0)
     for i in overlappingT:
         gene = i.data[-4].rsplit("-")[0]
         tstart = int(i.data[4])
         tend = int(i.data[5])
         e_s_posns = [int(x) for x in i.data[9].rsplit(",") if x]
-        e_e_posns = [int(x) for x in i.data[10].rsplit(",") if x]
-        if not gene.startswith("LOC") and not gene.startswith("LINC") and not gene.startswith("MIR"):
+        e_e_posns = [int(x) for x in i.data[10].rsplit(",") if x] 
+        is_other_feature = (gene.startswith("LOC") or gene.startswith("LINC") or gene.startswith("MIR"))
+        if gene_set_only:
+            gene_set.add(gene)
+
+        if not is_other_feature and gene in gene_set:
             if gene not in relGenes:
                 relGenes[gene] = (tstart,tend,zip(e_s_posns,e_e_posns))
 
@@ -334,7 +348,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
                 lw_v.append(0)
 
 #plot the reference genome
-def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,label_segs=True):
+def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,label_segs,onco_set=set()):
     font0 = FontProperties()
     rot_sp = global_rot/360.*total_length
     for ind,refObj in ref_placements.iteritems():
@@ -373,7 +387,7 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
                 ha=ha,fontsize=6,rotation_mode='anchor')
     
         gene_tree = parse_genes(seg_coord_tup[0])
-        relGenes = rel_genes(gene_tree,seg_coord_tup)
+        relGenes = rel_genes(gene_tree,seg_coord_tup,onco_set)
         #plot the gene track
         plot_gene_track(refObj.abs_start_pos,relGenes,seg_coord_tup,total_length,cycle[ind][1])
 
@@ -719,8 +733,8 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
         #print scaling_factor,c_id
 
         #bump it by spacing/2
-        seg_start_l_pos = (1+contig_spacing/2)*seg_start_l_pos
-        seg_end_l_pos = (1+contig_spacing/2)*seg_end_l_pos
+        # seg_start_l_pos = (1+contig_spacing/2)*seg_start_l_pos
+        # seg_end_l_pos = (1+contig_spacing/2)*seg_end_l_pos
 
         if contig_dir == "+":
             abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
@@ -769,7 +783,7 @@ parser.add_argument("--feature_files",help="bed file list",nargs="+")
 parser.add_argument("--feature_labels",help="bed feature names",nargs="+",default=[])
 parser.add_argument("--log10_features",help="features which have been log10 scaled",nargs="+")
 parser.add_argument("--transcript_features",help="features which are transcript info",nargs="+")
-parser.add_argument("--oncogenes_only",help="only show oncogenes in the annotation track",action='store_true')
+parser.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)")
 
 args = parser.parse_args()
 
@@ -800,6 +814,10 @@ raw_cycle_length = get_raw_cycle_length(cycle,segSeqD,isCircular,prev_seg_index_
 bpg_dict,seg_end_pos_d = {},{}
 if args.graph:
     bpg_dict,seg_end_pos_d = parse_BPG(args.graph)
+
+gene_set = set()
+if args.gene_subset_file:
+    gene_set = parse_gene_subset_file(args.gene_subset_file)
 
 # for i,k in seg_end_pos_d.iteritems():
 #     print i,k
@@ -874,7 +892,7 @@ else:
 
 imputed_status = imputed_status_from_aln(aln_vect,len(cycle))
 #plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,label_segs=True)
-plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,args.label_segs)
+plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,args.label_segs,gene_set)
 
 if args.graph:
     plot_bpg_connection(ref_placements,cycle,total_length,prev_seg_index_is_adj,bpg_dict,seg_end_pos_d)
