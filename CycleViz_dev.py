@@ -38,7 +38,7 @@ outer_bar = 10
 bed_spacing = .5
 contig_bar_height = -14/3
 segment_bar_height = -8.0/3
-unaligned_cutoff_frac = 1./45
+unaligned_cutoff_frac = 1./60
 
 gene_to_locations = defaultdict(list)
 
@@ -422,7 +422,7 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
         lw_v.append(0)
 
         # print "linewidth alt",0.2*1000000/total_length
-        linewidth = min(0.25*total_length/2000000,0.25)
+        linewidth = min(0.25*2000000/total_length,0.25)
         for i in segObj.label_posns:
             if i > segObj.abs_end_pos or i < segObj.abs_start_pos:
                 continue
@@ -447,7 +447,7 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
 #plot the connecting lines for the bionano track
 def plot_alignment(contig_locs,segment_locs,total_length):
     segs_base = outer_bar+segment_bar_height
-    linewidth = min(0.25*total_length/2000000,0.25)
+    linewidth = min(0.25*2000000/total_length,0.25)
     print "linewidth",linewidth,total_length
     for a_d in aln_vect:
         c_id = a_d["contig_id"]
