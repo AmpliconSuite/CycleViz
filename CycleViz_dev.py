@@ -387,7 +387,7 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
                 ha=ha,fontsize=6,rotation_mode='anchor')
     
         gene_tree = parse_genes(seg_coord_tup[0])
-        relGenes = rel_genes(gene_tree,seg_coord_tup,onco_set)
+        relGenes = rel_genes(gene_tree,seg_coord_tup,copy.copy(onco_set))
         #plot the gene track
         plot_gene_track(refObj.abs_start_pos,relGenes,seg_coord_tup,total_length,cycle[ind][1])
 
