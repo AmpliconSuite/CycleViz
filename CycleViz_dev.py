@@ -829,6 +829,7 @@ if args.gene_subset_file:
 # start_points,total_length = get_seg_locs_from_cycle(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj)
 if not args.om_alignments:
     ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular)
+    imputed_status = [False]*len(cycle)
 
 else:
     seg_cmaps = parse_cmap(args.segs,True)
@@ -875,6 +876,8 @@ else:
     #plot alignments
     plot_alignment(contig_placements,cycle_seg_placements,total_length)
 
+    imputed_status = imputed_status_from_aln(aln_vect,len(cycle))
+
     # contig_lab_dict = {}
     # for c_tup,start_posn in contig_locs.iteritems():
     #     contig_cycle = [c_tup]
@@ -890,7 +893,6 @@ else:
     # if len(cycle) > 1 and aln_vect[-1]["seg_aln_number"] == "0":
     #     aln_nums.append(0)
 
-imputed_status = imputed_status_from_aln(aln_vect,len(cycle))
 #plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,label_segs=True)
 plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,args.label_segs,gene_set)
 
@@ -922,4 +924,4 @@ plt.savefig(fname + '.png',dpi=600)
 plt.savefig(fname + '.pdf',format='pdf')
 
 plt.close()
-print "done plotting bionano"
+print "plotting completed"
