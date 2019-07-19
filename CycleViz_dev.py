@@ -79,13 +79,17 @@ def polar_series_to_cartesians(line_points,r):
         
     
 def start_end_angle(normStart,normEnd,total_length):
+    print "init norm_e_s",normStart,normEnd
     start_angle = normStart/total_length*360
     end_angle = normEnd/total_length*360
     # print start_angle,end_angle
     # text_angle = (start_angle + end_angle)/2.0
+    print "init s_e_angle",start_angle,end_angle
     if end_angle < 0 and start_angle > 0:
         end_angle+=360
-
+    ##    start_angle,end_angle = end_angle,start_angle
+    
+    print "s_e_angle",start_angle,end_angle
     return start_angle,end_angle
 
 class CycleVizElemObj(object):
@@ -387,7 +391,7 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
                 ha=ha,fontsize=6,rotation_mode='anchor')
     
         gene_tree = parse_genes(seg_coord_tup[0])
-        relGenes = rel_genes(gene_tree,seg_coord_tup,copy.copy(onco_set))
+        relGenes = rel_genes(gene_tree,seg_coord_tup,onco_set)
         #plot the gene track
         plot_gene_track(refObj.abs_start_pos,relGenes,seg_coord_tup,total_length,cycle[ind][1])
 
@@ -411,9 +415,9 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
     cycle_label_locs = defaultdict(list)
     for ind,segObj in seg_placements.iteritems():
         bar_height = unadj_bar_height + segObj.track_height_shift
-        # print "cmap_plot"
-        # print segObj.id
-        # print segObj.abs_end_pos,segObj.abs_start_pos
+        print "cmap_plot",segObj.id
+        print "cmap plotting abs end pos are"
+        print segObj.abs_end_pos,segObj.abs_start_pos
         start_angle, end_angle = start_end_angle(segObj.abs_end_pos,segObj.abs_start_pos,total_length)
         # print start_angle,end_angle
         patches.append(mpatches.Wedge((0,0), bar_height + bar_width, end_angle, start_angle, width=bar_width))
@@ -506,6 +510,43 @@ def parse_cycles_file(cycles_file):
 
     return cycles,segSeqD,circular_D
 
+def check_segdup(aln_vect,cycle,circular):
+    print("Checking if segdup")
+    #iterate over and delete the second half it's bad
+    num_contigs = len(set([x["contig_id"] for x in aln_vect]))
+    if num_contigs != 1:
+        return False,-1
+
+    if len(cycle) == 1 and circular:
+        split_ind = -1
+        direction = cycle[0][-1]
+        first_set = set()
+        second_set = set()
+        first_label = aln_vect[0]["seg_label"]
+        first_set.add(first_label)
+        prev = first_label
+        direction = "+" if aln_vect[1]["seg_label"] - first_label > 0 else "-"
+        for ind,i in enumerate(aln_vect[1:]):
+            curr_label = i["seg_label"]
+            if not curr_label < prev and direction == "+":
+                first_set.add(curr_label)
+                prev = curr_label
+
+            elif not curr_label > prev and direction == "-":
+                first_set.add(curr_label)
+                prev = curr_label
+                
+            else:
+                second_set.add(curr_label)
+                if split_ind == -1:
+                    split_ind = ind+1
+
+        s1,s2 = sorted([len(first_set),len(second_set)])
+        print s1,s2,split_ind,s1/float(s2)
+        return (s1/float(s2) > .25),split_ind
+
+    return False,-1
+                
 def parse_alnfile(path_aln_file):
     aln_vect = []
     with open(path_aln_file) as infile:
@@ -721,13 +762,16 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
         #look up position of last one
         segObj_end = cycle_seg_placements[san_l]
         seg_end_l_pos = segObj_end.label_posns[sal_l-1]
-
+       
         if seg_end_l_pos < seg_start_l_pos:
             seg_end_l_pos = total_length + seg_end_l_pos
 
         #compute scaling
+        print c_id,"comp_scaling"
         scaled_seg_dist  = abs(seg_end_l_pos - seg_start_l_pos)*(1-contig_spacing)
         scaling_factor = scaled_seg_dist/(abs(cc_vect[cal_f-1] - cc_vect[cal_l-1]))
+        print seg_start_l_pos,seg_end_l_pos,1-contig_spacing,scaled_seg_dist,total_length
+        print scaled_seg_dist,scaling_factor
         #SET CONTIG SCALING FACTOR
         curr_contig_struct.scaling_factor = scaling_factor
         #print scaling_factor,c_id
@@ -741,8 +785,10 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
             abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
 
         else:
+            print "applying scaling to ends"
             abs_start_pos = seg_start_l_pos - (cc_vect[cal_l-1])*scaling_factor
             abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
+            print "now",abs_start_pos,abs_end_pos
 
 
         print "SEG PLACEMENT ",c_id
@@ -829,13 +875,21 @@ if args.gene_subset_file:
 # start_points,total_length = get_seg_locs_from_cycle(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj)
 if not args.om_alignments:
     ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular)
-    imputed_status = [False]*len(cycle)
 
 else:
     seg_cmaps = parse_cmap(args.segs,True)
     seg_cmap_vects = vectorize_cmaps(seg_cmaps)
     seg_cmap_lens = get_cmap_lens(args.segs)
     aln_vect,meta_dict = parse_alnfile(args.path_alignment)
+    is_segdup,split_ind = check_segdup(aln_vect,cycle,isCircular)
+    if is_segdup:
+        print("alignment shows simple segdup")
+        cycle = [cycle[0]]*2
+        print cycle
+        isCircular = False
+        prev_seg_index_is_adj = [False,True]
+        for a_ind in range(split_ind,len(aln_vect)):
+            aln_vect[a_ind]["seg_aln_number"] = 1
 
     ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular,aln_vect)
     cycle_seg_placements = place_cycle_segs_and_labels(cycle,ref_placements,seg_cmap_vects)
@@ -876,8 +930,6 @@ else:
     #plot alignments
     plot_alignment(contig_placements,cycle_seg_placements,total_length)
 
-    imputed_status = imputed_status_from_aln(aln_vect,len(cycle))
-
     # contig_lab_dict = {}
     # for c_tup,start_posn in contig_locs.iteritems():
     #     contig_cycle = [c_tup]
@@ -893,6 +945,7 @@ else:
     # if len(cycle) > 1 and aln_vect[-1]["seg_aln_number"] == "0":
     #     aln_nums.append(0)
 
+imputed_status = imputed_status_from_aln(aln_vect,len(cycle))
 #plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,label_segs=True)
 plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,args.label_segs,gene_set)
 
@@ -924,4 +977,4 @@ plt.savefig(fname + '.png',dpi=600)
 plt.savefig(fname + '.pdf',format='pdf')
 
 plt.close()
-print "plotting completed"
+print "done plotting bionano"
