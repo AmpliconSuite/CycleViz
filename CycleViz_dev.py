@@ -29,7 +29,7 @@ except KeyError:
 
 from bionanoUtil import *
 
-contig_spacing = 0.0
+contig_spacing = 1./100
 seg_spacing = 0.009
 bar_width = 2.5/3
 global_rot = 90.0
@@ -79,17 +79,21 @@ def polar_series_to_cartesians(line_points,r):
         
     
 def start_end_angle(normStart,normEnd,total_length):
-    print "init norm_e_s",normStart,normEnd
+    #print "init norm_e_s",normStart,normEnd
     start_angle = normStart/total_length*360
     end_angle = normEnd/total_length*360
     # print start_angle,end_angle
     # text_angle = (start_angle + end_angle)/2.0
-    print "init s_e_angle",start_angle,end_angle
+    #print "init s_e_angle",start_angle,end_angle
     if end_angle < 0 and start_angle > 0:
         end_angle+=360
     ##    start_angle,end_angle = end_angle,start_angle
+
+    #handle circularl contig
+    if start_angle > 360 and start_angle % 360 > end_angle:
+        start_angle,end_angle = 360,0
     
-    print "s_e_angle",start_angle,end_angle
+    #print "s_e_angle",start_angle,end_angle
     return start_angle,end_angle
 
 class CycleVizElemObj(object):
@@ -764,7 +768,15 @@ def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_c
         seg_end_l_pos = segObj_end.label_posns[sal_l-1]
        
         if seg_end_l_pos < seg_start_l_pos:
-            seg_end_l_pos = total_length + seg_end_l_pos
+            seg_end_l_pos+= total_length
+
+        #catch case where contig is overcircularized (e.g. circular assembly)
+        if len(contig_aln_dict) == 1 and isCircular and len(i_list) > 2:
+            san_s = i_list[1]["seg_aln_number"]
+            segObj_second = cycle_seg_placements[san_s]
+            second_seg_abs_end_pos = segObj_second.abs_end_pos
+            if seg_end_l_pos < second_seg_abs_end_pos:
+                seg_end_l_pos+=total_length
 
         #compute scaling
         print c_id,"comp_scaling"
