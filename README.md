@@ -1,7 +1,7 @@
 # CycleViz
 Visualize outputs of AmpliconReconstructor in Circos-style images. 
 
-Requires matplotlib version 2.0.0 or higher and intervaltree python module. 
+Requires python2 and matplotlib version 2.0.0 or higher and intervaltree python module. 
 
 To check your matplotlib version in python, type
 ```
