@@ -1,5 +1,7 @@
 import sys
 import os
+import copy
+import bisect
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -7,7 +9,7 @@ from collections import defaultdict
 from matplotlib import pyplot as plt
 from intervaltree import Interval, IntervalTree
 
-
+contig_spacing = 1./100
 unaligned_cutoff_frac = 1./60
 
 def round_to_1_sig(x):
@@ -103,6 +105,23 @@ class CycleVizElemObj(object):
         print "diff",s_diff
         for ind in range(len(self.label_posns)):
             self.label_posns[ind]-=s_diff
+
+#SET COLORS
+def get_chr_colors():
+    to_add = plt.cm.get_cmap(None, 4).colors[1:]
+    # color_vect = ["#ffe8ed","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
+    #              to_add[2],"#017374","#734a65","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
+    #              "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","#ff073a",to_add[1],
+    #              "magenta","plum"]
+
+    color_vect= ["aqua","gainsboro","salmon","bisque",'goldenrod',"xkcd:algae",to_add[0],"darkslateblue",
+                 "yellow","sienna","purple","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
+                 "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","crimson",to_add[1],
+                 "fuchsia","pink"]
+
+    chrnames = [str(i) for i in (range(1,23) + ["X","Y"])]
+    chromosome_colors = dict(zip(["chr" + i for i in chrnames],color_vect))
+    return chromosome_colors
 
 #parse the breakpoint graph to indicate for two endpoints if there is an edge.
 def parse_BPG(BPG_file):
@@ -217,7 +236,7 @@ def parse_cycles_file(cycles_file):
                 segSeqD[segNum] = (chrom,lowerBound,upperBound)
 
             elif "Cycle=" in line:
-                isCircular = True
+                isCycle = True
                 curr_cycle = []
                 fields = line.rstrip().rsplit(";")
                 lineD = {x.rsplit("=")[0]:x.rsplit("=")[1] for x in fields}
@@ -229,10 +248,10 @@ def parse_cycles_file(cycles_file):
                         curr_cycle.append((seg,strand))
 
                     else:
-                        isCircular = False
+                        isCycle = False
 
                 cycles[lineD["Cycle"]] = curr_cycle
-                circular_D[lineD["Cycle"]] = isCircular
+                circular_D[lineD["Cycle"]] = isCycle
 
     return cycles,segSeqD,circular_D
 
@@ -291,7 +310,7 @@ def parse_alnfile(path_aln_file):
     return aln_vect,meta_dict
 
 #determine segments linearly adjacent in ref genome
-def adjacent_segs(cycle,segSeqD,isCircular):
+def adjacent_segs(cycle,segSeqD,isCycle):
     print "checking adjacency"
     prev_seg_index_is_adj = [False]*len(cycle)
     p_end = segSeqD[cycle[0][0]][2] if cycle[0][1] == "+" else segSeqD[cycle[0][0]][1]
@@ -307,7 +326,7 @@ def adjacent_segs(cycle,segSeqD,isCircular):
         p_chrom = curr_chrom
 
 
-    if isCircular and len(cycle) > 1:
+    if isCycle and len(cycle) > 1:
         init_start = segSeqD[cycle[0][0]][2] if cycle[0][1] == "-" else segSeqD[cycle[0][0]][1]
         init_chr = segSeqD[cycle[0][0]][0]
         if p_chrom == curr_chrom and abs(init_start - p_end) == 1:
@@ -316,14 +335,14 @@ def adjacent_segs(cycle,segSeqD,isCircular):
     # print prev_seg_index_is_adj
     return prev_seg_index_is_adj
 
-def get_raw_cycle_length(cycle,segSeqD,isCircular,prev_seg_index_is_adj):
-    raw_cycle_length= 0.0
-    for i in cycle:
+def get_raw_path_length(path,segSeqD,isCycle,prev_seg_index_is_adj):
+    raw_path_length= 0.0
+    for i in path:
         s_tup = segSeqD[i[0]]
         s_len = s_tup[2] - s_tup[1]
-        raw_cycle_length+=s_len
+        raw_path_length+=s_len
 
-    return raw_cycle_length
+    return raw_path_length
 
 #segment is imputed by AR or not
 def imputed_status_from_aln(aln_vect,cycle_len):
@@ -362,19 +381,152 @@ def decide_trim_contigs(contig_cmap_vects,contig_placements,total_length):
         if cObj.start_trim or cObj.end_trim:
             cObj.trim_obj_ends(total_length)
 
-#SET COLORS
-def get_chr_colors():
-    to_add = plt.cm.get_cmap(None, 4).colors[1:]
-    # color_vect = ["#ffe8ed","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
-    #              to_add[2],"#017374","#734a65","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
-    #              "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","#ff073a",to_add[1],
-    #              "magenta","plum"]
+#TEMP SOLUTION (will break if too many consecutive overlaps)
+def set_contig_height_shifts(contig_placements,contig_list,scale_mult=1):
+    print "SETTING HEIGHTS"
+    prev_offset = 0
+    for ind,i in enumerate(contig_list[1:]):
+        prevObj = contig_placements[contig_list[ind]]
+        currObj = contig_placements[i]
 
-    color_vect= ["aqua","gainsboro","salmon","bisque",'goldenrod',"xkcd:algae",to_add[0],"darkslateblue",
-                 "yellow","sienna","purple","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
-                 "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","crimson",to_add[1],
-                 "fuchsia","pink"]
+        if currObj.abs_start_pos < prevObj.abs_end_pos:
+            shift_mult = -1 if prev_offset == 0 else 0
+            currObj.track_height_shift = shift_mult*1.5*scale_mult
+            prev_offset = shift_mult
 
-    chrnames = [str(i) for i in (range(1,23) + ["X","Y"])]
-    chromosome_colors = dict(zip(["chr" + i for i in chrnames],color_vect))
-    return chromosome_colors
+        else:
+            prev_offset = 0
+
+
+
+
+def place_path_segs_and_labels(path,ref_placements,seg_cmap_vects):
+    path_seg_placements = {}
+    for ind,i in enumerate(path):
+        refObj = ref_placements[ind]
+        segObj = copy.deepcopy(refObj)
+        segObj.cmap_vect = seg_cmap_vects[i[0]]
+        segObj.compute_label_posns()
+        path_seg_placements[ind] = segObj
+
+    return path_seg_placements
+
+#create an object for each contig encoding variables such as position of start and end of contig (absolute ends)
+#and positioning of contig labels
+def place_contigs_and_labels(path_seg_placements,aln_vect,total_length,contig_cmap_vects,isCycle,circularViz):
+    used_contigs = set()
+    contig_aln_dict = defaultdict(list)
+    wraparound = []
+    contig_list = []
+    for i in aln_vect:
+        c_id = i["contig_id"]
+        contig_aln_dict[c_id].append(i)
+        if c_id not in contig_list: contig_list.append(c_id)
+
+    contig_span_dict = {}
+    for c_id,i_list in contig_aln_dict.iteritems():
+        #print "placing contigs computation step"
+        #print c_id
+        cc_vect = contig_cmap_vects[c_id]
+        san_f = i_list[0]["seg_aln_number"]
+        sal_f = i_list[0]["seg_label"]
+        cal_f = i_list[0]["contig_label"]
+        san_l = i_list[-1]["seg_aln_number"]
+        sal_l = i_list[-1]["seg_label"]
+        cal_l = i_list[-1]["contig_label"]
+        contig_dir = i_list[0]["contig_dir"]
+        #print san_f,sal_f,cal_f
+        #print san_l,sal_l,cal_l
+        curr_contig_struct = CycleVizElemObj(c_id,contig_dir,None,None,cc_vect)
+
+        #look up aln posns from path_seg_placements
+        #look up position of first one
+        segObj_start = path_seg_placements[san_f]
+        seg_start_l_pos = segObj_start.label_posns[sal_f-1]
+
+        #look up position of last one
+        segObj_end = path_seg_placements[san_l]
+        seg_end_l_pos = segObj_end.label_posns[sal_l-1]
+       
+        if seg_end_l_pos < seg_start_l_pos:
+            seg_end_l_pos+= total_length
+
+        #catch case where contig is overcircularized (e.g. circular assembly)
+        if len(contig_aln_dict) == 1 and isCycle and len(i_list) > 2:
+            san_s = i_list[1]["seg_aln_number"]
+            segObj_second = path_seg_placements[san_s]
+            second_seg_abs_end_pos = segObj_second.abs_end_pos
+            if seg_end_l_pos < second_seg_abs_end_pos:
+                seg_end_l_pos+=total_length
+
+        #compute scaling
+        scaling_factor = 1
+        if circularViz:
+            print c_id,"comp_scaling"
+            scaled_seg_dist  = abs(seg_end_l_pos - seg_start_l_pos)*(1-contig_spacing)
+            scaling_factor = scaled_seg_dist/(abs(cc_vect[cal_f-1] - cc_vect[cal_l-1]))
+            print seg_start_l_pos,seg_end_l_pos,1-contig_spacing,scaled_seg_dist,total_length
+            print scaled_seg_dist,scaling_factor
+            #SET CONTIG SCALING FACTOR
+
+        curr_contig_struct.scaling_factor = scaling_factor
+        #print scaling_factor,c_id
+
+        if contig_dir == "+":
+            abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
+            abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
+
+        else:
+            print "applying scaling to ends"
+            abs_start_pos = seg_start_l_pos - (cc_vect[cal_l-1])*scaling_factor
+            abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
+            print "now",abs_start_pos,abs_end_pos
+
+
+        print "SEG PLACEMENT ",c_id
+        print abs_start_pos,abs_end_pos
+        print seg_start_l_pos,seg_end_l_pos,scaling_factor
+
+        curr_contig_struct.abs_start_pos = abs_start_pos
+        curr_contig_struct.abs_end_pos = abs_end_pos
+
+        #SET BOUNDARY ALN POSITIONS FROM TRACK
+        curr_contig_struct.aln_bound_posns = (seg_start_l_pos,seg_end_l_pos)
+
+        csl = min(i_list[-1]["contig_label"],i_list[0]["contig_label"])
+        cel = max(i_list[-1]["contig_label"],i_list[0]["contig_label"])
+        print "CSL/CEL",csl,cel
+        print ""
+        #SET FIRST AND LAST LABEL ALIGNED IN THE CONTIG
+        curr_contig_struct.aln_lab_ends = (csl,cel)
+        curr_contig_struct.compute_label_posns()
+        contig_span_dict[c_id] = curr_contig_struct
+
+    return contig_span_dict,contig_list
+
+def reduce_path(path,prev_seg_index_is_adj,inds,aln_vect=[]):
+    #pass
+    print "Reducing path by " + str(inds)
+    print path
+    left,right = inds
+    path = path[left:]
+    prev_seg_index_is_adj = prev_seg_index_is_adj[left:]
+    prev_seg_index_is_adj[0] = False
+    item_nums = [a_d["seg_aln_number"] for a_d in aln_vect]
+    left_cut_position = bisect.bisect_left(item_nums,left)
+    aln_vect = aln_vect[left_cut_position:]
+    if right > 0:
+        path = path[:-right]
+        prev_seg_index_is_adj = prev_seg_index_is_adj[:-right]
+        cut_val = len(path) - right
+        item_nums = [a_d["seg_aln_number"] for a_d in aln_vect]
+        right_cut_position = bisect.bisect_left(item_nums,cut_val)
+        aln_vect = aln_vect[:right_cut_position]
+    
+
+    downshift = aln_vect[0]["seg_aln_number"]
+    for a_ind, a_d in enumerate(aln_vect):
+        aln_vect[a_ind]["seg_aln_number"] = aln_vect[a_ind]["seg_aln_number"] - downshift
+
+    print path
+    return path, prev_seg_index_is_adj, aln_vect

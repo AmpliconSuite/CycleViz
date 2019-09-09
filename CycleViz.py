@@ -30,7 +30,6 @@ except KeyError:
 
 from bionanoUtil import *
 
-contig_spacing = 1./100
 seg_spacing = 0.009
 bar_width = 2.5/3
 global_rot = 90.0
@@ -310,29 +309,10 @@ def plot_alignment(contig_locs,segment_locs,total_length):
 
 #     return start_points,endpoint
 
-#TEMP SOLUTION (will break if too many consecutive overlaps)
-def set_contig_height_shifts(contig_placements,contig_list):
-    print "SETTING HEIGHTS"
-    prev_offset = 0
-    for ind,i in enumerate(contig_list[1:]):
-        prevObj = contig_placements[contig_list[ind]]
-        currObj = contig_placements[i]
-
-        #print "s",prevObj.abs_start_pos,prevObj.abs_end_pos
-        #print "t",currObj.abs_start_pos,currObj.abs_end_pos
-
-        if currObj.abs_start_pos < prevObj.abs_end_pos:
-            shift_mult = -1 if prev_offset == 0 else 0
-            currObj.track_height_shift = shift_mult*1.5
-            prev_offset = shift_mult
-
-        else:
-            prev_offset = 0
-
-def construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular,aln_vect = []):
+def construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCycle,aln_vect = []):
     spacing_bp = seg_spacing*raw_cycle_length
     cycle_ref_placements = {}
-    curr_start = 0.0 if isCircular else spacing_bp
+    curr_start = 0.0 if isCycle else spacing_bp
     for ind,i in enumerate(cycle):
         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
         seg_end = curr_start+seg_len
@@ -348,116 +328,11 @@ def construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index
     total_length = next_start
     return cycle_ref_placements,total_length
 
-def place_cycle_segs_and_labels(cycle,ref_placements,seg_cmap_vects):
-    cycle_seg_placements = {}
-    for ind,i in enumerate(cycle):
-        refObj = ref_placements[ind]
-        segObj = copy.deepcopy(refObj)
-        segObj.cmap_vect = seg_cmap_vects[i[0]]
-        segObj.compute_label_posns()
-        cycle_seg_placements[ind] = segObj
 
-    return cycle_seg_placements
-
-#create an object for each contig encoding variables such as position of start and end of contig (absolute ends)
-#and positioning of contig labels
-def place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_cmap_vects):
-    used_contigs = set()
-    contig_aln_dict = defaultdict(list)
-    wraparound = []
-    contig_list = []
-    for i in aln_vect:
-        c_id = i["contig_id"]
-        contig_aln_dict[c_id].append(i)
-        if c_id not in contig_list: contig_list.append(c_id)
-
-    contig_span_dict = {}
-    for c_id,i_list in contig_aln_dict.iteritems():
-        #print "placing contigs computation step"
-        #print c_id
-        cc_vect = contig_cmap_vects[c_id]
-        san_f = i_list[0]["seg_aln_number"]
-        sal_f = i_list[0]["seg_label"]
-        cal_f = i_list[0]["contig_label"]
-        san_l = i_list[-1]["seg_aln_number"]
-        sal_l = i_list[-1]["seg_label"]
-        cal_l = i_list[-1]["contig_label"]
-        contig_dir = i_list[0]["contig_dir"]
-        #print san_f,sal_f,cal_f
-        #print san_l,sal_l,cal_l
-        curr_contig_struct = vu.CycleVizElemObj(c_id,contig_dir,None,None,cc_vect)
-
-        #look up aln posns from cycle_seg_placements
-        #look up position of first one
-        segObj_start = cycle_seg_placements[san_f]
-        seg_start_l_pos = segObj_start.label_posns[sal_f-1]
-
-        #look up position of last one
-        segObj_end = cycle_seg_placements[san_l]
-        seg_end_l_pos = segObj_end.label_posns[sal_l-1]
-       
-        if seg_end_l_pos < seg_start_l_pos:
-            seg_end_l_pos+= total_length
-
-        #catch case where contig is overcircularized (e.g. circular assembly)
-        if len(contig_aln_dict) == 1 and isCircular and len(i_list) > 2:
-            san_s = i_list[1]["seg_aln_number"]
-            segObj_second = cycle_seg_placements[san_s]
-            second_seg_abs_end_pos = segObj_second.abs_end_pos
-            if seg_end_l_pos < second_seg_abs_end_pos:
-                seg_end_l_pos+=total_length
-
-        #compute scaling
-        print c_id,"comp_scaling"
-        scaled_seg_dist  = abs(seg_end_l_pos - seg_start_l_pos)*(1-contig_spacing)
-        scaling_factor = scaled_seg_dist/(abs(cc_vect[cal_f-1] - cc_vect[cal_l-1]))
-        print seg_start_l_pos,seg_end_l_pos,1-contig_spacing,scaled_seg_dist,total_length
-        print scaled_seg_dist,scaling_factor
-        #SET CONTIG SCALING FACTOR
-        curr_contig_struct.scaling_factor = scaling_factor
-        #print scaling_factor,c_id
-
-        #bump it by spacing/2
-        # seg_start_l_pos = (1+contig_spacing/2)*seg_start_l_pos
-        # seg_end_l_pos = (1+contig_spacing/2)*seg_end_l_pos
-
-        if contig_dir == "+":
-            abs_start_pos = seg_start_l_pos - (cc_vect[cal_f-1])*scaling_factor
-            abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
-
-        else:
-            print "applying scaling to ends"
-            abs_start_pos = seg_start_l_pos - (cc_vect[cal_l-1])*scaling_factor
-            abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
-            print "now",abs_start_pos,abs_end_pos
-
-
-        print "SEG PLACEMENT ",c_id
-        print abs_start_pos,abs_end_pos
-        print seg_start_l_pos,seg_end_l_pos,scaling_factor
-
-        curr_contig_struct.abs_start_pos = abs_start_pos
-        curr_contig_struct.abs_end_pos = abs_end_pos
-
-        #SET BOUNDARY ALN POSITIONS FROM TRACK
-        curr_contig_struct.aln_bound_posns = (seg_start_l_pos,seg_end_l_pos)
-
-        csl = min(i_list[-1]["contig_label"],i_list[0]["contig_label"])
-        cel = max(i_list[-1]["contig_label"],i_list[0]["contig_label"])
-        print "CSL/CEL",csl,cel
-        print ""
-        #SET FIRST AND LAST LABEL ALIGNED IN THE CONTIG
-        curr_contig_struct.aln_lab_ends = (csl,cel)
-        curr_contig_struct.compute_label_posns()
-        contig_span_dict[c_id] = curr_contig_struct
-
-    return contig_span_dict,contig_list
-
-
-parser = argparse.ArgumentParser(description="Corrects and extends alignment paths to produce BioNano contig/AA segment scaffolds")
+parser = argparse.ArgumentParser(description="Circular visualizations of AA & AR output")
 parser.add_argument("--om_alignments",help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
     action='store_true')
-parser.add_argument("--cycles_file",help="cycles file",required=True)
+parser.add_argument("--cycles_file",help="AA/AR cycles-formatted input file",required=True)
 parser.add_argument("--cycle",help="cycle number to visualize",required=True)
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("-s", "--segs", help="segments cmap file")
@@ -466,10 +341,6 @@ parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--rot", help="number of segments to rotate counterclockwise",type=int,default=0)
 parser.add_argument("--label_segs",help="label segs with graph IDs",action='store_true')
-parser.add_argument("--feature_files",help="bed file list",nargs="+")
-parser.add_argument("--feature_labels",help="bed feature names",nargs="+",default=[])
-parser.add_argument("--log10_features",help="features which have been log10 scaled",nargs="+")
-parser.add_argument("--transcript_features",help="features which are transcript info",nargs="+")
 parser.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)")
 
 args = parser.parse_args()
@@ -484,7 +355,6 @@ if outdir and not os.path.exists(outdir):
 fname = args.sname + "_cycle_" + args.cycle
 
 print("Unaligned fraction cutoff set to " + str(vu.unaligned_cutoff_frac))
-
 chromosome_colors = vu.get_chr_colors()
 plt.clf()
 fig, ax = plt.subplots()
@@ -495,10 +365,10 @@ lw_v = []
 
 cycles,segSeqD,circular_D = vu.parse_cycles_file(args.cycles_file)
 cycle_num = args.cycle
-isCircular = circular_D[cycle_num]
+isCycle = circular_D[cycle_num]
 cycle = cycles[cycle_num]
-prev_seg_index_is_adj = vu.adjacent_segs(cycle,segSeqD,isCircular)
-raw_cycle_length = vu.get_raw_cycle_length(cycle,segSeqD,isCircular,prev_seg_index_is_adj)
+prev_seg_index_is_adj = vu.adjacent_segs(cycle,segSeqD,isCycle)
+raw_cycle_length = vu.get_raw_path_length(cycle,segSeqD,isCycle,prev_seg_index_is_adj)
 
 bpg_dict,seg_end_pos_d = {},{}
 if args.graph:
@@ -517,44 +387,41 @@ if args.gene_subset_file:
 
 # start_points,total_length = get_seg_locs_from_cycle(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj)
 if not args.om_alignments:
-    ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular)
+    ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCycle)
 
 else:
+    print("Visualizing with alignments")
+    print("Contig spacing set to " + str(vu.contig_spacing))
     seg_cmaps = parse_cmap(args.segs,True)
     seg_cmap_vects = vectorize_cmaps(seg_cmaps)
     seg_cmap_lens = get_cmap_lens(args.segs)
     aln_vect,meta_dict = vu.parse_alnfile(args.path_alignment)
-    is_segdup,split_ind = vu.check_segdup(aln_vect,cycle,isCircular)
+    is_segdup,split_ind = vu.check_segdup(aln_vect,cycle,isCycle)
     if is_segdup:
         print("alignment shows simple segdup")
         cycle = [cycle[0]]*2
         print cycle
-        isCircular = False
+        isCycle = False
         prev_seg_index_is_adj = [False,True]
         for a_ind in range(split_ind,len(aln_vect)):
             aln_vect[a_ind]["seg_aln_number"] = 1
 
-    ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,prev_seg_index_is_adj,isCircular,aln_vect)
-    cycle_seg_placements = place_cycle_segs_and_labels(cycle,ref_placements,seg_cmap_vects)
+    ref_placements,total_length = construct_cycle_ref_placements(cycle,segSeqD,raw_cycle_length,
+                                                                prev_seg_index_is_adj,isCycle,aln_vect)
+    cycle_seg_placements = vu.place_path_segs_and_labels(cycle,ref_placements,seg_cmap_vects)
 
     contig_cmaps = parse_cmap(args.contigs,True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
 
-    
-
     ###
-    #TRIM REF SEGS
+    #TODO: TRIM REF SEGS
     ###
-
-
 
     contig_cmap_lens = get_cmap_lens(args.contigs)
     #cycle_seg_placements,aln_vect,total_length,contig_cmap_vects
-    contig_placements,contig_list = place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,contig_cmap_vects)
+    contig_placements,contig_list = vu.place_contigs_and_labels(cycle_seg_placements,aln_vect,total_length,
+                                                                contig_cmap_vects,isCycle,True)
     vu.decide_trim_contigs(contig_cmap_vects,contig_placements,total_length)
-
-    if not args.feature_labels:
-        outside = False
 
     #plot segs
 
@@ -566,7 +433,7 @@ else:
     #plot contigs
 
     # check overlaps of contigs and adjust heights accordingly
-    contig_height_shifts = set_contig_height_shifts(contig_placements,contig_list)
+    contig_height_shifts = vu.set_contig_height_shifts(contig_placements,contig_list)
     plot_cmap_track(contig_placements,total_length,outer_bar+contig_bar_height,"cornflowerblue",seg_id_labels=True)
 
 
