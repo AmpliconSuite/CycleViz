@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
+from matplotlib import rcParams
 from collections import defaultdict
 from matplotlib import pyplot as plt
 import matplotlib.patches as mpatches
@@ -29,6 +30,8 @@ except KeyError:
     sys.exit()
 
 from bionanoUtil import *
+rcParams['font.family'] = 'sans-serif'
+rcParams['font.sans-serif'] = ['Arial']
 
 seg_spacing = 0.009
 bar_width_scaling = 0.02
@@ -99,7 +102,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
             
             # text_angle,ha = vu.correct_text_angle(text_angle)
             # ax.text(x_t,y_t,i,color='grey',rotation=text_angle,ha=ha,fontsize=6.5,rotation_mode='anchor')
-            ax.text(normStart + box_len/2.,gene_bar_height + 0.1*bar_width,i,color='grey',ha="center",fontsize=6)
+            ax.text(normStart + box_len/2.,gene_bar_height + 0.1*bar_width,i,color='grey',ha="center",fontsize=11)
             plotted_gene_names.add(i)
 
         # for exon in e_posns:
@@ -146,23 +149,26 @@ def plot_ref_genome(ref_placements,path,total_length,segSeqD,imputed_status,labe
             # posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_end_pos,refObj.abs_start_pos,-1))
             posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_start_pos,refObj.abs_end_pos))
 
-        tick_freq = max(20000,40000*int(np.floor(total_length/1000000)))        
+        tick_freq = max(40000,80000*int(np.floor(total_length/1000000)))        
         #segment too small, nothing gets ticked 
         if (not any(j[0] % tick_freq == 0 for j in posns)) and abs(refObj.abs_start_pos - p_end) > 1:
             tens = [j[0] for j in posns if j[0] % 10000 == 0]
             middleIndex = (len(tens) - 1)/2
-            tick_freq = tens[middleIndex]
+            if tens:
+                tick_freq = tens[middleIndex]
+            else:
+                tick_freq = 10000
 
         for j in posns:
             if j[0] % tick_freq == 0:
                 x_i,y_i = j[1],ref_bar_height
                 x_f,y_f = j[1],ref_bar_height-bar_width*0.3
-                ax.plot([x_i,x_f],[y_i,y_f],color='grey',linewidth=0.5)
+                ax.plot([x_i,x_f],[y_i,y_f],color='grey',linewidth=1)
                 txt = " " + str(int(round((j[0])/10000))) # if ha == "left" else str(int(round((j[0])/10000))) + " "
                 # txt = str(j[0])
                 x_t,y_t = j[1],ref_bar_height-bar_width*0.4
                 ax.text(x_t,y_t,txt,color='grey',rotation=-90,rotation_mode="anchor",
-                        ha="left",va="center",fontsize=6)
+                        ha="left",va="center",fontsize=12)
 
         p_end = refObj.abs_end_pos    
         gene_tree = vu.parse_genes(seg_coord_tup[0])
@@ -202,7 +208,7 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
         e_color_v.append('k')
         lw_v.append(0)
 
-        linewidth = min(0.25*2000000/total_length,0.25)
+        linewidth = min(0.5*2000000/total_length,0.5)
         #Draw the labels in the box
         for i in segObj.label_posns:
             if i > segObj.abs_end_pos or i < segObj.abs_start_pos:
@@ -215,13 +221,13 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
         if seg_id_labels:
             mid_sp = (segObj.abs_end_pos + segObj.abs_start_pos)/2
             text = segObj.id + segObj.direction 
-            ax.text(mid_sp,bar_height+1.1*bar_width,text,color='grey',fontsize=5,ha="center")
+            ax.text(mid_sp,bar_height+1.1*bar_width,text,color='grey',fontsize=9,ha="center")
 
     return path_label_locs
 
 #plot the connecting lines for the bionano track
 def plot_alignment(contig_locs,segment_locs,total_length):
-    linewidth = min(0.25*2000000/total_length,0.25)
+    linewidth = min(0.5*2000000/total_length,0.5)
     print "linewidth",linewidth,total_length
     for a_d in aln_vect:
         c_id = a_d["contig_id"]
@@ -253,20 +259,22 @@ def construct_path_ref_placements(path,segSeqD,raw_path_length,prev_seg_index_is
     total_length = next_start
     return path_ref_placements,total_length
 
-parser = argparse.ArgumentParser(description="CLinear visualizations of AA & AR output")
+parser = argparse.ArgumentParser(description="Linear visualizations of AA & AR output")
 parser.add_argument("--om_alignments",help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
     action='store_true')
-parser.add_argument("--cycles_file",help="AA/AR cycles-formatted input file",required=True)
-parser.add_argument("--path",help="path number to visualize",required=True)
-parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("-s", "--segs", help="segments cmap file")
 parser.add_argument("-g", "--graph", help="breakpoint graph file")
+parser.add_argument("-c", "--contigs", help="contig cmap file")
+parser.add_argument("--cycles_file",help="AA/AR cycles-formatted input file",required=True)
+parser.add_argument("--path",help="path number to visualize",required=True)
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--label_segs",help="label segs with graph IDs",action='store_true')
-parser.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)")
 parser.add_argument("--reduce_path",help="Number of path elements to remove from left and right ends. Must supply both values, \
                     default 0 0",nargs=2,type=int,default=[0,0])
+group2 = parser.add_mutually_exclusive_group(required=False)
+group2.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)")
+group2.add_argument("--gene_subset_list",help="List of genes to plot (e.g. MYC PVT1)",nargs="+",type=str)
 
 args = parser.parse_args()
 
@@ -277,7 +285,7 @@ outdir = os.path.dirname(args.sname)
 if outdir and not os.path.exists(outdir):
     os.makedirs(outdir)
 
-fname = args.sname + "_path_" + args.path
+fname = args.sname + "_path_" + args.path + "_trim_" + str(args.reduce_path[0]) + "_" + str(args.reduce_path[1])
 
 print args.reduce_path
 
@@ -285,7 +293,7 @@ print("Unaligned fraction cutoff set to " + str(vu.unaligned_cutoff_frac))
 
 chromosome_colors = vu.get_chr_colors()
 plt.clf()
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(10,6))
 patches = []
 f_color_v = []
 e_color_v = []
@@ -317,6 +325,9 @@ if args.graph:
 gene_set = set()
 if args.gene_subset_file:
     gene_set = vu.parse_gene_subset_file(args.gene_subset_file)
+
+elif args.gene_subset_list:
+    gene_set = set(args.gene_subset_list)
 
 if not args.om_alignments:
     ref_placements,total_length = construct_path_ref_placements(cycle,segSeqD,raw_path_length,prev_seg_index_is_adj)
@@ -400,7 +411,7 @@ for chrom,color in zip(sorted_chrom,sorted_chrom_colors):
     legend_patches.append(mpatches.Patch(color=color,label=chrom))
 
 # plt.legend(handles=legend_patches,fontsize=8,loc=3,bbox_to_anchor=(-.3,.15))
-plt.legend(handles=legend_patches,fontsize=8,bbox_to_anchor=(.09,-1.5))
+plt.legend(handles=legend_patches,fontsize=10,bbox_to_anchor=(0,0)) #bbox_to_anchor=(0,-1.5))#,bbox_to_anchor=(.09,-1.5))
 
 p = PatchCollection(patches)
 p.set_facecolor(f_color_v)
