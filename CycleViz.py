@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
+from matplotlib import rcParams
 from collections import defaultdict
 from matplotlib import pyplot as plt
 import matplotlib.patches as mpatches
@@ -29,6 +30,8 @@ except KeyError:
     sys.exit()
 
 from bionanoUtil import *
+rcParams['font.family'] = 'sans-serif'
+rcParams['font.sans-serif'] = ['Arial']
 
 seg_spacing = 0.009
 bar_width = 2.5/3
@@ -139,11 +142,11 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
         lw_v.append(0)
 
         # x,y = pol2cart(outer_bar+(bar_width/2.0),(text_angle/360*2*np.pi))
-        x_t,y_t = pol2cart(outer_bar + bar_width + 0.9,(text_angle/360*2*np.pi))
+        x_t,y_t = pol2cart(outer_bar + bar_width + 2,(text_angle/360*2*np.pi))
         #ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.4)
         
         text_angle,ha = vu.correct_text_angle(text_angle)
-        ax.text(x_t,y_t,i,color='grey',rotation=text_angle,ha=ha,fontsize=6.5,rotation_mode='anchor')
+        ax.text(x_t,y_t,i,color='grey',rotation=text_angle,ha=ha,va="center",fontsize=9,rotation_mode='anchor')
 
         for exon in e_posns:
             if exon[1] > pTup[1] and exon[0] < pTup[2]:
@@ -186,19 +189,21 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
             # posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_end_pos,refObj.abs_start_pos,-1))
             posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_start_pos,refObj.abs_end_pos))
 
-        tick_freq = max(20000,20000*int(np.floor(total_length/1000000)))
+        tick_freq = max(30000,30000*int(np.floor(total_length/1000000)))
+        if refObj.abs_end_pos-refObj.abs_start_pos < 30000:
+            tick_freq = 10000
         for j in posns:
             if j[0] % tick_freq == 0:
                 text_angle = j[1]/total_length*360
                 x,y = pol2cart(outer_bar,(text_angle/360*2*np.pi))
                 x_t,y_t = pol2cart(outer_bar + 0.2,(text_angle/360*2*np.pi))
-                ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.25)
+                ax.plot([x,x_t],[y,y_t],color='grey',linewidth=1)
                 
                 text_angle,ha = vu.correct_text_angle(text_angle)
                 txt = " " + str(int(round((j[0])/10000))) if ha == "left" else str(int(round((j[0])/10000))) + " "
 
                 ax.text(x_t,y_t,txt,color='grey',rotation=text_angle,
-                ha=ha,fontsize=6,rotation_mode='anchor')
+                ha=ha,va="center",fontsize=9,rotation_mode='anchor')
     
         gene_tree = vu.parse_genes(seg_coord_tup[0])
         relGenes = vu.rel_genes(gene_tree,seg_coord_tup,onco_set)

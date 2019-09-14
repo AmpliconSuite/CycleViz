@@ -63,7 +63,7 @@ def plot_bpg_connection(ref_placements,path,total_length,prev_seg_index_is_adj,b
             #makes the reference genome wedges
             # patches.append(mpatches.Wedge((0,0), seg_bar_base - bar_width/4, end_angle, start_angle, width=connect_width))
             #draw the connecting triangle
-            patches.append(mpatches.Rectangle((refObj.abs_end_pos,seg_bar_base + bar_width/4.),bpg_connector_len,connect_width))
+            patches.append(mpatches.Rectangle((refObj.abs_end_pos,ref_bar_height + bar_width/4.),bpg_connector_len,connect_width))
             f_color_v.append('grey')
             e_color_v.append('grey')
             lw_v.append(0.2)
@@ -177,20 +177,21 @@ def plot_ref_genome(ref_placements,path,total_length,segSeqD,imputed_status,labe
         # TODO: IMPLEMENT
         plot_gene_track(refObj.abs_start_pos,relGenes,seg_coord_tup,total_length,path[ind][1])
 
-        # #label the segments by number in path
-        # mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos)/2
+        #label the segments by number in path
+        mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos)/2
         # text_angle = mid_sp/total_length*360.
         # x,y = pol2cart((seg_bar_base-2*bar_width),(text_angle/360.*2.*np.pi))
-        # font = font0.copy()
-        # if imputed_status[ind]:
-        #     font.set_style('italic')
+        font = font0.copy()
+        if imputed_status[ind]:
+            font.set_style('italic')
         #     # font.set_weight('bold')
 
         # text_angle,ha = vu.correct_text_angle(text_angle)
 
-        # if label_segs:
+        if label_segs:
         #     ax.text(x,y,cycle[ind][0]+cycle[ind][1],color='grey',rotation=text_angle,
         #         ha=ha,fontsize=5,fontproperties=font,rotation_mode='anchor')
+            ax.text(mid_sp,ref_bar_height+0.25*bar_width,path[ind][0]+path[ind][1],fontsize=8,fontproperties=font)
 
 #plot cmap track
 def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_labels = False):
@@ -359,6 +360,10 @@ else:
     bar_width = total_length*bar_width_scaling
     contig_bar_height+=bar_width*bar_drop_prop
     path_seg_placements = vu.place_path_segs_and_labels(path,ref_placements,seg_cmap_vects)
+    ref_bar_height=seg_bar_base
+    gene_bar_height=seg_bar_base
+    gene_bar_height-=bar_width*bar_drop_prop
+    ref_bar_height-=(bar_width*1.5*bar_drop_prop)
 
     contig_cmaps = parse_cmap(args.contigs,True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
