@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+"""
+Jens Luebeck
+UC San Diego, Bioinformatics & Systems Biology
+jluebeck@ucsd.edu
+"""
+
 import sys
 import os
 import copy
@@ -13,7 +19,6 @@ from collections import defaultdict
 from matplotlib import pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import colors as mcolors
-# import matplotlib._color_data as mcd
 from matplotlib.collections import PatchCollection
 from matplotlib.font_manager import FontProperties
 from intervaltree import Interval, IntervalTree
