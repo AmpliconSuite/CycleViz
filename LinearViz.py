@@ -340,6 +340,7 @@ if not args.om_alignments:
     if args.reduce_path != [0,0]:
         #reduce alignments
         path,prev_seg_index_is_adj,_ = vu.reduce_path(path,prev_seg_index_is_adj,args.reduce_path)
+        imputed_status = [False]*len(cycle)
 
 else:
     seg_cmaps = parse_cmap(args.segs,True)
@@ -396,7 +397,7 @@ else:
     #plot alignments
     plot_alignment(contig_placements,path_seg_placements,total_length)
 
-imputed_status = vu.imputed_status_from_aln(aln_vect,len(path))
+    imputed_status = vu.imputed_status_from_aln(aln_vect,len(path))
 
 ref_bar_height=seg_bar_base
 gene_bar_height=seg_bar_base
