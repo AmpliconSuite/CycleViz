@@ -518,7 +518,7 @@ def reduce_path(path,prev_seg_index_is_adj,inds,aln_vect=[]):
     if right > 0:
         path = path[:-right]
         prev_seg_index_is_adj = prev_seg_index_is_adj[:-right]
-        cut_val = len(path) - right
+        cut_val = len(path)+1
         item_nums = [a_d["seg_aln_number"] for a_d in aln_vect]
         right_cut_position = bisect.bisect_left(item_nums,cut_val)
         aln_vect = aln_vect[:right_cut_position]
