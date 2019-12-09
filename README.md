@@ -1,7 +1,7 @@
 ## CycleViz
 
 ### Installation
-Visualize outputs of AmpliconReconstructor in Circos-style images. 
+Visualize outputs of AmpliconReconstructor in Circos-style images. Currently only supports hg19, but will add hg38 soon.
 
 Requires python2 and matplotlib version 2.0.0 or higher and intervaltree python module. 
 
@@ -44,4 +44,7 @@ For linear visualizations do
                     `
 
 
-Note that the cycles file and cycle number (or "path number", in the linear case) are the only required arguments. It is highly recommended to use the Bushman oncogoene file for the gene_subset_file to make more readable plots
+Note that the cycles file and cycle number (or "path number", in the linear case) are the only required arguments. It is highly recommended to use the Bushman oncogene file for the gene_subset_file to make more readable plots
+
+#### Running CycleViz with an AA-generated cycles file
+If using an AA-generated cycles file, whose segments are merged across adjacent breakpoint graph segments, you will first need to unmerge the segments in the cycles file. We provide a script, `convert_cycles_file.py` which can be run on an AA cycles file and AA breakpoint graph. This script must be run to generate a BPG-converted cycles file, prior to running CycleViz. Many thanks to Siavash R. Dehkordi for providing this script.
