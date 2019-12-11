@@ -26,13 +26,13 @@ import VizUtil as vu
 
 #non-interactive backend
 
-try:
-    sys.path.insert(0,os.environ['AR_SRC'])
+# try:
+#     sys.path.insert(0,os.environ['AR_SRC'])
 
-except KeyError:
-    sys.stderr.write("AmpliconReconstructor source directory bash variable ($AR_SRC) not found.\n")
-    sys.stderr.write("Is AmpliconReconstructor configured?")
-    sys.exit()
+# except KeyError:
+#     sys.stderr.write("AmpliconReconstructor source directory bash variable ($AR_SRC) not found.\nIs AmpliconReconstructor configured?\n")
+#     sys.stderr.write("Falling back to ref")
+#     sys.exit()
 
 from bionanoUtil import *
 rcParams['font.family'] = 'sans-serif'
@@ -176,7 +176,7 @@ def plot_ref_genome(ref_placements,path,total_length,segSeqD,imputed_status,labe
                         ha="left",va="center",fontsize=12)
 
         p_end = refObj.abs_end_pos    
-        gene_tree = vu.parse_genes(seg_coord_tup[0])
+        gene_tree = vu.parse_genes(seg_coord_tup[0],args.ref)
         relGenes = vu.rel_genes(gene_tree,seg_coord_tup,onco_set)
         # plot the gene track
         # TODO: IMPLEMENT
@@ -271,6 +271,7 @@ parser.add_argument("--om_alignments",help="Enable Bionano visualizations (requi
 parser.add_argument("-s", "--segs", help="segments cmap file")
 parser.add_argument("-g", "--graph", help="breakpoint graph file")
 parser.add_argument("-c", "--contigs", help="contig cmap file")
+parser.add_argument("--ref",help="reference genome",choices=["hg19","hg38"],default="hg19")
 parser.add_argument("--cycles_file",help="AA/AR cycles-formatted input file",required=True)
 parser.add_argument("--path",help="path number to visualize",required=True)
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
