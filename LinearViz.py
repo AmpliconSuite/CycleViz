@@ -107,7 +107,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
             
             # text_angle,ha = vu.correct_text_angle(text_angle)
             # ax.text(x_t,y_t,i,color='grey',rotation=text_angle,ha=ha,fontsize=6.5,rotation_mode='anchor')
-            ax.text(normStart + box_len/2.,gene_bar_height + 0.1*bar_width,i,color='grey',ha="center",fontsize=11)
+            ax.text(normStart + box_len/2.,gene_bar_height + 0.1*bar_width,i,color='k',ha="center",fontsize=11)
             plotted_gene_names.add(i)
 
         # for exon in e_posns:
@@ -177,7 +177,7 @@ def plot_ref_genome(ref_placements,path,total_length,segSeqD,imputed_status,labe
 
         p_end = refObj.abs_end_pos    
         gene_tree = vu.parse_genes(seg_coord_tup[0],args.ref)
-        relGenes = vu.rel_genes(gene_tree,seg_coord_tup,onco_set)
+        relGenes = vu.rel_genes(gene_tree,seg_coord_tup,copy.copy(onco_set))
         # plot the gene track
         # TODO: IMPLEMENT
         plot_gene_track(refObj.abs_start_pos,relGenes,seg_coord_tup,total_length,path[ind][1])
@@ -339,11 +339,12 @@ elif args.gene_subset_list:
     gene_set = set(args.gene_subset_list)
 
 if not args.om_alignments:
-    ref_placements,total_length = construct_path_ref_placements(cycle,segSeqD,raw_path_length,prev_seg_index_is_adj)
+    ref_placements,total_length = construct_path_ref_placements(path,segSeqD,raw_path_length,prev_seg_index_is_adj)
     if args.reduce_path != [0,0]:
         #reduce alignments
         path,prev_seg_index_is_adj,_ = vu.reduce_path(path,prev_seg_index_is_adj,args.reduce_path)
-        imputed_status = [False]*len(cycle)
+    
+    imputed_status = [False]*len(path)
 
 else:
     seg_cmaps = parse_cmap(args.segs,True)

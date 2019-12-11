@@ -146,7 +146,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
         #ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.4)
         
         text_angle,ha = vu.correct_text_angle(text_angle)
-        ax.text(x_t,y_t,i,color='grey',rotation=text_angle,ha=ha,va="center",fontsize=9,rotation_mode='anchor')
+        ax.text(x_t,y_t,i,color='k',rotation=text_angle,ha=ha,va="center",fontsize=9,rotation_mode='anchor')
 
         for exon in e_posns:
             if exon[1] > pTup[1] and exon[0] < pTup[2]:
@@ -206,7 +206,7 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
                 ha=ha,va="center",fontsize=9,rotation_mode='anchor')
     
         gene_tree = vu.parse_genes(seg_coord_tup[0],args.ref)
-        relGenes = vu.rel_genes(gene_tree,seg_coord_tup,onco_set)
+        relGenes = vu.rel_genes(gene_tree,seg_coord_tup,copy.copy(onco_set))
         #plot the gene track
         plot_gene_track(refObj.abs_start_pos,relGenes,seg_coord_tup,total_length,cycle[ind][1])
 
@@ -353,6 +353,8 @@ args = parser.parse_args()
 
 if args.ref == "GRCh38":
     args.ref == "hg38"
+
+print args.ref
 
 if not args.sname:
     args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"

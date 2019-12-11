@@ -1,7 +1,7 @@
 ## CycleViz
 
 ### Installation
-Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) in Circos-style images. Supports hg19, hg38, and GRCh37.
+Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) in Circos-style images. Supports hg19, hg38, and GRCh37. CycleViz has been tested on Ubuntu 16.04+.
 Requires python2 and matplotlib version 2.0.0 or higher and intervaltree python module. 
 
 To check your matplotlib version in python, type
@@ -18,6 +18,11 @@ pip install --upgrade matplotlib
 To install intervaltree python package. 
 ```
 pip install intervaltree
+```
+
+To get the Microsoft fonts on Ubuntu (CycleViz defaults to Arial)
+```
+sudo apt-get install ttf-mscorefonts-installer
 ```
 
 ### Usage
