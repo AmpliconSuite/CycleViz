@@ -1,8 +1,7 @@
 ## CycleViz
 
 ### Installation
-Visualize outputs of AmpliconReconstructor in Circos-style images. Currently only supports hg19, but will add hg38 soon.
-
+Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) in Circos-style images. Supports hg19 and hg38.
 Requires python2 and matplotlib version 2.0.0 or higher and intervaltree python module. 
 
 To check your matplotlib version in python, type
@@ -40,9 +39,10 @@ For linear visualizations do
                     --cycles_file CYCLES_FILE --path PATH [-i PATH_ALIGNMENT]
                     [--sname SNAME] [--label_segs]
                     [--reduce_path REDUCE_PATH REDUCE_PATH]
-                    [--gene_subset_file GENE_SUBSET_FILE | --gene_subset_list GENE_SUBSET_LIST [GENE_SUBSET_LIST
+                    [--gene_subset_file GENE_SUBSET_FILE | --gene_subset_list GENE_SUBSET_LIST [GENE_SUBSET_LIST]
                     `
 
+The `--gene_subset_file` or `--gene_subset_list` arguments can be used to reduce the genes shown in the visualization. By default all genes (except lncRNAs, microRNAs, etc.) will be shown. An cancer-related genelist file is provided: `Bushman_group_allOnco_May2018.tsv`, which was taken from [here](http://www.bushmanlab.org/links/genelists)
 
 Note that the cycles file and cycle number (or "path number", in the linear case) are the only required arguments. It is highly recommended to use the Bushman oncogene file for the gene_subset_file to make more readable plots
 
