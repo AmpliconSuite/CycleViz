@@ -343,13 +343,16 @@ parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("-s", "--segs", help="segments cmap file")
 parser.add_argument("-g", "--graph", help="breakpoint graph file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
-parser.add_argument("--ref",help="reference genome",choices=["hg19","hg38"],default="hg19")
+parser.add_argument("--ref",help="reference genome",choices=["hg19","hg38","GRCh37","GRCh38"],default="hg19")
 parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--rot", help="number of segments to rotate counterclockwise",type=int,default=0)
 parser.add_argument("--label_segs",help="label segs with graph IDs",action='store_true')
 parser.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)")
 
 args = parser.parse_args()
+
+if args.ref == "GRCh38":
+    args.ref == "hg38"
 
 if not args.sname:
     args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"

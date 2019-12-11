@@ -271,7 +271,7 @@ parser.add_argument("--om_alignments",help="Enable Bionano visualizations (requi
 parser.add_argument("-s", "--segs", help="segments cmap file")
 parser.add_argument("-g", "--graph", help="breakpoint graph file")
 parser.add_argument("-c", "--contigs", help="contig cmap file")
-parser.add_argument("--ref",help="reference genome",choices=["hg19","hg38"],default="hg19")
+parser.add_argument("--ref",help="reference genome",choices=["hg19","hg38","GRCh37","GRCh38"],default="hg19")
 parser.add_argument("--cycles_file",help="AA/AR cycles-formatted input file",required=True)
 parser.add_argument("--path",help="path number to visualize",required=True)
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
@@ -284,6 +284,8 @@ group2.add_argument("--gene_subset_file",help="File containing subset of genes t
 group2.add_argument("--gene_subset_list",help="List of genes to plot (e.g. MYC PVT1)",nargs="+",type=str)
 
 args = parser.parse_args()
+if args.ref == "GRCh38":
+    args.ref == "hg38"
 
 if not args.sname:
     args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"

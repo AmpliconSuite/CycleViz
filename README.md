@@ -1,7 +1,7 @@
 ## CycleViz
 
 ### Installation
-Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) in Circos-style images. Supports hg19 and hg38.
+Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) in Circos-style images. Supports hg19, hg38, and GRCh37.
 Requires python2 and matplotlib version 2.0.0 or higher and intervaltree python module. 
 
 To check your matplotlib version in python, type

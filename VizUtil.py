@@ -167,12 +167,19 @@ def parse_genes(chrom,ref):
     t = IntervalTree()
     # with open(os.environ['AR_SRC'] + "/hg19_refGene.txt") as infile:
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-    refGene_name = "refGene_" + ref + ".txt"
+    if ref == "GRCh37" or ref == "hg19":
+        refGene_name = "refGene_hg19.txt"
+    else:
+        refGene_name = "refGene_" + ref + ".txt"
+
     with open(os.path.join(__location__, refGene_name)) as infile:
         for line in infile:
             fields = line.rsplit("\t")
             #gene = fields[-2]
             currChrom = fields[2]
+            if ref == "GRCh37":
+                currChrom = currChrom[3:]
+                
             tstart = int(fields[4])
             tend = int(fields[5])
             if chrom == currChrom:
