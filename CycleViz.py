@@ -230,9 +230,9 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
     cycle_label_locs = defaultdict(list)
     for ind,segObj in seg_placements.iteritems():
         bar_height = unadj_bar_height + segObj.track_height_shift
-        print "cmap_plot",segObj.id
-        print "cmap plotting abs end pos are"
-        print segObj.abs_end_pos,segObj.abs_start_pos
+        print("cmap_plot",segObj.id)
+        # print "cmap plotting abs end pos are"
+        # print segObj.abs_end_pos,segObj.abs_start_pos
         start_angle, end_angle = start_end_angle(segObj.abs_end_pos,segObj.abs_start_pos,total_length)
         # print start_angle,end_angle
         patches.append(mpatches.Wedge((0,0), bar_height + bar_width, end_angle, start_angle, width=bar_width))
@@ -477,7 +477,7 @@ if args.graph:
     plot_bpg_connection(ref_placements,cycle,total_length,prev_seg_index_is_adj,bpg_dict,seg_end_pos_d)
 
 ax.set_xlim(-(outer_bar+1.25), (outer_bar+1.25))
-ax.set_ylim(-(outer_bar+1.25), (outer_bar+1.25))
+ax.set_ylim(-(outer_bar+2.5), (outer_bar+2.5))
 chrom_set = set()
 for i in cycle:
     chrom_set.add(segSeqD[i[0]][0])
@@ -497,6 +497,7 @@ p.set_linewidth(lw_v)
 ax.add_collection(p)
 ax.set_aspect(1.0)
 plt.axis('off')
+
 plt.savefig(fname + '.png',dpi=600)
 plt.savefig(fname + '.pdf',format='pdf')
 

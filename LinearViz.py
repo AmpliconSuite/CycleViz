@@ -100,15 +100,15 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
         e_color_v.append('k')
         lw_v.append(0)
 
-        if i not in plotted_gene_names:
+        # if i not in plotted_gene_names:
             # x,y = pol2cart(seg_bar_base+(bar_width/2.0),(text_angle/360*2*np.pi))
             # x_t,y_t = pol2cart(seg_bar_base + bar_width + 0.9,(text_angle/360*2*np.pi))
             #ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.4)
             
             # text_angle,ha = vu.correct_text_angle(text_angle)
             # ax.text(x_t,y_t,i,color='grey',rotation=text_angle,ha=ha,fontsize=6.5,rotation_mode='anchor')
-            ax.text(normStart + box_len/2.,gene_bar_height + 0.1*bar_width,i,color='k',ha="center",fontsize=11)
-            plotted_gene_names.add(i)
+        ax.text(normStart + box_len/2.,gene_bar_height + 0.1*bar_width,i,color='k',ha="center",fontsize=11)
+        plotted_gene_names.add(i)
 
         # for exon in e_posns:
         #     if exon[1] > pTup[1] and exon[0] < pTup[2]:
