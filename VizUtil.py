@@ -121,6 +121,8 @@ def get_chr_colors():
 
     chrnames = [str(i) for i in (range(1,23) + ["X","Y"])]
     chromosome_colors = dict(zip(["chr" + i for i in chrnames],color_vect))
+    for i in range(len(chrnames)):
+        chromosome_colors[chrnames[i]] = color_vect[i]
     return chromosome_colors
 
 #parse the breakpoint graph to indicate for two endpoints if there is an edge.

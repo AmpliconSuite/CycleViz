@@ -13,8 +13,8 @@ parser.add_argument("-c", "--cycle", help="cycle file", required=True)
 parser.add_argument("-g", "--graph", help="graph file", required=True)
 args = parser.parse_args()
 
-if not args.output_directory:
-    args.output_directory = os.getcwd()
+if not args.output:
+    args.output = os.getcwd()
 
 
 def extract_seg(path):
@@ -70,7 +70,8 @@ def make_new_cycle(graph_path, cycle_path):
     fuse_seg_dict = extract_fuse_seg(cycle_path)
     segment_dict = {'0': {'segment_chr': '0', 'segment_start': '0',
                           'segment_end': '0', 'length': '0'}}
-    with open(args.output, 'w') as the_file:
+    output = os.path.join(args.output, 'cycles.txt')
+    with open(output, 'w') as the_file:
         with open(cycle_path) as f:
             for line in f:
                 if line.startswith('Segment'):
