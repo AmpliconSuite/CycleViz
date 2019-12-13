@@ -89,6 +89,8 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
             normEnd = currStart + min(seg_len,pTup[2]-tstart)
             normStart = currStart + max(0,pTup[2] - tend)
 
+                
+
         # print max(0,tstart-pTup[1]),min(seg_len,tend-pTup[1]),seg_len
         # print i,normStart,normEnd, currStart, currStart+seg_len,tstart,tend,strand
 
@@ -100,15 +102,22 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
         e_color_v.append('k')
         lw_v.append(0)
 
-        # if i not in plotted_gene_names:
+        #draw some arrows over the black box
+        #but first draw a white line in the box
+
+        #then put some white arrow markers on it
+
+
+        if i not in plotted_gene_names:
+            print i
             # x,y = pol2cart(seg_bar_base+(bar_width/2.0),(text_angle/360*2*np.pi))
             # x_t,y_t = pol2cart(seg_bar_base + bar_width + 0.9,(text_angle/360*2*np.pi))
             #ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.4)
             
             # text_angle,ha = vu.correct_text_angle(text_angle)
             # ax.text(x_t,y_t,i,color='grey',rotation=text_angle,ha=ha,fontsize=6.5,rotation_mode='anchor')
-        ax.text(normStart + box_len/2.,gene_bar_height + 0.1*bar_width,i,color='k',ha="center",fontsize=11)
-        plotted_gene_names.add(i)
+            ax.text(normStart + box_len/2.,gene_bar_height + 0.1*bar_width,i,color='k',ha="center",fontsize=11)
+            plotted_gene_names.add(i)
 
         # for exon in e_posns:
         #     if exon[1] > pTup[1] and exon[0] < pTup[2]:
@@ -196,16 +205,20 @@ def plot_ref_genome(ref_placements,path,total_length,segSeqD,imputed_status,labe
         if label_segs:
         #     ax.text(x,y,cycle[ind][0]+cycle[ind][1],color='grey',rotation=text_angle,
         #         ha=ha,fontsize=5,fontproperties=font,rotation_mode='anchor')
-            ax.text(mid_sp,ref_bar_height+0.25*bar_width,path[ind][0]+path[ind][1],fontsize=8,fontproperties=font)
+            label_text = path[ind][1]
+            if label_segs == "id":
+                label_text = path[ind][0] + label_text
+
+            ax.text(mid_sp,ref_bar_height+0.25*bar_width,label_text,fontsize=8,fontproperties=font,ha='center')
 
 #plot cmap track
 def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_labels = False):
     path_label_locs = defaultdict(list)
     for ind,segObj in seg_placements.iteritems():
         bar_height = unadj_bar_height + segObj.track_height_shift
-        print "cmap_plot",segObj.id
-        print "cmap plotting abs end pos are"
-        print segObj.abs_start_pos, segObj.abs_end_pos
+        print("cmap_plot",segObj.id)
+        # print "cmap plotting abs end pos are"
+        # print segObj.abs_start_pos, segObj.abs_end_pos
         box_len = segObj.abs_end_pos - segObj.abs_start_pos
 
         #Draw the box
@@ -276,7 +289,7 @@ parser.add_argument("--cycles_file",help="AA/AR cycles-formatted input file",req
 parser.add_argument("--path",help="path number to visualize",required=True)
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--sname", help="output prefix")
-parser.add_argument("--label_segs",help="label segs with graph IDs",action='store_true')
+parser.add_argument("--label_segs",help="label segs with graph IDs",choices=["id","dir"],default="")
 parser.add_argument("--reduce_path",help="Number of path elements to remove from left and right ends. Must supply both values, \
                     default 0 0",nargs=2,type=int,default=[0,0])
 group2 = parser.add_mutually_exclusive_group(required=False)
