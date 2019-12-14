@@ -108,7 +108,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
         #then put some white arrow markers on it
 
 
-        if i not in plotted_gene_names:
+        if i not in plotted_gene_names or args.print_dup_genes:
             print i
             # x,y = pol2cart(seg_bar_base+(bar_width/2.0),(text_angle/360*2*np.pi))
             # x_t,y_t = pol2cart(seg_bar_base + bar_width + 0.9,(text_angle/360*2*np.pi))
@@ -292,6 +292,7 @@ parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--label_segs",help="label segs with graph IDs",choices=["id","dir"],default="")
 parser.add_argument("--reduce_path",help="Number of path elements to remove from left and right ends. Must supply both values, \
                     default 0 0",nargs=2,type=int,default=[0,0])
+parser.add_argument("--print_dup_genes",help="If a gene appears multiple times print name every time.",action='store_true',default=False)
 group2 = parser.add_mutually_exclusive_group(required=False)
 group2.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)")
 group2.add_argument("--gene_subset_list",help="List of genes to plot (e.g. MYC PVT1)",nargs="+",type=str)

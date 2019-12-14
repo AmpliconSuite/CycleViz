@@ -5,3 +5,9 @@ old_figs_2/*
 *.png
 *.pyc
 test_files/*
+test_files/*/*
+test_file/*/*/*
+*.cmap
+*_graph.txt
+*_key.txt
+*_aln.txt
