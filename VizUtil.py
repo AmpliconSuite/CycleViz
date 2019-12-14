@@ -149,8 +149,9 @@ def parse_BPG(BPG_file):
 
     return bidirectional_edge_dict,seg_end_pos_d
 
-#extract oncogenes from the bushman lab file, assumes refseq name in last column
-def parse_gene_subset_file(gene_list_file):
+#extract oncogenes from a file.
+#Assumes refseq genome name in last column, or get the refseq name from a gff file
+def parse_gene_subset_file(gene_list_file,gff=False):
     gene_set = set()
     with open(gene_list_file) as infile:
         for line in infile:
@@ -158,7 +159,12 @@ def parse_gene_subset_file(gene_list_file):
             if not fields:
                 continue
 
-            gene_set.add(fields[-1].strip("\""))
+            if not gff:
+                gene_set.add(fields[-1].strip("\""))
+            else:
+                #parse the line and get the name
+                propFields = {x.split("=")[0]:x.split("=")[1] for x in fields[-1].rstrip(";").split(";")}
+                gene_set.add(propFields["Name"])
 
     return gene_set
 

@@ -347,7 +347,8 @@ if args.graph:
 
 gene_set = set()
 if args.gene_subset_file:
-    gene_set = vu.parse_gene_subset_file(args.gene_subset_file)
+    gff = True if args.gene_subset_file.endswith(".gff") else False
+    gene_set = vu.parse_gene_subset_file(args.gene_subset_file,gff)
 
 elif args.gene_subset_list:
     gene_set = set(args.gene_subset_list)
