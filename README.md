@@ -1,7 +1,7 @@
 ## CycleViz
 
 ### Installation
-Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) in Circos-style images. Supports hg19, hg38, and GRCh37. CycleViz has been tested on Ubuntu 16.04+.
+Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. Supports hg19, hg38, and GRCh37. CycleViz has been tested on Ubuntu 16.04+.
 Requires python2 and matplotlib version 2.0.0 or higher and intervaltree python module. 
 
 To check your matplotlib version in python, type
@@ -20,10 +20,15 @@ To install intervaltree python package.
 pip install intervaltree
 ```
 
-To get the Microsoft fonts on Ubuntu (CycleViz defaults to Arial)
+To get the Microsoft fonts on Ubuntu (CycleViz defaults to Arial font)
 ```
 sudo apt-get install ttf-mscorefonts-installer
 ```
+
+If you are using this with AR, after cloning the CycleViz repo consider running the following to add a line to your `.bashrc` file to enable automatic generation of CycleViz figures at the end of an AR run. 
+`cd CycleViz/`
+`echo export CV_SRC=$PWD >> ~/.bashrc`
+`source ~/.bashrc`
 
 ### Usage
 There are two modes of visualization, circular and linear. Currently there are separate scripts to run each mode, but we intend to merge these in the future.
