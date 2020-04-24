@@ -4,7 +4,7 @@ Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/Ampl
 
 **Examples**: Left, a cycles file visualization without AR-reconstruction data. Right, a cycles file visualization with Bionano data. 
 
-Seperate instructions [are available](###running-cycleviz-with-an-aa-generated-cycles-file) if using an AA cycles file without AR reconstruction.
+Seperate instructions [are available](#running-cycleviz-with-an-aa-generated-cycles-file) if using an AA cycles file without AR reconstruction.
 
 <!---![AA example](images/exampleAA.png){:height="300px" width="300px"}
 ![AR example](images/exampleAR.png){:height="300px" width="300px"} --->
