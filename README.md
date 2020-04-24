@@ -9,7 +9,7 @@ Seperate instructions [are available](###running-cycleviz-with-an-aa-generated-c
 <!---![AA example](images/exampleAA.png){:height="300px" width="300px"}
 ![AR example](images/exampleAR.png){:height="300px" width="300px"} --->
 
-<img src="images/exampleAA.png" height="30%" width="30%"> <img src="images/exampleAR.png" height="30%" width="30%">
+<img src="images/exampleAA.png" height="40%" width="40%"> <img src="images/exampleAR.png" height="40%" width="40%">
 
 
 ### Installation
