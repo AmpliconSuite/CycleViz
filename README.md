@@ -1,7 +1,20 @@
 ## CycleViz
 
-### Installation
 Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. Supports hg19, hg38, and GRCh37. CycleViz has been tested on Ubuntu 16.04+.
+
+**Examples**: Left, a cycles file visualization without AR-reconstruction data. Right, a cycles file visualization with Bionano data. 
+
+Seperate instructions [are available](###running-cycleviz-with-an-aa-generated-cycles-file) if using an AA cycles file without AR reconstruction.
+
+<!---![AA example](images/exampleAA.png){:height="300px" width="300px"}
+![AR example](images/exampleAR.png){:height="300px" width="300px"} --->
+
+<img src="images/exampleAA.png" height="400" width="400">
+<img src="images/exampleAR.png" height="400" width="400">
+
+
+### Installation
+
 Requires python2 and matplotlib version 2.0.0 or higher and intervaltree python module. 
 
 To check your matplotlib version in python, type
@@ -59,5 +72,7 @@ The `--gene_subset_file` or `--gene_subset_list` arguments can be used to reduce
 
 Note that the cycles file and cycle number (or "path number", in the linear case) are the only required arguments. It is highly recommended to use the Bushman oncogene file for the gene_subset_file to make more readable plots
 
-#### Running CycleViz with an AA-generated cycles file
-If using an AA-generated cycles file, whose segments are merged across adjacent breakpoint graph segments, you will first need to unmerge the segments in the cycles file. We provide a script, `convert_cycles_file.py` which can be run on an AA cycles file and AA breakpoint graph. This script must be run to generate a BPG-converted cycles file, prior to running CycleViz. Many thanks to Siavash R. Dehkordi for providing this script.
+
+### Running CycleViz with an AA-generated cycles file
+If using an AA-generated cycles file instead of AR, whose segments are merged across adjacent breakpoint graph segments, you will first need to unmerge the segments in the cycles file. We provide a script, `convert_cycles_file.py` which can be run on an AA cycles file and AA breakpoint graph. This script must be run to generate a BPG-converted cycles file, prior to running CycleViz. Many thanks to Siavash R. Dehkordi for providing this script.
+
