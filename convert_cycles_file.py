@@ -3,19 +3,25 @@
 import os
 import argparse
 
-#Author: Siavash Dehkordi, edited by Jens Luebeck 
+#Author: Siavash Dehkordi, modified by Jens Luebeck 
 
 #converts cycles file to be numbered by BPG segment.
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-o", "--output", help="output directory")
+parser.add_argument("-o", "--output", help="output prefix")
 parser.add_argument("-c", "--cycle", help="cycle file", required=True)
 parser.add_argument("-g", "--graph", help="graph file", required=True)
 args = parser.parse_args()
 
 if not args.output:
-    args.output = os.getcwd()
+    args.output = os.getcwd() + "/"
+    bn = os.path.basename(args.cycle).rsplit(".txt")[0].split("_cycles")
+    args.output+=(bn[0] + "_BPG_converted_cycles.txt")
 
+if not args.output.endswith("_cycles.txt"):
+    args.output+="_cycles.txt"
+
+print args.output
 
 def extract_seg(path):
     line_number = 0
@@ -32,7 +38,7 @@ def extract_seg(path):
                 # name = line.split(' ')[3]
             elif line.startswith('sequence'):
                 # print(line)
-                line = line.split('\t')
+                line = line.split()
                 segment_number = line_number
                 line_s = line[1].split(':')
                 start_chr = line_s[0]
@@ -59,7 +65,7 @@ def extract_fuse_seg(path):
         for line in f:
             if line.startswith('Segment'):
                 line = line.strip()
-                line = line.split('\t')
+                line = line.split()
                 fuse_seg_dict[line[1]] = {'start_chr': line[2], 'start_index': line[3],
                                           'end_cht': line[2], 'end_index': line[4]}
     return fuse_seg_dict
@@ -70,12 +76,12 @@ def make_new_cycle(graph_path, cycle_path):
     fuse_seg_dict = extract_fuse_seg(cycle_path)
     segment_dict = {'0': {'segment_chr': '0', 'segment_start': '0',
                           'segment_end': '0', 'length': '0'}}
-    output = os.path.join(args.output, 'cycles.txt')
-    with open(output, 'w') as the_file:
+
+    with open(args.output, 'w') as the_file:
         with open(cycle_path) as f:
             for line in f:
                 if line.startswith('Segment'):
-                    line = line.strip().split('\t')
+                    line = line.strip().split()
                     segment_number = line[1]
                     segment_chr = line[2]
                     segment_start = line[3]
@@ -84,7 +90,6 @@ def make_new_cycle(graph_path, cycle_path):
                     segment_dict[segment_number] = {'segment_chr': segment_chr, 'segment_start': segment_start,
                                                     'segment_end': segment_end, 'length': segment_length}
                 elif line.startswith('Cycle'):
-                    check = 1
                     continues = 1
                     end_loc = 0
                     length = 0
@@ -140,8 +145,7 @@ def make_new_cycle(graph_path, cycle_path):
                                         continues +=1
                                     end_loc = int(segment_dict[number]['segment_end'])
                                     chrom = segment_dict[number]['segment_chr']
-                    if int(length / 1000) > 2000 or int(length / 1000)< 250:
-                        check = 0
+                    
                     the_file.write('Length=' + str(int(length / 1000)) + 'Kbp;')
                     the_file.write(a[:-1])
                     the_file.write(circle)
@@ -149,11 +153,7 @@ def make_new_cycle(graph_path, cycle_path):
                         the_file.write(';TRIVAL=FALSE')
                     else:
                         the_file.write(';TRIVAL=TRUE')
-                        check = 0
-                    if check == 0:
-                        the_file.write(';PASSED=FALSE')
-                    else:
-                        the_file.write(';PASSED=TRUE')
+                   
                     the_file.write('\n')
                 elif line.startswith('List of cycle'):
                     the_file.write(line)
