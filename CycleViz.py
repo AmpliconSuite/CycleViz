@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import sys
 import os
@@ -177,7 +177,13 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
         #makes the reference genome wedges    
         patches.append(mpatches.Wedge((0,0), outer_bar, end_angle, start_angle, width=bar_width))
         chrom = segSeqD[cycle[ind][0]][0]
-        f_color_v.append(chromosome_colors[chrom])
+        try:
+            f_color_v.append(chromosome_colors[chrom])
+        except KeyError:
+            print("Color not found for " + chrom + ". Using red.")
+            chromosome_colors[chrom] = "red"
+            f_color_v.append("red")
+
         e_color_v.append('grey')
         lw_v.append(0.2)
         

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """
 Jens Luebeck
@@ -151,7 +151,13 @@ def plot_ref_genome(ref_placements,path,total_length,segSeqD,imputed_status,labe
         # patches.append(mpatches.Wedge((0,0), seg_bar_base, end_angle, start_angle, width=bar_width))
         patches.append(mpatches.Rectangle((refObj.abs_start_pos,ref_bar_height),box_len,bar_width))
         chrom = segSeqD[path[ind][0]][0]
-        f_color_v.append(chromosome_colors[chrom])
+        try:
+            f_color_v.append(chromosome_colors[chrom])
+        except KeyError:
+            print("Color not found for " + chrom + ". Using red.")
+            chromosome_colors[chrom] = "red"
+            f_color_v.append("red")
+
         e_color_v.append('grey')
         lw_v.append(0.2)
         
@@ -289,7 +295,7 @@ parser.add_argument("--cycles_file",help="AA/AR cycles-formatted input file",req
 parser.add_argument("--path",help="path number to visualize",required=True)
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--sname", help="output prefix")
-parser.add_argument("--label_segs",help="label segs with graph IDs",choices=["id","dir"],default="")
+parser.add_argument("--label_segs",help="label segs with graph IDs",choices=["id","dir"],default="id")
 parser.add_argument("--reduce_path",help="Number of path elements to remove from left and right ends. Must supply both values, \
                     default 0 0",nargs=2,type=int,default=[0,0])
 parser.add_argument("--print_dup_genes",help="If a gene appears multiple times print name every time.",action='store_true',default=False)
