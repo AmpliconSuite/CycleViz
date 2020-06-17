@@ -298,9 +298,11 @@ parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--label_segs",help="label segs with graph IDs",choices=["id","dir"],default="id")
 parser.add_argument("--reduce_path",help="Number of path elements to remove from left and right ends. Must supply both values, \
                     default 0 0",nargs=2,type=int,default=[0,0])
-parser.add_argument("--print_dup_genes",help="If a gene appears multiple times print name every time.",action='store_true',default=False)
+parser.add_argument("--print_dup_genes",help="If a gene appears multiple times print name every time.",action='store_true', 
+    default=False)
 group2 = parser.add_mutually_exclusive_group(required=False)
-group2.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)")
+group2.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)", 
+    default="")
 group2.add_argument("--gene_subset_list",help="List of genes to plot (e.g. MYC PVT1)",nargs="+",type=str)
 
 args = parser.parse_args()
@@ -352,6 +354,11 @@ if args.graph:
     bpg_dict,seg_end_pos_d = vu.parse_BPG(args.graph)
 
 gene_set = set()
+
+if args.gene_subset_file.upper() == "BUSHMAN":
+    sourceDir = os.path.dirname(os.path.abspath(__file__))
+    args.gene_subset_file = sourceDir + "/Bushman_group_allOnco_May2018.tsv"
+
 if args.gene_subset_file:
     gff = True if args.gene_subset_file.endswith(".gff") else False
     gene_set = vu.parse_gene_subset_file(args.gene_subset_file,gff)

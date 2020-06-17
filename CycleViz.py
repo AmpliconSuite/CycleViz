@@ -195,9 +195,11 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
             # posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_end_pos,refObj.abs_start_pos,-1))
             posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_start_pos,refObj.abs_end_pos))
 
-        tick_freq = max(30000,30000*int(np.floor(total_length/1000000)))
+        tick_freq = max(30000,30000*int(np.floor(total_length/800000)))
         if refObj.abs_end_pos-refObj.abs_start_pos < 30000:
             tick_freq = 10000
+
+        print("tick freq",tick_freq)
         for j in posns:
             if j[0] % tick_freq == 0:
                 text_angle = j[1]/total_length*360
@@ -353,7 +355,10 @@ parser.add_argument("--ref",help="reference genome",choices=["hg19","hg38","GRCh
 parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--rot", help="number of segments to rotate counterclockwise",type=int,default=0)
 parser.add_argument("--label_segs",help="label segs with graph IDs",action='store_true')
-parser.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)")
+parser.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)", 
+    default="")
+parser.add_argument("--gene_subset_list",help="List of genes to plot (e.g. MYC PVT1)",nargs="+",type=str)
+
 
 args = parser.parse_args()
 
@@ -392,9 +397,18 @@ if args.graph:
     bpg_dict,seg_end_pos_d = vu.parse_BPG(args.graph)
 
 gene_set = set()
-if args.gene_subset_file:
+
+if args.gene_subset_file.upper() == "BUSHMAN":
+    sourceDir = os.path.dirname(os.path.abspath(__file__))
+    args.gene_subset_file = sourceDir + "/Bushman_group_allOnco_May2018.tsv"
+
+if args.gene_subset_file and not args.gene_subset_file == "NO":
     gff = True if args.gene_subset_file.endswith(".gff") else False
     gene_set = vu.parse_gene_subset_file(args.gene_subset_file,gff)
+
+elif args.gene_subset_list:
+    gene_set = set(args.gene_subset_list)
+
 
 # for i,k in seg_end_pos_d.iteritems():
 #     print i,k
