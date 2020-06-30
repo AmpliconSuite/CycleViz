@@ -127,7 +127,7 @@ def parse_xmap(xmapf):
 
 #Swap reference and query for a given xmap
 def swap_xmap_RQ(xmapD):
-    for xmap_id,fD in xmapD.iteritems():
+    for xmap_id,fD in xmapD.items():
         # fD["QryLen"],fD["RefLen"] = fD["RefLen"],fD["QryLen"] #do this in the parsing itself
         fD["QryStartPos"],fD["RefStartPos"] = fD["RefStartPos"],fD["QryStartPos"]
         fD["QryEndPos"],fD["RefEndPos"] = fD["RefEndPos"],fD["QryEndPos"]
@@ -257,7 +257,7 @@ def pos_to_label(x, item_cmap):
 #convert XMAP format to SegAligner alignment format. OMPathFinder requires alignments in SA format.
 def xmap_to_SA_aln(xmapD,outdir,fname_prefix,ref_cmaps,contig_cmaps):
     seg_contig_count = {}
-    for xmap_id,fD in xmapD.iteritems():
+    for xmap_id,fD in xmapD.items():
         contig_id = fD["QryContigID"]
         seg_id = fD["RefContigID"]
         score = fD["Confidence"]

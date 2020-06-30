@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -93,7 +93,7 @@ def start_end_angle(normStart,normEnd,total_length):
 
 def plot_bpg_connection(ref_placements,cycle,total_length,prev_seg_index_is_adj,bpg_dict,seg_end_pos_d):
     connect_width = bar_width/2.
-    for ind,refObj in ref_placements.iteritems():
+    for ind,refObj in ref_placements.items():
         next_ind = (ind+1) % len(ref_placements)
         next_refObj = ref_placements[next_ind]
         if not prev_seg_index_is_adj[next_ind]: #or next_ind == 0 to try and close
@@ -168,7 +168,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
 def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,label_segs,onco_set=set()):
     font0 = FontProperties()
     rot_sp = global_rot/360.*total_length
-    for ind,refObj in ref_placements.iteritems():
+    for ind,refObj in ref_placements.items():
         seg_coord_tup = segSeqD[cycle[ind][0]]
         # print(refObj.to_string())
         start_angle, end_angle = start_end_angle(refObj.abs_end_pos,refObj.abs_start_pos,total_length)
@@ -236,7 +236,7 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
 #plot cmap track
 def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_labels = False):
     cycle_label_locs = defaultdict(list)
-    for ind,segObj in seg_placements.iteritems():
+    for ind,segObj in seg_placements.items():
         bar_height = unadj_bar_height + segObj.track_height_shift
         print("cmap_plot",segObj.id)
         # print "cmap plotting abs end pos are"
@@ -275,7 +275,7 @@ def plot_cmap_track(seg_placements,total_length,unadj_bar_height,color,seg_id_la
 def plot_alignment(contig_locs,segment_locs,total_length):
     segs_base = outer_bar+segment_bar_height
     linewidth = min(0.25*2000000/total_length,0.25)
-    print "linewidth",linewidth,total_length
+    print("linewidth",linewidth,total_length)
     for a_d in aln_vect:
         c_id = a_d["contig_id"]
         c_num_dir = int(a_d["contig_dir"]+"1")
@@ -365,7 +365,7 @@ args = parser.parse_args()
 if args.ref == "GRCh38":
     args.ref == "hg38"
 
-print args.ref
+print(args.ref)
 
 if not args.sname:
     args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
@@ -433,7 +433,7 @@ else:
     if is_segdup:
         print("alignment shows simple segdup")
         cycle = [cycle[0]]*2
-        print cycle
+        print(cycle)
         isCycle = False
         prev_seg_index_is_adj = [False,True]
         for a_ind in range(split_ind,len(aln_vect)):
@@ -523,4 +523,4 @@ plt.savefig(fname + '.png',dpi=600)
 plt.savefig(fname + '.pdf',format='pdf')
 
 plt.close()
-print "finished"
+print("finished")

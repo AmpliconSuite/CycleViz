@@ -35,20 +35,20 @@ class CycleVizElemObj(object):
 
     def compute_label_posns(self):
         if self.direction == "+":
-            if self.abs_start_pos == None:
+            if self.abs_start_pos is None:
                 self.abs_start_pos = self.aln_bound_posns[0] - self.scaling_factor*self.cmap_vect[self.aln_lab_ends[0]-1]
             
-            if self.abs_end_pos == None:
+            if self.abs_end_pos is None:
                 self.abs_end_pos = self.aln_bound_posns[1] + self.scaling_factor*(self.cmap_vect[-1] - self.cmap_vect[self.aln_lab_ends[1]-1])
 
             for i in self.cmap_vect[:-1]:
                 self.label_posns.append(self.scaling_factor*i + self.abs_start_pos)
 
         else:
-            if self.abs_start_pos == None:
+            if self.abs_start_pos is None:
                 self.abs_start_pos = self.aln_bound_posns[0] - self.scaling_factor*(self.cmap_vect[-1] - self.cmap_vect[self.aln_lab_ends[1]-1])
             
-            if self.abs_end_pos == None:
+            if self.abs_end_pos is None:
                 self.abs_end_pos = self.aln_bound_posns[1] + self.scaling_factor*self.cmap_vect[self.aln_lab_ends[0]-1]
 
             rev_cmap_vect = [self.cmap_vect[-1] - x for x in self.cmap_vect[::-1][1:]] #does not include length value
@@ -70,7 +70,7 @@ class CycleVizElemObj(object):
 
         if self.start_trim:
             p_abs_start = self.abs_start_pos
-            print "DOING s TRIM on " + self.id
+            print("DOING s TRIM on " + self.id)
             self.abs_start_pos = self.aln_bound_posns[0] - unaligned_cutoff_frac*total_length/4.
             # if self.direction == "+":
             #     self.abs_start_pos = self.aln_bound_posns[0] - unaligned_cutoff_frac*total_length/4.
@@ -80,14 +80,14 @@ class CycleVizElemObj(object):
 
             if self.direction == "-":
                 self.update_label_posns(p_abs_start - self.abs_start_pos)
-            print "now",self.abs_start_pos
+            print("now",self.abs_start_pos)
 
 
 
         if self.end_trim:
             p_abs_end = self.abs_end_pos
-            print "DOING e TRIM on " + self.id
-            print self.aln_bound_posns
+            print("DOING e TRIM on " + self.id)
+            print(self.aln_bound_posns)
             self.abs_end_pos = self.aln_bound_posns[-1] + unaligned_cutoff_frac*total_length/4.
             # if self.direction == "+":
             #     self.abs_end_pos = self.aln_bound_posns[-1] + unaligned_cutoff_frac*total_length/4.
@@ -97,12 +97,12 @@ class CycleVizElemObj(object):
             if self.direction == "-":
                 self.update_label_posns(p_abs_end - self.abs_end_pos)
 
-            print "now",self.abs_end_pos
+            print("now",self.abs_end_pos)
 
         
     #update label positions after trimming contigs
     def update_label_posns(self,s_diff):
-        print "diff",s_diff
+        print("diff",s_diff)
         for ind in range(len(self.label_posns)):
             self.label_posns[ind]-=s_diff
 
@@ -119,7 +119,7 @@ def get_chr_colors():
                  "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","crimson",to_add[1],
                  "fuchsia","pink"]
 
-    chrnames = [str(i) for i in (range(1,23) + ["X","Y"])]
+    chrnames = [str(i) for i in (list(range(1,23)) + ["X","Y"])]
     chromosome_colors = dict(zip(["chr" + i for i in chrnames],color_vect))
     for i in range(len(chrnames)):
         chromosome_colors[chrnames[i]] = color_vect[i]
@@ -220,7 +220,7 @@ def rel_genes(chrIntTree,pTup, gene_set = set()):
 
         if not is_other_feature and gene in gene_set:
             if gene not in relGenes:
-                relGenes[gene] = (tstart,tend,zip(e_s_posns,e_e_posns))
+                relGenes[gene] = (tstart,tend,list(zip(e_s_posns,e_e_posns)))
 
             else:
                 oldTStart = relGenes[gene][0]
@@ -230,7 +230,7 @@ def rel_genes(chrIntTree,pTup, gene_set = set()):
                 if tend > oldTEnd:
                     oldTEnd = tend
                 
-                relGenes[gene] = (oldTStart,oldTEnd,relGenes[gene][2] + zip(e_s_posns,e_e_posns))
+                relGenes[gene] = (oldTStart,oldTEnd,relGenes[gene][2] + list(zip(e_s_posns,e_e_posns)))
     
     return relGenes
 
@@ -305,7 +305,7 @@ def check_segdup(aln_vect,cycle,circular):
                     split_ind = ind+1
 
         s1,s2 = sorted([len(first_set),len(second_set)])
-        print s1,s2,split_ind,s1/float(s2)
+        print(s1,s2,split_ind,s1/float(s2))
         return (s1/float(s2) > .25),split_ind
 
     return False,-1
@@ -329,7 +329,7 @@ def parse_alnfile(path_aln_file):
 
 #determine segments linearly adjacent in ref genome
 def adjacent_segs(cycle,segSeqD,isCycle):
-    print "checking adjacency"
+    print("checking adjacency")
     prev_seg_index_is_adj = [False]*len(cycle)
     p_end = segSeqD[cycle[0][0]][2] if cycle[0][1] == "+" else segSeqD[cycle[0][0]][1]
     p_chrom = segSeqD[cycle[0][0]][0]
@@ -382,26 +382,26 @@ def imputed_status_from_aln(aln_vect,cycle_len):
 
 #check contig end trimming
 def decide_trim_contigs(contig_cmap_vects,contig_placements,total_length):
-    print "DECIDING TRIMMING"
+    print("DECIDING TRIMMING")
     for cObj in contig_placements.values():
-        print cObj.id
+        print(cObj.id)
         cmap_vect = contig_cmap_vects[cObj.id]
         first_lab,last_lab = cObj.aln_lab_ends
 
         if (cmap_vect[first_lab-1] - cmap_vect[0])*cObj.scaling_factor > unaligned_cutoff_frac*total_length:
             cObj.start_trim = True
-            print "start_trim true"
+            print("start_trim true")
 
         if (cmap_vect[-1] - cmap_vect[last_lab-1])*cObj.scaling_factor > unaligned_cutoff_frac*total_length:
             cObj.end_trim = True
-            print "end_trim true"
+            print("end_trim true")
 
         if cObj.start_trim or cObj.end_trim:
             cObj.trim_obj_ends(total_length)
 
 #TEMP SOLUTION (will break if too many consecutive overlaps)
 def set_contig_height_shifts(contig_placements,contig_list,scale_mult=1):
-    print "SETTING HEIGHTS"
+    print("SETTING HEIGHTS")
     prev_offset = 0
     for ind,i in enumerate(contig_list[1:]):
         prevObj = contig_placements[contig_list[ind]]
@@ -480,11 +480,11 @@ def place_contigs_and_labels(path_seg_placements,aln_vect,total_length,contig_cm
         #compute scaling
         scaling_factor = 1
         if circularViz:
-            print c_id,"comp_scaling"
+            print(c_id,"comp_scaling")
             scaled_seg_dist  = abs(seg_end_l_pos - seg_start_l_pos)*(1-contig_spacing)
             scaling_factor = scaled_seg_dist/(abs(cc_vect[cal_f-1] - cc_vect[cal_l-1]))
-            print seg_start_l_pos,seg_end_l_pos,1-contig_spacing,scaled_seg_dist,total_length
-            print scaled_seg_dist,scaling_factor
+            print(seg_start_l_pos,seg_end_l_pos,1-contig_spacing,scaled_seg_dist,total_length)
+            print(scaled_seg_dist,scaling_factor)
             #SET CONTIG SCALING FACTOR
 
         curr_contig_struct.scaling_factor = scaling_factor
@@ -495,15 +495,15 @@ def place_contigs_and_labels(path_seg_placements,aln_vect,total_length,contig_cm
             abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
 
         else:
-            print "applying scaling to ends"
+            print("applying scaling to ends")
             abs_start_pos = seg_start_l_pos - (cc_vect[cal_l-1])*scaling_factor
             abs_end_pos = abs_start_pos + (cc_vect[-1])*scaling_factor
-            print "now",abs_start_pos,abs_end_pos
+            print("now",abs_start_pos,abs_end_pos)
 
 
-        print "SEG PLACEMENT ",c_id
-        print abs_start_pos,abs_end_pos
-        print seg_start_l_pos,seg_end_l_pos,scaling_factor
+        print("SEG PLACEMENT ",c_id)
+        print(abs_start_pos,abs_end_pos)
+        print(seg_start_l_pos,seg_end_l_pos,scaling_factor)
 
         curr_contig_struct.abs_start_pos = abs_start_pos
         curr_contig_struct.abs_end_pos = abs_end_pos
@@ -513,8 +513,8 @@ def place_contigs_and_labels(path_seg_placements,aln_vect,total_length,contig_cm
 
         csl = min(i_list[-1]["contig_label"],i_list[0]["contig_label"])
         cel = max(i_list[-1]["contig_label"],i_list[0]["contig_label"])
-        print "CSL/CEL",csl,cel
-        print ""
+        print("CSL/CEL",csl,cel)
+        print("")
         #SET FIRST AND LAST LABEL ALIGNED IN THE CONTIG
         curr_contig_struct.aln_lab_ends = (csl,cel)
         curr_contig_struct.compute_label_posns()
@@ -524,8 +524,8 @@ def place_contigs_and_labels(path_seg_placements,aln_vect,total_length,contig_cm
 
 def reduce_path(path,prev_seg_index_is_adj,inds,aln_vect=[]):
     #pass
-    print "Reducing path by " + str(inds)
-    print path
+    print("Reducing path by " + str(inds))
+    print(path)
     left,right = inds
     path = path[left:]
     prev_seg_index_is_adj = prev_seg_index_is_adj[left:]
@@ -546,5 +546,5 @@ def reduce_path(path,prev_seg_index_is_adj,inds,aln_vect=[]):
     for a_ind, a_d in enumerate(aln_vect):
         aln_vect[a_ind]["seg_aln_number"] = aln_vect[a_ind]["seg_aln_number"] - downshift
 
-    print path
+    print(path)
     return path, prev_seg_index_is_adj, aln_vect
