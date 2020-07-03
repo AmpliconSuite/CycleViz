@@ -195,7 +195,7 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
             # posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_end_pos,refObj.abs_start_pos,-1))
             posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_start_pos,refObj.abs_end_pos))
 
-        tick_freq = max(30000,30000*int(np.floor(total_length/800000)))
+        tick_freq = max(10000,30000*int(np.floor(total_length/800000)))
         if refObj.abs_end_pos-refObj.abs_start_pos < 30000:
             tick_freq = 10000
 

@@ -114,7 +114,7 @@ def get_chr_colors():
     #              "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","#ff073a",to_add[1],
     #              "magenta","plum"]
 
-    color_vect= ["aqua","gainsboro","salmon","bisque",'goldenrod',"xkcd:algae",to_add[0],"darkslateblue",
+    color_vect= ["aqua","rosybrown","salmon","bisque",'goldenrod',"xkcd:algae",to_add[0],"darkslateblue",
                  "yellow","sienna","purple","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
                  "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","crimson",to_add[1],
                  "fuchsia","pink"]
