@@ -145,6 +145,13 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
         x_t,y_t = pol2cart(outer_bar + bar_width + 2,(text_angle/360*2*np.pi))
         #ax.plot([x,x_t],[y,y_t],color='grey',linewidth=0.4)
         
+
+        #Use filtering from LinearViz to control which names are printed:
+        '''
+        if i not in plotted_gene_names or args.print_dup_genes:
+            print i
+
+        '''
         text_angle,ha = vu.correct_text_angle(text_angle)
         ax.text(x_t,y_t,i,color='k',rotation=text_angle,ha=ha,va="center",fontsize=9,rotation_mode='anchor')
 
@@ -195,6 +202,7 @@ def plot_ref_genome(ref_placements,cycle,total_length,segSeqD,imputed_status,lab
             # posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_end_pos,refObj.abs_start_pos,-1))
             posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_start_pos,refObj.abs_end_pos))
 
+        #TODO: Make this behave like LinearViz. Use the same logic as implemented there
         tick_freq = max(10000,30000*int(np.floor(total_length/800000)))
         if refObj.abs_end_pos-refObj.abs_start_pos < 30000:
             tick_freq = 10000
