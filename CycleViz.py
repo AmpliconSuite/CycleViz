@@ -358,7 +358,8 @@ parser.add_argument("--label_segs",help="label segs with graph IDs",action='stor
 parser.add_argument("--gene_subset_file",help="File containing subset of genes to plot (e.g. oncogene genelist file)", 
     default="")
 parser.add_argument("--gene_subset_list",help="List of genes to plot (e.g. MYC PVT1)",nargs="+",type=str)
-
+parser.add_argument("--print_dup_genes",help="If a gene appears multiple times print name every time.",action='store_true', 
+    default=False)
 
 args = parser.parse_args()
 

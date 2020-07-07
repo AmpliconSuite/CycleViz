@@ -102,9 +102,9 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
         e_color_v.append('k')
         lw_v.append(0)
 
+        #TODO:
         #draw some arrows over the black box
         #but first draw a white line in the box
-
         #then put some white arrow markers on it
 
 
@@ -119,6 +119,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
             ax.text(normStart + box_len/2.,gene_bar_height + 0.1*bar_width,i,color='k',ha="center",fontsize=11)
             plotted_gene_names.add(i)
 
+        #TODO: add exon plotting
         # for exon in e_posns:
         #     if exon[1] > pTup[1] and exon[0] < pTup[2]:
         #         if strand == "+":
@@ -193,8 +194,8 @@ def plot_ref_genome(ref_placements,path,total_length,segSeqD,imputed_status,labe
         p_end = refObj.abs_end_pos    
         gene_tree = vu.parse_genes(seg_coord_tup[0],args.ref)
         relGenes = vu.rel_genes(gene_tree,seg_coord_tup,copy.copy(onco_set))
+
         # plot the gene track
-        # TODO: IMPLEMENT
         plot_gene_track(refObj.abs_start_pos,relGenes,seg_coord_tup,total_length,path[ind][1])
 
         #label the segments by number in path
