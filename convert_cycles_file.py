@@ -11,6 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-o", "--output", help="output prefix")
 parser.add_argument("-c", "--cycle", help="cycle file", required=True)
 parser.add_argument("-g", "--graph", help="graph file", required=True)
+
 args = parser.parse_args()
 
 if not args.output:
@@ -21,7 +22,7 @@ if not args.output:
 if not args.output.endswith("_cycles.txt"):
     args.output+="_cycles.txt"
 
-print args.output
+print(args.output)
 
 def extract_seg(path):
     line_number = 0
