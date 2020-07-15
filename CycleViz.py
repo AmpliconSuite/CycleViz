@@ -1,35 +1,22 @@
 #!/usr/bin/env python
 
-import sys
-import os
-import copy
-import bisect
 import argparse
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-from matplotlib import rcParams
 from collections import defaultdict
+import copy
+import os
+
+import matplotlib
 from matplotlib import pyplot as plt
-import matplotlib.patches as mpatches
-from matplotlib import colors as mcolors
-# import matplotlib._color_data as mcd
+from matplotlib import rcParams
 from matplotlib.collections import PatchCollection
 from matplotlib.font_manager import FontProperties
-from intervaltree import Interval, IntervalTree
-import VizUtil as vu
-
-#non-interactive backend
-
-# try:
-#     sys.path.insert(0,os.environ['AR_SRC'])
-
-# except KeyError:
-#     sys.stderr.write("AmpliconReconstructor source directory bash variable ($AR_SRC) not found.\n")
-#     sys.stderr.write("Is AmpliconReconstructor configured?")
-#     sys.exit()
+import matplotlib.patches as mpatches
+import numpy as np
 
 from bionanoUtil import *
+import VizUtil as vu
+
+matplotlib.use('Agg')
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
 
@@ -153,7 +140,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, strand):
 
         '''
         text_angle,ha = vu.correct_text_angle(text_angle)
-        ax.text(x_t,y_t,i,color='k',rotation=text_angle,ha=ha,va="center",fontsize=9,rotation_mode='anchor')
+        ax.text(x_t,y_t,i,style='italic',color='k',rotation=text_angle,ha=ha,va="center",fontsize=9,rotation_mode='anchor')
 
         for exon in e_posns:
             if exon[1] > pTup[1] and exon[0] < pTup[2]:
