@@ -294,7 +294,6 @@ def check_segdup(aln_vect, cycle, circular):
 
     if len(cycle) == 1 and circular:
         split_ind = -1
-        direction = cycle[0][-1]
         first_set = set()
         second_set = set()
         first_label = aln_vect[0]["seg_label"]
@@ -328,10 +327,10 @@ def parse_alnfile(path_aln_file):
     with open(path_aln_file) as infile:
         # read a few special header lines directly by calling .next(). This will not work in python3!
         # Ideally there should be a way to read the next line from infile with a command that works in 2 & 3.
-        meta_header = infile.next().rstrip()[1:].split()
-        aln_metadata_fields = infile.next().rstrip()[1:].split()
+        meta_header = next(infile).rstrip()[1:].split()
+        aln_metadata_fields = next(infile).rstrip()[1:].split()
         meta_dict = dict(zip(meta_header, aln_metadata_fields))
-        aln_header = infile.next().rstrip()[1:].split()
+        aln_header = next(infile).rstrip()[1:].split()
         for line in infile:
             fields = line.rstrip().split()
             fields_dict = dict(zip(aln_header, fields))
@@ -369,7 +368,7 @@ def adjacent_segs(cycle, segSeqD, isCycle):
     return prev_seg_index_is_adj
 
 
-def get_raw_path_length(path, segSeqD, isCycle, prev_seg_index_is_adj):
+def get_raw_path_length(path, segSeqD):
     raw_path_length = 0.0
     for i in path:
         s_tup = segSeqD[i[0]]
@@ -459,7 +458,7 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
         if c_id not in contig_list: contig_list.append(c_id)
 
     contig_span_dict = {}
-    for c_id, i_list in contig_aln_dict.iteritems():
+    for c_id, i_list in contig_aln_dict.items():
         # print "placing contigs computation step"
         # print c_id
         cc_vect = contig_cmap_vects[c_id]

@@ -344,7 +344,7 @@ cycle_num = args.cycle
 isCycle = circular_D[cycle_num]
 cycle = cycles[cycle_num]
 prev_seg_index_is_adj = vu.adjacent_segs(cycle, segSeqD, isCycle)
-raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD, isCycle, prev_seg_index_is_adj)
+raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD)
 
 bpg_dict, seg_end_pos_d = {}, {}
 if args.graph:

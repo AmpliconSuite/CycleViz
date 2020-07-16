@@ -329,7 +329,7 @@ else:
 prev_seg_index_is_adj = vu.adjacent_segs(path, segSeqD, isCycle)
 print(path)
 print("PSIIA", prev_seg_index_is_adj)
-raw_path_length = vu.get_raw_path_length(path, segSeqD, False, prev_seg_index_is_adj)
+raw_path_length = vu.get_raw_path_length(path, segSeqD)
 
 bpg_dict, seg_end_pos_d = {}, {}
 if args.graph:
