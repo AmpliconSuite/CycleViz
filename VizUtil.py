@@ -326,6 +326,8 @@ def check_segdup(aln_vect, cycle, circular):
 def parse_alnfile(path_aln_file):
     aln_vect = []
     with open(path_aln_file) as infile:
+        # read a few special header lines directly by calling .next(). This will not work in python3!
+        # Ideally there should be a way to read the next line from infile with a command that works in 2 & 3.
         meta_header = infile.next().rstrip()[1:].split()
         aln_metadata_fields = infile.next().rstrip()[1:].split()
         meta_dict = dict(zip(meta_header, aln_metadata_fields))
