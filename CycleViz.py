@@ -30,6 +30,8 @@ bed_spacing = .5
 contig_bar_height = -14 / 3
 segment_bar_height = -8.0 / 3
 gene_to_locations = defaultdict(list)
+overlap_genes = []
+
 
 
 def cart2pol(x, y):
@@ -85,7 +87,8 @@ def plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_a
 
 
 # must return positions of transcribed regions of genes here
-def plot_gene_track(currStart, relGenes, pTup, total_length, seg_dir):
+def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
+    overlap_genes.append({})
     for gObj in relGenes:
         # e_posns is a list of tuples of exon (start,end)
         # these can be plotted similarly to how the coding region is marked
@@ -117,8 +120,12 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, seg_dir):
             print i
         '''
         text_angle, ha = vu.correct_text_angle(text_angle)
-        ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center", fontsize=9,
+        if gname not in overlap_genes[len(overlap_genes)-2] or gstart > overlap_genes[len(overlap_genes)-2].get(gname):
+            ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center", fontsize=gene_fontsize,
                 rotation_mode='anchor')
+            
+        if currEnd < gend:
+            overlap_genes[len(overlap_genes)-1][gname] = gend
 
         for exon in e_posns:
             if exon[1] > pTup[1] and exon[0] < pTup[2]:
@@ -141,6 +148,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, seg_dir):
 # plot the reference genome
 def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, label_segs, onco_set=set()):
     font0 = FontProperties()
+    p_end = 0
     # rot_sp = global_rot / 360. * total_length
     for ind, refObj in ref_placements.items():
         seg_coord_tup = segSeqD[cycle[ind][0]]
@@ -169,10 +177,22 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
             posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
                         np.arange(refObj.abs_start_pos, refObj.abs_end_pos))
 
-        # TODO: Make this behave like LinearViz. Use the same logic as implemented there
         tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
-        if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
-            tick_freq = 10000
+        #if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
+            #tick_freq = 25000
+         
+        # if there are no labels present on the segment given the current frequency, AND this refobject is not adjacent
+        # to the previous, get positions in this segment divisible by 10kbp, set the middle one as the labelling site
+        # else just set it to 10000
+        if (not any(j[0] % tick_freq == 0 for j in posns)) and abs(refObj.abs_start_pos - p_end) > 1:
+            tens = [j[0] for j in posns if j[0] % 10000 == 0]
+            middleIndex = (len(tens) - 1) / 2
+            if tens:
+                tick_freq = tens[middleIndex]
+            else:
+                tick_freq = 10000
+                
+        p_end = refObj.abs_end_pos
 
         print("tick freq", tick_freq)
         for j in posns:
@@ -186,12 +206,12 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
                 txt = " " + str(int(round((j[0]) / 10000))) if ha == "left" else str(int(round((j[0]) / 10000))) + " "
 
                 ax.text(x_t, y_t, txt, color='grey', rotation=text_angle,
-                        ha=ha, va="center", fontsize=9, rotation_mode='anchor')
+                        ha=ha, va="center", fontsize=tick_fontsize, rotation_mode='anchor')
 
         # gene_tree = vu.parse_genes(seg_coord_tup[0], args.ref)
         relGenes = vu.rel_genes(gene_tree, seg_coord_tup, copy.copy(onco_set))
         # plot the gene track
-        plot_gene_track(refObj.abs_start_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1])
+        plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1])
 
         # label the segments by number in cycle
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
@@ -304,12 +324,13 @@ parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "
 parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
 parser.add_argument("--label_segs", help="label segs with graph IDs", action='store_true')
-parser.add_argument("--gene_subset_file", help="File containing subset of genes to plot (e.g. oncogene genelist file)",
+parser.add_argument("--gene_subset_file", help="file containing subset of genes to plot (e.g. oncogene genelist file)",
                     default="")
-parser.add_argument("--gene_subset_list", help="List of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
-parser.add_argument("--print_dup_genes", help="If a gene appears multiple times print name every time.",
-                    action='store_true',
-                    default=False)
+parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
+parser.add_argument("--print_dup_genes", help="if a gene appears multiple times print name every time.",
+                    action='store_true', default=False)
+parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
+parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
 
 args = parser.parse_args()
 
@@ -345,6 +366,9 @@ isCycle = circular_D[cycle_num]
 cycle = cycles[cycle_num]
 prev_seg_index_is_adj = vu.adjacent_segs(cycle, segSeqD, isCycle)
 raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD)
+
+gene_fontsize = args.gene_fontsize
+tick_fontsize = args.tick_fontsize
 
 bpg_dict, seg_end_pos_d = {}, {}
 if args.graph:
