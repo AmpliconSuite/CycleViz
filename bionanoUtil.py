@@ -10,7 +10,7 @@ def median(L):
         L = sorted(L)
         n = len(L)
         m = n - 1
-        return (L[n/2] + L[m/2]) / 2.0
+        return (L[int(n/2)] + L[int(m/2)]) / 2.0
 
     return None
 
@@ -326,10 +326,10 @@ def parse_seg_alignment_file(alignfile):
     alignment = []
     tip_aln = True if "_tip_" in alignfile else False
     with open(alignfile) as infile:
-        meta_head = infile.next().rstrip()[1:].rsplit()
-        meta_vals = infile.next().rstrip()[1:].rsplit()
+        meta_head = next(infile).rstrip()[1:].rsplit()
+        meta_vals = next(infile).rstrip()[1:].rsplit()
         meta_dict = dict(zip(meta_head,meta_vals))
-        aln_head = infile.next().rstrip()[1:].rsplit()
+        aln_head = next(infile).rstrip()[1:].rsplit()
         for line in infile:
             fields = line.rstrip().rsplit()
             alignment.append(dict(zip(aln_head,fields)))
