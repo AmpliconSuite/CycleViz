@@ -24,12 +24,12 @@ rcParams['font.sans-serif'] = ['Arial']
 seg_spacing = 0.009
 bar_width_scaling = 0.02
 bar_drop_prop = 2
-seg_bar_base = 0
+seg_bar_height = 0
 bed_spacing = .5
 contig_bar_height = 1
 segment_bar_height = 0
-ref_bar_height = -2
 gene_bar_height = -1
+ref_bar_height = -2
 bar_width = 1
 gene_to_locations = defaultdict(list)
 plotted_gene_names = set()
@@ -72,7 +72,8 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, seg_dir):
 
         gene_to_locations[gname].append((normStart, normEnd))
         box_len = normEnd - normStart
-        # patches.append(mpatches.Wedge((0,0), seg_bar_base, start_angle, end_angle, width=bar_width/2.0))
+        # patches.append(mpatches.Wedge((0,0), seg_bar_height, start_angle, end_angle, width=bar_width/2.0))
+        print(gname, "GBH",gene_bar_height,"BW",bar_width)
         patches.append(mpatches.Rectangle((normStart, gene_bar_height + bar_width), box_len, 0.6 * bar_width))
         f_color_v.append('k')
         e_color_v.append('k')
@@ -100,7 +101,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, seg_dir):
         #             normStart = currStart + max(1,pTup[2] - exon[1])
 
         #         # start_angle, end_angle = start_end_angle(normStart,normEnd,total_length)
-        #         # patches.append(mpatches.Wedge((0,0), seg_bar_base-bar_width/2.0, start_angle, end_angle, width=bar_width/2.0))
+        #         # patches.append(mpatches.Wedge((0,0), seg_bar_height-bar_width/2.0, start_angle, end_angle, width=bar_width/2.0))
         #         patches.append(mpatches.Rectangle((normStart,gene_bar_height + 0.4*bar_width),box_len,0.6*bar_width))
         #         f_color_v.append('r')
         #         e_color_v.append('r')
@@ -112,6 +113,7 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
     font0 = FontProperties()
     p_end = 0
     for ind, refObj in ref_placements.iteritems():
+        print(ind,refObj.to_string(),ref_bar_height)
         seg_coord_tup = segSeqD[path[ind][0]]
         # print(refObj.to_string())
         # start_angle, end_angle = start_end_angle(refObj.abs_end_pos,refObj.abs_start_pos,total_length)
@@ -119,7 +121,7 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
         # print start_angle,end_angle
 
         # makes the reference genome wedges
-        # patches.append(mpatches.Wedge((0,0), seg_bar_base, end_angle, start_angle, width=bar_width))
+        # patches.append(mpatches.Wedge((0,0), seg_bar_height, end_angle, start_angle, width=bar_width))
         patches.append(mpatches.Rectangle((refObj.abs_start_pos, ref_bar_height), box_len, bar_width))
         chrom = segSeqD[path[ind][0]][0]
         try:
@@ -173,7 +175,7 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
         # label the segments by number in path
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
         # text_angle = mid_sp/total_length*360.
-        # x,y = pol2cart((seg_bar_base-2*bar_width),(text_angle/360.*2.*np.pi))
+        # x,y = pol2cart((seg_bar_height-2*bar_width),(text_angle/360.*2.*np.pi))
         font = font0.copy()
         if imputed_status[ind]:
             font.set_style('italic')
@@ -236,9 +238,9 @@ def plot_alignment(contig_locs, segment_locs, total_length):
         seg_label_vect = segment_locs[a_d["seg_aln_number"]].label_posns
         clx = contig_label_vect[a_d["contig_label"] - 1]
         slx = seg_label_vect[a_d["seg_label"] - 1]
-        # contig_top = seg_bar_base + contig_bar_height + contig_locs[c_id].track_height_shift + bar_width
-        contig_bottom = seg_bar_base + contig_bar_height + contig_locs[c_id].track_height_shift
-        ax.plot([slx, clx], [seg_bar_base + bar_width, contig_bottom], color="grey", linewidth=linewidth)
+        # contig_top = seg_bar_height + contig_bar_height + contig_locs[c_id].track_height_shift + bar_width
+        contig_bottom = seg_bar_height + contig_bar_height + contig_locs[c_id].track_height_shift
+        ax.plot([slx, clx], [seg_bar_height + bar_width, contig_bottom], color="grey", linewidth=linewidth)
 
 
 def construct_path_ref_placements(path, segSeqD, raw_path_length, prev_seg_index_is_adj, aln_vect=[]):
@@ -284,6 +286,10 @@ group2.add_argument("--gene_subset_file", help="File containing subset of genes 
                     default="")
 group2.add_argument("--gene_subset_list", help="List of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
 
+
+# ----------------------
+# handle arguments
+
 args = parser.parse_args()
 if args.ref == "GRCh38":
     args.ref = "hg38"
@@ -321,11 +327,6 @@ if args.reduce_path != [0, 0]:
 else:
     isCycle = circular_D[path_num]
 
-# debug
-# vu.reduce_path(path,)
-# print "PATH:",path
-# print "SEGSEQD",segSeqD
-
 prev_seg_index_is_adj = vu.adjacent_segs(path, segSeqD, isCycle)
 print(path)
 print("PSIIA", prev_seg_index_is_adj)
@@ -348,13 +349,34 @@ if args.gene_subset_file:
 elif args.gene_subset_list:
     gene_set = set(args.gene_subset_list)
 
+# ----------------------
+
 if not args.om_alignments:
-    ref_placements, total_length = construct_path_ref_placements(path, segSeqD, raw_path_length, prev_seg_index_is_adj)
     if args.reduce_path != [0, 0]:
         # reduce alignments
         path, prev_seg_index_is_adj, _ = vu.reduce_path(path, prev_seg_index_is_adj, args.reduce_path)
 
+    ref_placements, total_length = construct_path_ref_placements(path, segSeqD, raw_path_length, 
+                                                                 prev_seg_index_is_adj)
+
     imputed_status = [False] * len(path)
+    # set heights
+    # order of tracks goes:
+    # contig_bar_height (level 1)
+    # seg_bar_height (level 0)
+    # gene_bar_height (level -1)
+    # ref_bar_height (level -2)
+
+    # scales the height based on the length. (bar_width = total_length * some proportion)
+    # level is turned into absolute coordinates
+    bar_width = total_length * bar_width_scaling
+
+    #put the om contigs on top of the reference om segments
+    contig_bar_height += bar_width * bar_drop_prop
+    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop
+    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop)
+    # the following is a holder point to make the plot height work when no OM data is present
+    ax.plot(0,seg_bar_height + contig_bar_height, color='white', markersize=10) 
 
 else:
     seg_cmaps = parse_cmap(args.segs, True)
@@ -377,13 +399,25 @@ else:
 
     ref_placements, total_length = construct_path_ref_placements(path, segSeqD, raw_path_length,
                                                                  prev_seg_index_is_adj, aln_vect)
-    bar_width = total_length * bar_width_scaling
-    contig_bar_height += bar_width * bar_drop_prop
+
     path_seg_placements = vu.place_path_segs_and_labels(path, ref_placements, seg_cmap_vects)
-    ref_bar_height = seg_bar_base
-    gene_bar_height = seg_bar_base
-    gene_bar_height -= bar_width * bar_drop_prop
-    ref_bar_height -= (bar_width * 1.5 * bar_drop_prop)
+
+    # set heights 
+    # this is same as non-om version, but total length is different, thus bar_width is different 
+    # order of tracks goes:
+    # contig_bar_height (level 1)
+    # seg_bar_height (level 0)
+    # gene_bar_height (level -1)
+    # ref_bar_height (level -2)
+
+    # scales the height based on the length. (bar_width = total_length * some proportion)
+    # level is turned into absolute coordinates
+    bar_width = total_length * bar_width_scaling
+
+    #put the om contigs on top of the reference om segments
+    contig_bar_height += bar_width * bar_drop_prop
+    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop
+    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop)
 
     contig_cmaps = parse_cmap(args.contigs, True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
@@ -399,14 +433,14 @@ else:
     vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length)
 
     # plot segs cmap
-    print("SH", seg_bar_base + segment_bar_height)
-    print("CH", seg_bar_base + contig_bar_height)
-    plot_cmap_track(path_seg_placements, total_length, seg_bar_base + segment_bar_height, "darkorange")
+    print("SH", seg_bar_height + segment_bar_height)
+    print("CH", seg_bar_height + contig_bar_height)
+    plot_cmap_track(path_seg_placements, total_length, seg_bar_height + segment_bar_height, "darkorange")
 
     # check overlaps of contigs and adjust heights accordingly
     contig_height_shifts = vu.set_contig_height_shifts(contig_placements, contig_list, -bar_width)
     # plot contigs cmap
-    plot_cmap_track(contig_placements, total_length, seg_bar_base + contig_bar_height, "cornflowerblue",
+    plot_cmap_track(contig_placements, total_length, seg_bar_height + contig_bar_height, "cornflowerblue",
                     seg_id_labels=True)
 
     # plot alignments
@@ -414,18 +448,14 @@ else:
 
     imputed_status = vu.imputed_status_from_aln(aln_vect, len(path))
 
-ref_bar_height = seg_bar_base
-gene_bar_height = seg_bar_base
-gene_bar_height -= bar_width * bar_drop_prop
-ref_bar_height -= (bar_width * 1.5 * bar_drop_prop)
-print("RH", seg_bar_base - ref_bar_height)
+print("RH", ref_bar_height, "BW", bar_width)
 plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, args.label_segs, gene_set)
 
 if args.graph:
     plot_bpg_connection(ref_placements, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)
 
-# ax.set_xlim(-(seg_bar_base+1.25), (seg_bar_base+1.25))
-# ax.set_ylim(-(seg_bar_base+1.25), (seg_bar_base+1.25))
+# ax.set_xlim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
+# ax.set_ylim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
 chrom_set = set()
 for i in path:
     chrom_set.add(segSeqD[i[0]][0])
