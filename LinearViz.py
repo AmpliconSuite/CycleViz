@@ -25,11 +25,10 @@ seg_spacing = 0.009
 bar_width_scaling = 0.02
 bar_drop_prop = 2
 seg_bar_height = 0
-bed_spacing = .5
-contig_bar_height = 1
-segment_bar_height = 0
-gene_bar_height = -1
-ref_bar_height = -2
+contig_bar_height = 3
+segment_bar_height = 2
+gene_bar_height = 1
+ref_bar_height = 0
 bar_width = 1
 gene_to_locations = defaultdict(list)
 plotted_gene_names = set()
@@ -362,10 +361,10 @@ if not args.om_alignments:
     imputed_status = [False] * len(path)
     # set heights
     # order of tracks goes:
-    # contig_bar_height (level 1)
-    # seg_bar_height (level 0)
-    # gene_bar_height (level -1)
-    # ref_bar_height (level -2)
+    # contig_bar_height (level 3) #unused in this case
+    # seg_bar_height (level 2) #unused in this case
+    # gene_bar_height (level 1)
+    # ref_bar_height (level 0)
 
     # scales the height based on the length. (bar_width = total_length * some proportion)
     # level is turned into absolute coordinates
@@ -405,10 +404,10 @@ else:
     # set heights 
     # this is same as non-om version, but total length is different, thus bar_width is different 
     # order of tracks goes:
-    # contig_bar_height (level 1)
-    # seg_bar_height (level 0)
-    # gene_bar_height (level -1)
-    # ref_bar_height (level -2)
+    # contig_bar_height (level 3)
+    # seg_bar_height (level 2)
+    # gene_bar_height (level 1)
+    # ref_bar_height (level 0)
 
     # scales the height based on the length. (bar_width = total_length * some proportion)
     # level is turned into absolute coordinates
