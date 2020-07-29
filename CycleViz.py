@@ -33,6 +33,7 @@ gene_to_locations = defaultdict(list)
 overlap_genes = []
 
 
+
 def cart2pol(x, y):
     rho = np.sqrt(x ** 2 + y ** 2)
     phi = np.arctan2(y, x) / (2. * np.pi) * 360
@@ -122,6 +123,7 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
         if gname not in overlap_genes[len(overlap_genes)-2] or gstart > overlap_genes[len(overlap_genes)-2].get(gname):
             ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center", fontsize=gene_fontsize,
                 rotation_mode='anchor')
+            
         if currEnd < gend:
             overlap_genes[len(overlap_genes)-1][gname] = gend
 
@@ -146,6 +148,7 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
 # plot the reference genome
 def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, label_segs, onco_set=set()):
     font0 = FontProperties()
+    p_end = 0
     # rot_sp = global_rot / 360. * total_length
     for ind, refObj in ref_placements.items():
         seg_coord_tup = segSeqD[cycle[ind][0]]
@@ -174,10 +177,22 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
             posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
                         np.arange(refObj.abs_start_pos, refObj.abs_end_pos))
 
-        # TODO: Make this behave like LinearViz. Use the same logic as implemented there
         tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
-        if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
-            tick_freq = 25000
+        #if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
+            #tick_freq = 25000
+         
+        # if there are no labels present on the segment given the current frequency, AND this refobject is not adjacent
+        # to the previous, get positions in this segment divisible by 10kbp, set the middle one as the labelling site
+        # else just set it to 10000
+        if (not any(j[0] % tick_freq == 0 for j in posns)) and abs(refObj.abs_start_pos - p_end) > 1:
+            tens = [j[0] for j in posns if j[0] % 10000 == 0]
+            middleIndex = (len(tens) - 1) / 2
+            if tens:
+                tick_freq = tens[middleIndex]
+            else:
+                tick_freq = 10000
+                
+        p_end = refObj.abs_end_pos
 
         print("tick freq", tick_freq)
         for j in posns:
@@ -309,14 +324,13 @@ parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "
 parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
 parser.add_argument("--label_segs", help="label segs with graph IDs", action='store_true')
-parser.add_argument("--gene_subset_file", help="File containing subset of genes to plot (e.g. oncogene genelist file)",
+parser.add_argument("--gene_subset_file", help="file containing subset of genes to plot (e.g. oncogene genelist file)",
                     default="")
-parser.add_argument("--gene_subset_list", help="List of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
-parser.add_argument("--print_dup_genes", help="If a gene appears multiple times print name every time.",
-                    action='store_true',
-                    default=False)
+parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
+parser.add_argument("--print_dup_genes", help="if a gene appears multiple times print name every time.",
+                    action='store_true', default=False)
 parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
-parser.add_argument("--tick_fontsize", help="font size for base numbers", type=float, default=7)
+parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
 
 args = parser.parse_args()
 
@@ -352,6 +366,7 @@ isCycle = circular_D[cycle_num]
 cycle = cycles[cycle_num]
 prev_seg_index_is_adj = vu.adjacent_segs(cycle, segSeqD, isCycle)
 raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD)
+
 gene_fontsize = args.gene_fontsize
 tick_fontsize = args.tick_fontsize
 
