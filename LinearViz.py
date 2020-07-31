@@ -36,14 +36,14 @@ plotted_gene_names = set()
 
 def plot_bpg_connection(ref_placements, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d):
     connect_width = bar_width / 2.
-    for ind, refObj in ref_placements.iteritems():
+    for ind, refObj in ref_placements.items():
         next_ind = (ind + 1) % len(ref_placements)
         next_refObj = ref_placements[next_ind]
         if not prev_seg_index_is_adj[next_ind]:  # or next_ind == 0 to try and close
             bpg_adjacency = vu.pair_is_edge(refObj.id, next_refObj.id, refObj.direction, next_refObj.direction,
                                             bpg_dict, seg_end_pos_d)
 
-            if not bpg_adjacency:
+            if not bpg_adjacency or ind == len(ref_placements) - 1:
                 continue
 
             bpg_connector_len = next_refObj.abs_start_pos - refObj.abs_end_pos
@@ -111,7 +111,7 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, seg_dir):
 def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, label_segs, onco_set=set()):
     font0 = FontProperties()
     p_end = 0
-    for ind, refObj in ref_placements.iteritems():
+    for ind, refObj in ref_placements.items():
         print(ind,refObj.to_string(),ref_bar_height)
         seg_coord_tup = segSeqD[path[ind][0]]
         # print(refObj.to_string())
@@ -195,7 +195,7 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
 # plot cmap track
 def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_id_labels=False):
     path_label_locs = defaultdict(list)
-    for ind, segObj in seg_placements.iteritems():
+    for ind, segObj in seg_placements.items():
         bar_height = unadj_bar_height + segObj.track_height_shift
         print("cmap_plot", segObj.id)
         # print "cmap plotting abs end pos are"
@@ -355,7 +355,7 @@ if not args.om_alignments:
         # reduce alignments
         path, prev_seg_index_is_adj, _ = vu.reduce_path(path, prev_seg_index_is_adj, args.reduce_path)
 
-    ref_placements, total_length = construct_path_ref_placements(path, segSeqD, raw_path_length, 
+    ref_placements, total_length = construct_path_ref_placements(path, segSeqD, raw_path_length,
                                                                  prev_seg_index_is_adj)
 
     imputed_status = [False] * len(path)
@@ -375,7 +375,7 @@ if not args.om_alignments:
     gene_bar_height = seg_bar_height - bar_width * bar_drop_prop
     ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop)
     # the following is a holder point to make the plot height work when no OM data is present
-    ax.plot(0,seg_bar_height + contig_bar_height, color='white', markersize=10) 
+    ax.plot(0,seg_bar_height + contig_bar_height, color='white', markersize=10)
 
 else:
     seg_cmaps = parse_cmap(args.segs, True)
@@ -401,8 +401,8 @@ else:
 
     path_seg_placements = vu.place_path_segs_and_labels(path, ref_placements, seg_cmap_vects)
 
-    # set heights 
-    # this is same as non-om version, but total length is different, thus bar_width is different 
+    # set heights
+    # this is same as non-om version, but total length is different, thus bar_width is different
     # order of tracks goes:
     # contig_bar_height (level 3)
     # seg_bar_height (level 2)
