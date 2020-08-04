@@ -81,7 +81,7 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
         f_color_v.append('k')
         e_color_v.append('k')
         lw_v.append(0)
-
+        print(total_length, bar_width)
         # TODO:
         # draw some arrows over the black box
         # but first draw a white line in the box
@@ -89,18 +89,18 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
 
         if gname not in overlap_genes[len(overlap_genes) - 2] or gstart > overlap_genes[len(overlap_genes) - 2].get(
                 gname) or args.print_dup_genes:
-            if abs(gstart - prev_start) < 200000 and alternate and not alternated:
-                ax.text(normStart + box_len / 2., gene_bar_height - 40000 + 0.1 * bar_width, gname, style='italic', color='k',
+            if abs(gstart - prev_start) < 8*bar_width and alternate and not alternated:
+                ax.text(normStart + box_len / 2., gene_bar_height - 1.5*bar_width + 0.1 * bar_width, gname, style='italic', color='k',
                         ha="center", fontsize=11)
                 alternate = False
-            elif abs(gstart - prev_start) < 200000 and not alternate and not alternated:
+            elif abs(gstart - prev_start) < 8*bar_width and not alternate and not alternated:
                 ax.text(normStart + box_len / 2., gene_bar_height + 0.1 * bar_width, gname, style='italic',
                        color='k',
                        ha="center", fontsize=11)
                 alternate = True
                 alternated = True
             else:
-                ax.text(normStart + box_len / 2., gene_bar_height - 20000 + 0.1 * bar_width, gname, style='italic', color='k',
+                ax.text(normStart + box_len / 2., gene_bar_height - 0.7*bar_width + 0.1 * bar_width, gname, style='italic', color='k',
                         ha="center", fontsize=11)
                 alternated = False
             prev_start = gstart
@@ -392,8 +392,8 @@ if not args.om_alignments:
 
     #put the om contigs on top of the reference om segments
     contig_bar_height += bar_width * bar_drop_prop
-    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop + 20000
-    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop) - 20000
+    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop + 0.7*bar_width
+    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop) - 0.7*bar_width
     # the following is a holder point to make the plot height work when no OM data is present
     ax.plot(0,seg_bar_height + contig_bar_height, color='white', markersize=10)
 
@@ -435,8 +435,8 @@ else:
 
     #put the om contigs on top of the reference om segments
     contig_bar_height += bar_width * bar_drop_prop
-    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop + 20000
-    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop) - 20000
+    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop + 0.7*bar_width
+    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop) - 0.7*bar_width
 
     contig_cmaps = parse_cmap(args.contigs, True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
@@ -473,8 +473,8 @@ plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, arg
 if args.graph:
     plot_bpg_connection(ref_placements, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)
 
-# ax.set_xlim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
-# ax.set_ylim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
+#ax.set_xlim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
+#ax.set_ylim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
 chrom_set = set()
 for i in path:
     chrom_set.add(segSeqD[i[0]][0])
