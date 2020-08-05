@@ -31,7 +31,10 @@ gene_bar_height = 1
 ref_bar_height = 0
 bar_width = 1
 gene_to_locations = defaultdict(list)
-plotted_gene_names = set()
+overlap_genes = []
+prev_start = 0
+alternate = True
+alternated = False
 
 
 def plot_bpg_connection(ref_placements, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d):
@@ -48,15 +51,16 @@ def plot_bpg_connection(ref_placements, prev_seg_index_is_adj, bpg_dict, seg_end
 
             bpg_connector_len = next_refObj.abs_start_pos - refObj.abs_end_pos
             # makes the reference genome wedges
-            patches.append(mpatches.Rectangle((refObj.abs_end_pos, ref_bar_height + bar_width / 4.), bpg_connector_len,
-                                              connect_width))
+            patches.append(mpatches.Rectangle((refObj.abs_end_pos, ref_bar_height + bar_width / 4.), bpg_connector_len,connect_width))
             f_color_v.append('grey')
             e_color_v.append('grey')
             lw_v.append(0.2)
 
 
 # must return positions of transcribed regions of genes here
-def plot_gene_track(currStart, relGenes, pTup, total_length, seg_dir):
+def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
+    global prev_start, alternate, alternated
+    overlap_genes.append({})
     for gObj in relGenes:
         # e_posns is a list of tuples of exon (start,end)
         # these can be plotted similarly to how the coding region is marked
@@ -77,16 +81,32 @@ def plot_gene_track(currStart, relGenes, pTup, total_length, seg_dir):
         f_color_v.append('k')
         e_color_v.append('k')
         lw_v.append(0)
-
+        print(total_length, bar_width)
         # TODO:
         # draw some arrows over the black box
         # but first draw a white line in the box
         # then put some white arrow markers on it
 
-        if gname not in plotted_gene_names or args.print_dup_genes:
-            ax.text(normStart + box_len / 2., gene_bar_height + 0.1 * bar_width, gname, style='italic', color='k',
-                    ha="center", fontsize=11)
-            plotted_gene_names.add(gname)
+        if gname not in overlap_genes[len(overlap_genes) - 2] or gstart > overlap_genes[len(overlap_genes) - 2].get(
+                gname) or args.print_dup_genes:
+            if abs(gstart - prev_start) < 8*bar_width and alternate and not alternated:
+                ax.text(normStart + box_len / 2., gene_bar_height - 1.5*bar_width + 0.1 * bar_width, gname, style='italic', color='k',
+                        ha="center", fontsize=11)
+                alternate = False
+            elif abs(gstart - prev_start) < 8*bar_width and not alternate and not alternated:
+                ax.text(normStart + box_len / 2., gene_bar_height + 0.1 * bar_width, gname, style='italic',
+                       color='k',
+                       ha="center", fontsize=11)
+                alternate = True
+                alternated = True
+            else:
+                ax.text(normStart + box_len / 2., gene_bar_height - 0.7*bar_width + 0.1 * bar_width, gname, style='italic', color='k',
+                        ha="center", fontsize=11)
+                alternated = False
+            prev_start = gstart
+
+        if currEnd < gend:
+            overlap_genes[len(overlap_genes) - 1][gname] = gend
 
         # TODO: add exon plotting
         # for exon in e_posns:
@@ -169,7 +189,7 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
         relGenes = vu.rel_genes(gene_tree, seg_coord_tup, copy.copy(onco_set))
 
         # plot the gene track
-        plot_gene_track(refObj.abs_start_pos, relGenes, seg_coord_tup, total_length, path[ind][1])
+        plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, path[ind][1])
 
         # label the segments by number in path
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
@@ -372,8 +392,8 @@ if not args.om_alignments:
 
     #put the om contigs on top of the reference om segments
     contig_bar_height += bar_width * bar_drop_prop
-    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop
-    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop)
+    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop + 0.7*bar_width
+    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop) - 0.7*bar_width
     # the following is a holder point to make the plot height work when no OM data is present
     ax.plot(0,seg_bar_height + contig_bar_height, color='white', markersize=10)
 
@@ -415,8 +435,8 @@ else:
 
     #put the om contigs on top of the reference om segments
     contig_bar_height += bar_width * bar_drop_prop
-    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop
-    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop)
+    gene_bar_height = seg_bar_height - bar_width * bar_drop_prop + 0.7*bar_width
+    ref_bar_height = seg_bar_height - (bar_width * 1.5 * bar_drop_prop) - 0.7*bar_width
 
     contig_cmaps = parse_cmap(args.contigs, True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
@@ -453,8 +473,8 @@ plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, arg
 if args.graph:
     plot_bpg_connection(ref_placements, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)
 
-# ax.set_xlim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
-# ax.set_ylim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
+#ax.set_xlim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
+#ax.set_ylim(-(seg_bar_height+1.25), (seg_bar_height+1.25))
 chrom_set = set()
 for i in path:
     chrom_set.add(segSeqD[i[0]][0])
