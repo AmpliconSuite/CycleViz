@@ -6,7 +6,8 @@ import copy
 import os
 
 import matplotlib
-matplotlib.use('Agg') #this import must happen immediately after importing matplotlib
+
+matplotlib.use('Agg')  # this import must happen immediately after importing matplotlib
 
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
@@ -31,7 +32,6 @@ contig_bar_height = -14 / 3
 segment_bar_height = -8.0 / 3
 gene_to_locations = defaultdict(list)
 overlap_genes = []
-
 
 
 def cart2pol(x, y):
@@ -120,12 +120,14 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
             print i
         '''
         text_angle, ha = vu.correct_text_angle(text_angle)
-        if gname not in overlap_genes[len(overlap_genes)-2] or gstart > overlap_genes[len(overlap_genes)-2].get(gname):
-            ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center", fontsize=gene_fontsize,
-                rotation_mode='anchor')
-            
+        if gname not in overlap_genes[len(overlap_genes) - 2] or gstart > overlap_genes[len(overlap_genes) - 2].get(
+                gname):
+            ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center",
+                    fontsize=gene_fontsize,
+                    rotation_mode='anchor')
+
         if currEnd < gend:
-            overlap_genes[len(overlap_genes)-1][gname] = gend
+            overlap_genes[len(overlap_genes) - 1][gname] = gend
 
         for exon in e_posns:
             if exon[1] > pTup[1] and exon[0] < pTup[2]:
@@ -178,9 +180,9 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
                         np.arange(refObj.abs_start_pos, refObj.abs_end_pos))
 
         tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
-        #if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
-            #tick_freq = 25000
-         
+        # if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
+        # tick_freq = 25000
+
         # if there are no labels present on the segment given the current frequency, AND this refobject is not adjacent
         # to the previous, get positions in this segment divisible by 10kbp, set the middle one as the labelling site
         # else just set it to 10000
@@ -191,7 +193,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
                 tick_freq = tens[middleIndex]
             else:
                 tick_freq = 10000
-                
+
         p_end = refObj.abs_end_pos
 
         print("tick freq", tick_freq)
@@ -311,11 +313,13 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
 
 
 parser = argparse.ArgumentParser(description="Circular visualizations of AA & AR output")
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument("--yaml_file", help="yaml file to specify file and input")
+group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
+parser.add_argument("--cycle", help="cycle number to visualize")
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
-parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file", required=True)
-parser.add_argument("--cycle", help="cycle number to visualize", required=True)
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("-s", "--segs", help="segments cmap file")
 parser.add_argument("-g", "--graph", help="breakpoint graph file")
@@ -333,7 +337,8 @@ parser.add_argument("--gene_fontsize", help="font size for gene names", type=flo
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
 
 args = parser.parse_args()
-
+if args.yaml_file:
+    args = vu.parse_yaml(args)
 if args.ref == "GRCh38":
     args.ref = "hg38"
 
