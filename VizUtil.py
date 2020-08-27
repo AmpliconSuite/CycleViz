@@ -568,35 +568,36 @@ def parse_yaml(args):
     import yaml
     with open(args.yaml_file) as f:
         sample_data = yaml.safe_load(f)
-        args.cycles_file = sample_data.get("Gene_track").get("cycles_file")
-        args.cycle = sample_data.get("Gene_track").get("cycle")
+        args.cycles_file = sample_data.get("cycles_file")
+        args.cycle = sample_data.get("cycle")
         if "om_alignments" in sample_data:
-            args.om_alignments = sample_data.get("Gene_track").get("om_alignments")
-        if "c" in sample_data.get("Gene_track"):
-            args.c = sample_data.get("Gene_track").get("c")
-        if "s" in sample_data.get("Gene_track"):
-            args.s = sample_data.get("Gene_track").get("s")
-        if "g" in sample_data.get("Gene_track"):
-            args.g = sample_data.get("Gene_track").get("g")
-        if "i" in sample_data.get("Gene_track"):
-            args.i = sample_data.get("Gene_track").get("i")
-        if "ref" in sample_data.get("Gene_track"):
-            args.ref = sample_data.get("Gene_track").get("ref")
-        if "sname" in sample_data.get("Gene_track"):
-            args.sname = sample_data.get("Gene_track").get("sname")
-        if "rot" in sample_data.get("Gene_track"):
-            args.rot = sample_data.get("Gene_track").get("rot")
-        if "label_segs" in sample_data.get("Gene_track"):
-            args.label_segs = sample_data.get("Gene_track").get("label_segs")
-        if "gene_subset_file" in sample_data.get("Gene_track"):
-            args.gene_subset_files = sample_data.get("Gene_track").get("gene_subset_file")
-        if "gene_subset_list" in sample_data.get("Gene_track"):
-            args.gene_subset_list = sample_data.get("Gene_track").get("gene_subset_list")
-        if "print_dup_genes" in sample_data.get("Gene_track"):
-            args.print_dup_genes = sample_data.get("Gene_track").get("print_dup_genes")
-        if "gene_fontsize" in sample_data.get("Gene_track"):
-            args.gene_fontsize = sample_data.get("Gene_track").get("gene_fontsize")
-        if "tick_fontsize" in sample_data.get("Gene_track"):
-            args.tick_fontsize = sample_data.get("Gene_track").get("tick_fontsize")
+            args.om_alignments = sample_data.get("om_alignments")
+        if "c" in sample_data:
+            args.contigs = sample_data.get("c")
+        if "s" in sample_data:
+            args.segs = sample_data.get("s")
+        if "g" in sample_data:
+            args.graph = sample_data.get("g")
+        if "i" in sample_data:
+            args.path_alignment = sample_data.get("i")
+        if "ref" in sample_data:
+            args.ref = sample_data.get("ref")
+        if "sname" in sample_data:
+            args.sname = sample_data.get("sname")
+        if "rot" in sample_data:
+            args.rot = sample_data.get("rot")
+        if "label_segs" in sample_data:
+            args.label_segs = sample_data.get("label_segs")
+        if "gene_subset_file" in sample_data:
+            args.gene_subset_files = sample_data.get("gene_subset_file")
+        if "gene_subset_list" in sample_data:
+            args.gene_subset_list = sample_data.get("gene_subset_list")
+            print(args.gene_subset_list)
+        if "print_dup_genes" in sample_data:
+            args.print_dup_genes = sample_data.get("print_dup_genes")
+        if "gene_fontsize" in sample_data:
+            args.gene_fontsize = sample_data.get("gene_fontsize")
+        if "tick_fontsize" in sample_data:
+            args.tick_fontsize = sample_data.get("tick_fontsize")
     return args
 
