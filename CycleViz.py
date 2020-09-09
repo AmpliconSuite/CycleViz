@@ -329,8 +329,8 @@ parser.add_argument("--gene_subset_file", help="file containing subset of genes 
 parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
 parser.add_argument("--print_dup_genes", help="if a gene appears multiple times print name every time.",
                     action='store_true', default=False)
-parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
-parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
+parser.add_argument("--gene_fontsize", help="font size for gene names (default 7)", type=float, default=7)
+parser.add_argument("--tick_fontsize", help="font size for genomic position ticks (default 7)", type=float, default=7)
 
 args = parser.parse_args()
 
