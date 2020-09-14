@@ -4,8 +4,13 @@ UC San Diego, Bioinformatics & Systems Biology
 jluebeck@ucsd.edu
 """
 
+from collections import defaultdict
+from intervaltree import IntervalTree
 
 # compute the median
+
+
+
 def median(L):
     if L:
         L = sorted(L)
@@ -206,14 +211,20 @@ def vectorize_cmaps(cmap_d):
 
 
 def parse_bed(bedfile):
-    bed_list = []
+    bedgraph_data = defaultdict(IntervalTree)
     with open(bedfile) as infile:
         for line in infile:
             if not line.startswith("#"):
                 fields = line.rstrip().rsplit()
-                bed_list.append([fields[0], int(fields[1]), int(fields[2])])
+                chrom = fields[0]
+                begin, end = int(fields[1]), int(fields[2])
+                if len(fields) == 4:
+                    data = float(fields[3])
+                else:
+                    data = None
+                bedgraph_data[chrom].addi(begin, end, data)
 
-    return bed_list
+    return bedgraph_data
 
 
 def dict_from_bed_list(bed_list):
