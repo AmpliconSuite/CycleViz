@@ -299,7 +299,7 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
     for ind, i in enumerate(cycle):
         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
         seg_end = curr_start + seg_len
-        curr_obj = vu.CycleVizElemObj(i[0], i[1], curr_start, seg_end)
+        curr_obj = vu.CycleVizElemObj(i[0], segSeqD[i[0]][0], segSeqD[i[0]][1], segSeqD[i[0]][2], i[1], curr_start, seg_end)
         cycle_ref_placements[ind] = curr_obj
         next_start = seg_end
         mod_ind = (ind + 1) % (len(prev_seg_index_is_adj))
@@ -307,10 +307,15 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
             next_start += spacing_bp
 
         curr_start = next_start
+        print(curr_obj)
 
     total_length = next_start
     return cycle_ref_placements, total_length
 
+def store_bed_data(bed_dict, ref_placements):
+    for obj in ref_placements:
+        for point in bed_dict[obj.chrom][obj.ref_start, obj.ref_end]:
+            obj.bed_data[(point.begin, point.end)] = point.data
 
 parser = argparse.ArgumentParser(description="Circular visualizations of AA & AR output")
 group = parser.add_mutually_exclusive_group(required=True)
@@ -335,6 +340,7 @@ parser.add_argument("--print_dup_genes", help="if a gene appears multiple times 
                     action='store_true', default=False)
 parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
+parser.add_argument("--bedgraph_file","--begraph" ,help="bedgraph file specifying additional data")
 
 args = parser.parse_args()
 if args.yaml_file:
@@ -375,6 +381,7 @@ raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD)
 gene_fontsize = args.gene_fontsize
 tick_fontsize = args.tick_fontsize
 
+
 bpg_dict, seg_end_pos_d = {}, {}
 if args.graph:
     bpg_dict, seg_end_pos_d = vu.parse_BPG(args.graph)
@@ -396,6 +403,13 @@ if not args.om_alignments:
     ref_placements, total_length = construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length,
                                                                   prev_seg_index_is_adj, isCycle)
     imputed_status = [False] * len(cycle)
+
+    # bedgraph
+    if args.bedgraph:
+        bed_files = set(args.bedgraph)
+        for bed in bed_files:
+            bed_data = parse_bed(bed)
+            store_bed_data(bed_data, ref_placements)
 
 # only if bionano data present
 else:
@@ -419,6 +433,13 @@ else:
                                                                   prev_seg_index_is_adj, isCycle, aln_vect)
     cycle_seg_placements = vu.place_path_segs_and_labels(cycle, ref_placements, seg_cmap_vects)
 
+    # bedgraph
+    if args.bedgraph:
+        bed_files = set(args.bedgraph)
+        for bed in bed_files:
+            bed_data = parse_bed(bed)
+            store_bed_data(bed_data, ref_placements)
+
     contig_cmaps = parse_cmap(args.contigs, True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
 
@@ -428,7 +449,7 @@ else:
 
     contig_cmap_lens = get_cmap_lens(args.contigs)
     contig_placements, contig_list = vu.place_contigs_and_labels(cycle_seg_placements, aln_vect, total_length,
-                                                                 contig_cmap_vects, isCycle, True)
+                                                                 contig_cmap_vects, isCycle, True, segSeqD)
     vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length)
 
     # plot cmap segs
