@@ -22,8 +22,11 @@ def round_to_1_sig(x):
 
 
 class CycleVizElemObj(object):
-    def __init__(self, m_id, direction, s, t, cmap_vect=[]):
+    def __init__(self, m_id, chrom, ref_start, ref_end, direction, s, t, cmap_vect=[]):
         self.id = m_id
+        self.chrom = chrom
+        self.ref_start = ref_start
+        self.ref_end = ref_end
         self.direction = direction
         self.abs_start_pos = s
         self.abs_end_pos = t
@@ -35,6 +38,7 @@ class CycleVizElemObj(object):
         self.track_height_shift = 0
         self.start_trim = False
         self.end_trim = False
+        self.bed_data = {}
 
     def compute_label_posns(self):
         if self.direction == "+":
@@ -65,7 +69,7 @@ class CycleVizElemObj(object):
             self.label_posns = self.label_posns[::-1]
 
     def to_string(self):
-        return "{}{} | Start: {} | End: {} | scaling {}".format(self.id, self.direction, str(self.abs_start_pos),
+        return "{}{} | Start: {} | End: {} | scaling {}".format(self.id, self.direction, self.chrom, str(self.abs_start_pos),
                                                                 str(self.abs_end_pos), str(self.scaling_factor))
 
     # trim visualized contig if it's long and unaligned
@@ -447,7 +451,7 @@ def place_path_segs_and_labels(path, ref_placements, seg_cmap_vects):
 
 # create an object for each contig encoding variables such as position of start and end of contig (absolute ends)
 # and positioning of contig labels
-def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig_cmap_vects, isCycle, circularViz):
+def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig_cmap_vects, isCycle, circularViz, segSeqD):
     used_contigs = set()
     contig_aln_dict = defaultdict(list)
     wraparound = []
@@ -460,7 +464,7 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
     contig_span_dict = {}
     for c_id, i_list in contig_aln_dict.items():
         # print "placing contigs computation step"
-        # print c_id
+        #print(c_id)
         cc_vect = contig_cmap_vects[c_id]
         san_f = i_list[0]["seg_aln_number"]
         sal_f = i_list[0]["seg_label"]
@@ -469,9 +473,9 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
         sal_l = i_list[-1]["seg_label"]
         cal_l = i_list[-1]["contig_label"]
         contig_dir = i_list[0]["contig_dir"]
-        # print san_f,sal_f,cal_f
-        # print san_l,sal_l,cal_l
-        curr_contig_struct = CycleVizElemObj(c_id, contig_dir, None, None, cc_vect)
+        #print(san_f,sal_f,cal_f)
+        #print(san_l,sal_l,cal_l)
+        curr_contig_struct = CycleVizElemObj(c_id, segSeqD[c_id[0]][0], segSeqD[c_id[0]][1], segSeqD[c_id[0]][2], contig_dir, None, None, cc_vect)
 
         # look up aln posns from path_seg_placements
         # look up position of first one
@@ -564,3 +568,43 @@ def reduce_path(path, prev_seg_index_is_adj, inds, aln_vect=[]):
 
     print(path)
     return path, prev_seg_index_is_adj, aln_vect
+
+def parse_yaml(args):
+    import yaml
+    with open(args.yaml_file) as f:
+        sample_data = yaml.safe_load(f)
+        args.cycles_file = sample_data.get("cycles_file")
+        args.cycle = sample_data.get("cycle")
+        if "om_alignments" in sample_data:
+            args.om_alignments = sample_data.get("om_alignments")
+        if "c" in sample_data:
+            args.contigs = sample_data.get("c")
+        if "s" in sample_data:
+            args.segs = sample_data.get("s")
+        if "g" in sample_data:
+            args.graph = sample_data.get("g")
+        if "i" in sample_data:
+            args.path_alignment = sample_data.get("i")
+        if "ref" in sample_data:
+            args.ref = sample_data.get("ref")
+        if "sname" in sample_data:
+            args.sname = sample_data.get("sname")
+        if "rot" in sample_data:
+            args.rot = sample_data.get("rot")
+        if "label_segs" in sample_data:
+            args.label_segs = sample_data.get("label_segs")
+        if "gene_subset_file" in sample_data:
+            args.gene_subset_files = sample_data.get("gene_subset_file")
+        if "gene_subset_list" in sample_data:
+            args.gene_subset_list = sample_data.get("gene_subset_list")
+            print(args.gene_subset_list)
+        if "print_dup_genes" in sample_data:
+            args.print_dup_genes = sample_data.get("print_dup_genes")
+        if "gene_fontsize" in sample_data:
+            args.gene_fontsize = sample_data.get("gene_fontsize")
+        if "tick_fontsize" in sample_data:
+            args.tick_fontsize = sample_data.get("tick_fontsize")
+        if "bedgraph_file" in sample_data:
+            args.bedgraph = sample_data.get("begraph_file")
+    return args
+
