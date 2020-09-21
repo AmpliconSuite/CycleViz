@@ -191,10 +191,11 @@ class gene(object):
                         t._transform = t.get_transform().rotate_deg(e_ang - 91)
                         plt.scatter(x_m, y_m, marker=t, s=6, color='k')
 
+    # draw_trunc_spots must be pre-sorted
     def draw_trunc_spots(self, outer_bar):
         if self.gdrops:
-            print(self.gname)
-            self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
+            # rev = True if self.strand == "-" else False
+            # self.gdrops = sorted(self.gdrops, key=lambda x: x[-1], reverse=rev)
             for ind, gd in enumerate(self.gdrops):
                 normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
                 if not hasEnd and ind not in self.gdrops_go_to_link:
@@ -205,17 +206,22 @@ class gene(object):
                     plt.scatter(x_m, y_m, marker=t, s=12, color='r')
 
     def draw_seg_links(self, outer_bar, bar_width):
+        print(self.gname)
         if len(self.gdrops) > 1:
-            self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
+            rev = True if self.strand == "-" else False
+            self.gdrops = sorted(self.gdrops, key=lambda x: x[-1], reverse=rev)
             for ind, gd in enumerate(self.gdrops[1:]):
                 normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
                 pgd = self.gdrops[ind]
                 pposTup = pgd[-1]
                 pseg_ind = pgd[-3]
+                diff = pTup[1] - pposTup[2] if self.strand == "+" else pposTup[1] - pTup[2]
                 if abs(seg_ind - pseg_ind) == 1:
-                    print("RS")
-                    if (pTup[0] != pposTup[0] or pTup[1] - pposTup[2] > 1):
+                    print("NS",diff)
+                    if pTup[0] != pposTup[0] or diff > 1:
+                        print("Adj",diff)
                         if hasStart or hasEnd and (hasStart, hasEnd) == (pgd[-5], pgd[-4]):
+                            print("HS,HE",hasStart,hasEnd)
                             continue
 
                         self.gdrops_go_to_link.add(ind)
@@ -249,7 +255,7 @@ class gene(object):
                     # elif pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
                     #     self.gdrops_go_to_link.add(ind)
 
-                if pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
+                if pTup[0] == pposTup[0] and diff == 1:
                     self.gdrops_go_to_link.add(ind)
 
 # SET COLORS

@@ -133,7 +133,7 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
 
         if gname not in overlap_genes[len(overlap_genes)-2] or gstart > overlap_genes[len(overlap_genes)-2].get(gname)[0]\
                 or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
-            x_t, y_t = vu.pol2cart(outer_bar + bar_width + 2, (text_angle / 360 * 2 * np.pi))
+            x_t, y_t = vu.pol2cart(outer_bar + bar_width + 1.7, (text_angle / 360 * 2 * np.pi))
             text_angle, ha = vu.correct_text_angle(text_angle)
 
             if gObj.highlight_name:
@@ -346,17 +346,17 @@ def store_bed_data(bed_dict, ref_placements):
 
 parser = argparse.ArgumentParser(description="Circular visualizations of AA & AR output")
 group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument("--yaml_file", help="yaml file to specify file and input")
-group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
-parser.add_argument("--cycle", help="cycle number to visualize")
+group.add_argument("--yaml_file", help="Specifiy all desired arguments in this file, OR use the options below\n")
+group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file [required]")
+parser.add_argument("--cycle", help="cycle number to visualize [required]")
+parser.add_argument("-g", "--graph", help="breakpoint graph file [required]")
+parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("-s", "--segs", help="segments cmap file")
-parser.add_argument("-g", "--graph", help="breakpoint graph file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
-parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
 parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
 parser.add_argument("--label_segs", help="label segs with graph IDs", action='store_true')
@@ -502,7 +502,7 @@ if args.graph:
     plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)
 
 ax.set_xlim(-(outer_bar + 1.25), (outer_bar + 1.25))
-ax.set_ylim(-(outer_bar + 2.5), (outer_bar + 2.5))
+ax.set_ylim(-(outer_bar + 3.3), (outer_bar + 3.3))
 chrom_set = set()
 for i in cycle:
     chrom_set.add(segSeqD[i[0]][0])
@@ -523,7 +523,7 @@ ax.add_collection(p)
 ax.set_aspect(1.0)
 plt.axis('off')
 
-plt.savefig(fname + '.png', dpi=600)
+plt.savefig(fname + '.png', dpi=300)
 plt.savefig(fname + '.pdf', format='pdf')
 
 plt.close()
