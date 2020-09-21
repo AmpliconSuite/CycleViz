@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
 import argparse
-from collections import defaultdict
 import copy
 import os
 
 import matplotlib
-matplotlib.use('Agg') #this import must happen immediately after importing matplotlib
-
+matplotlib.use('Agg')  # this import must happen immediately after importing matplotlib
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
 from matplotlib.collections import PatchCollection
@@ -31,23 +29,7 @@ contig_bar_height = -14 / 3
 segment_bar_height = -8.0 / 3
 gene_to_locations = defaultdict(list)
 overlap_genes = []
-
-
-
-def cart2pol(x, y):
-    rho = np.sqrt(x ** 2 + y ** 2)
-    phi = np.arctan2(y, x) / (2. * np.pi) * 360
-    return rho, phi
-
-
-def pol2cart(rho, phi):
-    x = rho * np.cos(phi)
-    y = rho * np.sin(phi)
-    return x, y
-
-
-def polar_series_to_cartesians(line_points, r):
-    return zip(*[pol2cart(r, i) for i in line_points])
+all_relGenes = []
 
 
 # get the start and end angle from the linear start and end
@@ -86,18 +68,54 @@ def plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_a
             lw_v.append(0.2)
 
 
+def plot_gene_direction_indicator(normStart, normEnd, drop):
+    start_angle = normStart / total_length * 360
+    end_angle = normEnd / total_length * 360
+
+    patches.append(mpatches.Wedge((0, 0), outer_bar - drop, start_angle, end_angle, width=bar_width / 4.5))
+    f_color_v.append('k')
+    e_color_v.append('k')
+    lw_v.append(0)
+
+
 # must return positions of transcribed regions of genes here
-def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
+def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, plot_gene_direction=True):
     overlap_genes.append({})
     for gObj in relGenes:
         # e_posns is a list of tuples of exon (start,end)
         # these can be plotted similarly to how the coding region is marked
         gname, gstart, gend, e_posns = gObj.gname, gObj.gstart, gObj.gend, gObj.eposns
+        # print(gname, gstart, gend, pTup, len(gObj.gdrops))
         seg_len = pTup[2] - pTup[1]
+        hasStart = False
+        hasEnd = False
         if seg_dir == "+":
+            ts = max(0, gstart - pTup[1])
+            te = min(seg_len, gend - pTup[1])
+            if gObj.strand == "+":
+                drop = 1.4 * bar_width
+                if ts > 0: hasStart = True
+                if te < seg_len: hasEnd = True
+            else:
+                drop = 2 * bar_width
+                if ts > 0: hasEnd = True
+                if te < seg_len: hasStart = True
+
             normStart = currStart + max(0, gstart - pTup[1])
             normEnd = currStart + min(seg_len, gend - pTup[1])
+
         else:
+            te = min(seg_len, pTup[2] - gstart)
+            ts = max(0, pTup[2] - gend)
+            if gObj.strand == "+":
+                drop = 2 * bar_width
+                if te < seg_len: hasStart = True
+                if ts > 0: hasEnd = True
+            else:
+                drop = 1.4 * bar_width
+                if te < seg_len: hasEnd = True
+                if ts > 0: hasStart = True
+
             normEnd = currStart + min(seg_len, pTup[2] - gstart)
             normStart = currStart + max(0, pTup[2] - gend)
 
@@ -113,21 +131,29 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
         e_color_v.append('k')
         lw_v.append(0)
 
-        x_t, y_t = pol2cart(outer_bar + bar_width + 2, (text_angle / 360 * 2 * np.pi))
-        # Use filtering from LinearViz to control which names are printed:
-        '''
-        if i not in plotted_gene_names or args.print_dup_genes:
-            print i
-        '''
-        text_angle, ha = vu.correct_text_angle(text_angle)
-        if gname not in overlap_genes[len(overlap_genes)-2] or gstart > overlap_genes[len(overlap_genes)-2].get(gname):
-            ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center", fontsize=gene_fontsize,
-                rotation_mode='anchor')
-            
+        if gname not in overlap_genes[len(overlap_genes)-2] or gstart > overlap_genes[len(overlap_genes)-2].get(gname)[0]\
+                or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
+            x_t, y_t = vu.pol2cart(outer_bar + bar_width + 2, (text_angle / 360 * 2 * np.pi))
+            text_angle, ha = vu.correct_text_angle(text_angle)
+
+            if gObj.highlight_name:
+                ax.text(x_t, y_t, gname, style='italic', color='r', rotation=text_angle, ha=ha, va="center",
+                        fontsize=gene_fontsize, rotation_mode='anchor')
+            else:
+                ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center",
+                        fontsize=gene_fontsize, rotation_mode='anchor')
+
+        # draw something to show direction and truncation status
+        if plot_gene_direction:
+            plot_gene_direction_indicator(normStart, normEnd, drop)
+            gObj.gdrops.append((normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, ind, drop, pTup))
+            # gObj.gdrops = [(normStart, normEnd, total_length, seg_dir, currStart, currEnd, pTup), ]
+
         if currEnd < gend:
-            overlap_genes[len(overlap_genes)-1][gname] = gend
+            overlap_genes[len(overlap_genes)-1][gname] = (gend, seg_dir)
 
         for exon in e_posns:
+            #fix exon orientation
             if exon[1] > pTup[1] and exon[0] < pTup[2]:
                 if seg_dir == "+":
                     normStart = currStart + max(1, exon[0] - pTup[1])
@@ -146,15 +172,16 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
 
 
 # plot the reference genome
-def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, label_segs, onco_set=set()):
+def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, label_segs, onco_set=None):
+    if onco_set is None:
+        onco_set = set()
+
     font0 = FontProperties()
     p_end = 0
     # rot_sp = global_rot / 360. * total_length
     for ind, refObj in ref_placements.items():
         seg_coord_tup = segSeqD[cycle[ind][0]]
-        # print(refObj.to_string())
         start_angle, end_angle = start_end_angle(refObj.abs_end_pos, refObj.abs_start_pos, total_length)
-        # print start_angle,end_angle
 
         # makes the reference genome wedges
         patches.append(mpatches.Wedge((0, 0), outer_bar, end_angle, start_angle, width=bar_width))
@@ -178,28 +205,28 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
                         np.arange(refObj.abs_start_pos, refObj.abs_end_pos))
 
         tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
-        #if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
-            #tick_freq = 25000
-         
+        # if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
+        # tick_freq = 25000
+
         # if there are no labels present on the segment given the current frequency, AND this refobject is not adjacent
         # to the previous, get positions in this segment divisible by 10kbp, set the middle one as the labelling site
         # else just set it to 10000
         if (not any(j[0] % tick_freq == 0 for j in posns)) and abs(refObj.abs_start_pos - p_end) > 1:
             tens = [j[0] for j in posns if j[0] % 10000 == 0]
-            middleIndex = (len(tens) - 1) / 2
+            middleIndex = int((len(tens) - 1) / 2)
             if tens:
                 tick_freq = tens[middleIndex]
             else:
                 tick_freq = 10000
-                
+
         p_end = refObj.abs_end_pos
 
         print("tick freq", tick_freq)
         for j in posns:
             if j[0] % tick_freq == 0:
                 text_angle = j[1] / total_length * 360
-                x, y = pol2cart(outer_bar, (text_angle / 360 * 2 * np.pi))
-                x_t, y_t = pol2cart(outer_bar + 0.2, (text_angle / 360 * 2 * np.pi))
+                x, y = vu.pol2cart(outer_bar, (text_angle / 360 * 2 * np.pi))
+                x_t, y_t = vu.pol2cart(outer_bar + 0.2, (text_angle / 360 * 2 * np.pi))
                 ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1)
 
                 text_angle, ha = vu.correct_text_angle(text_angle)
@@ -210,13 +237,15 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
 
         # gene_tree = vu.parse_genes(seg_coord_tup[0], args.ref)
         relGenes = vu.rel_genes(gene_tree, seg_coord_tup, copy.copy(onco_set))
+        all_relGenes.extend(relGenes)
         # plot the gene track
-        plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1])
+        # print(ind, refObj.to_string(), len(relGenes))
+        plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1], ind)
 
         # label the segments by number in cycle
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
         text_angle = mid_sp / total_length * 360.
-        x, y = pol2cart((outer_bar - 2 * bar_width), (text_angle / 360. * 2. * np.pi))
+        x, y = vu.pol2cart((outer_bar - 2 * bar_width), (text_angle / 360. * 2. * np.pi))
         font = font0.copy()
         if imputed_status[ind]:
             font.set_style('italic')
@@ -235,31 +264,27 @@ def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_i
     for ind, segObj in seg_placements.items():
         bar_height = unadj_bar_height + segObj.track_height_shift
         print("cmap_plot", segObj.id)
-        # print "cmap plotting abs end pos are"
-        # print segObj.abs_end_pos,segObj.abs_start_pos
         start_angle, end_angle = start_end_angle(segObj.abs_end_pos, segObj.abs_start_pos, total_length)
-        # print start_angle,end_angle
         patches.append(mpatches.Wedge((0, 0), bar_height + bar_width, end_angle, start_angle, width=bar_width))
         f_color_v.append(color)
         e_color_v.append('k')
         lw_v.append(0)
 
-        # print "linewidth alt",0.2*1000000/total_length
         linewidth = min(0.25 * 2000000 / total_length, 0.25)
         for i in segObj.label_posns:
             if i > segObj.abs_end_pos or i < segObj.abs_start_pos:
                 continue
 
             label_rads = i / total_length * 2 * np.pi
-            x, y = pol2cart(bar_height, label_rads)
-            x_t, y_t = pol2cart(bar_height + bar_width, label_rads)
+            x, y = vu.pol2cart(bar_height, label_rads)
+            x_t, y_t = vu.pol2cart(bar_height + bar_width, label_rads)
             # linewidth = min(0.2*2000000/total_length,0.2)
             ax.plot([x, x_t], [y, y_t], color='k', alpha=0.9, linewidth=linewidth)
 
         if seg_id_labels:
             mid_sp = (segObj.abs_end_pos + segObj.abs_start_pos) / 2
             text_angle = mid_sp / total_length * 360.
-            x, y = pol2cart(bar_height - 1.2, (text_angle / 360. * 2. * np.pi))
+            x, y = vu.pol2cart(bar_height - 1.2, (text_angle / 360. * 2. * np.pi))
             text_angle, ha = vu.correct_text_angle(text_angle)
             text = segObj.id + segObj.direction
             ax.text(x, y, text, color='grey', rotation=text_angle,
@@ -272,7 +297,6 @@ def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_i
 def plot_alignment(contig_locs, segment_locs, total_length):
     segs_base = outer_bar + segment_bar_height
     linewidth = min(0.25 * 2000000 / total_length, 0.25)
-    print("linewidth", linewidth, total_length)
     for a_d in aln_vect:
         c_id = a_d["contig_id"]
         c_num_dir = int(a_d["contig_dir"] + "1")
@@ -285,19 +309,23 @@ def plot_alignment(contig_locs, segment_locs, total_length):
         s_l_pos = seg_label_vect[a_d["seg_label"] - 1]
         s_l_loc = s_l_pos / total_length * 2. * np.pi
         contig_top = outer_bar + contig_bar_height + contig_locs[c_id].track_height_shift + bar_width
-        x_c, y_c = pol2cart(contig_top, c_l_loc)
-        x_s, y_s = pol2cart(segs_base, s_l_loc)
+        x_c, y_c = vu.pol2cart(contig_top, c_l_loc)
+        x_s, y_s = vu.pol2cart(segs_base, s_l_loc)
         ax.plot([x_c, x_s], [y_c, y_s], color="grey", linewidth=linewidth)
 
 
-def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_index_is_adj, isCycle, aln_vect=[]):
+def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_index_is_adj, isCycle, aln_vect=None):
+    if aln_vect is None:
+        aln_vect = []
+
     spacing_bp = seg_spacing * raw_cycle_length
     cycle_ref_placements = {}
     curr_start = 0.0 if isCycle else spacing_bp
     for ind, i in enumerate(cycle):
         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
         seg_end = curr_start + seg_len
-        curr_obj = vu.CycleVizElemObj(i[0], i[1], curr_start, seg_end)
+        curr_obj = vu.CycleVizElemObj(i[0], segSeqD[i[0]][0], segSeqD[i[0]][1], segSeqD[i[0]][2], i[1], curr_start,
+                                      seg_end)
         cycle_ref_placements[ind] = curr_obj
         next_start = seg_end
         mod_ind = (ind + 1) % (len(prev_seg_index_is_adj))
@@ -310,12 +338,20 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
     return cycle_ref_placements, total_length
 
 
+def store_bed_data(bed_dict, ref_placements):
+    for obj in ref_placements:
+        for point in bed_dict[obj.chrom][obj.ref_start, obj.ref_end]:
+            obj.bed_data[(point.begin, point.end)] = point.data
+
+
 parser = argparse.ArgumentParser(description="Circular visualizations of AA & AR output")
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument("--yaml_file", help="yaml file to specify file and input")
+group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
+parser.add_argument("--cycle", help="cycle number to visualize")
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
-parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file", required=True)
-parser.add_argument("--cycle", help="cycle number to visualize", required=True)
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("-s", "--segs", help="segments cmap file")
 parser.add_argument("-g", "--graph", help="breakpoint graph file")
@@ -329,11 +365,14 @@ parser.add_argument("--gene_subset_file", help="file containing subset of genes 
 parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
 parser.add_argument("--print_dup_genes", help="if a gene appears multiple times print name every time.",
                     action='store_true', default=False)
-parser.add_argument("--gene_fontsize", help="font size for gene names (default 7)", type=float, default=7)
-parser.add_argument("--tick_fontsize", help="font size for genomic position ticks (default 7)", type=float, default=7)
+parser.add_argument("--gene_highlight_list", help="list of gene names to highlight", nargs="+", type=str)
+parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
+parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
+parser.add_argument("--bedgraph", help="bedgraph file specifying additional data")
 
 args = parser.parse_args()
-
+if args.yaml_file:
+    args = vu.parse_yaml(args)
 if args.ref == "GRCh38":
     args.ref = "hg38"
 
@@ -346,10 +385,10 @@ outdir = os.path.dirname(args.sname)
 if outdir and not os.path.exists(outdir):
     os.makedirs(outdir)
 
-fname = args.sname + "_cycle_" + args.cycle
+fname = args.sname + "cycle_" + args.cycle
 
 print("Reading genes")
-gene_tree = vu.parse_genes(args.ref)
+gene_tree = vu.parse_genes(args.ref, args.gene_highlight_list)
 
 print("Unaligned fraction cutoff set to " + str(vu.unaligned_cutoff_frac))
 chromosome_colors = vu.get_chr_colors()
@@ -392,6 +431,13 @@ if not args.om_alignments:
                                                                   prev_seg_index_is_adj, isCycle)
     imputed_status = [False] * len(cycle)
 
+    # bedgraph
+    if args.bedgraph:
+        bed_files = set(args.bedgraph)
+        for bed in bed_files:
+            bed_data = parse_bed(bed)
+            store_bed_data(bed_data, ref_placements)
+
 # only if bionano data present
 else:
     print("Visualizing with alignments")
@@ -414,6 +460,13 @@ else:
                                                                   prev_seg_index_is_adj, isCycle, aln_vect)
     cycle_seg_placements = vu.place_path_segs_and_labels(cycle, ref_placements, seg_cmap_vects)
 
+    # bedgraph
+    if args.bedgraph:
+        bed_files = set(args.bedgraph)
+        for bed in bed_files:
+            bed_data = parse_bed(bed)
+            store_bed_data(bed_data, ref_placements)
+
     contig_cmaps = parse_cmap(args.contigs, True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
 
@@ -423,7 +476,7 @@ else:
 
     contig_cmap_lens = get_cmap_lens(args.contigs)
     contig_placements, contig_list = vu.place_contigs_and_labels(cycle_seg_placements, aln_vect, total_length,
-                                                                 contig_cmap_vects, isCycle, True)
+                                                                 contig_cmap_vects, isCycle, True, segSeqD)
     vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length)
 
     # plot cmap segs
@@ -440,6 +493,10 @@ else:
     imputed_status = vu.imputed_status_from_aln(aln_vect, len(cycle))
 
 plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, args.label_segs, gene_set)
+for gObj in all_relGenes:
+    gObj.draw_marker_ends(outer_bar)
+    gObj.draw_seg_links(outer_bar, bar_width)
+    gObj.draw_trunc_spots(outer_bar)
 
 if args.graph:
     plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)

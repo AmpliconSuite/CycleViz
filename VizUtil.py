@@ -14,6 +14,22 @@ contig_spacing = 1. / 100
 unaligned_cutoff_frac = 1. / 60
 
 
+def cart2pol(x, y):
+    rho = np.sqrt(x ** 2 + y ** 2)
+    phi = np.arctan2(y, x) / (2. * np.pi) * 360
+    return rho, phi
+
+
+def pol2cart(rho, phi):
+    x = rho * np.cos(phi)
+    y = rho * np.sin(phi)
+    return x, y
+
+
+def polar_series_to_cartesians(line_points, rad_vect):
+    return zip(*[pol2cart(r, i) for r, i in zip(rad_vect, line_points)])
+
+
 def round_to_1_sig(x):
     if x == 0:
         return 0.
@@ -22,8 +38,11 @@ def round_to_1_sig(x):
 
 
 class CycleVizElemObj(object):
-    def __init__(self, m_id, direction, s, t, cmap_vect=[]):
+    def __init__(self, m_id, chrom, ref_start, ref_end, direction, s, t, cmap_vect=[]):
         self.id = m_id
+        self.chrom = chrom
+        self.ref_start = ref_start
+        self.ref_end = ref_end
         self.direction = direction
         self.abs_start_pos = s
         self.abs_end_pos = t
@@ -35,6 +54,7 @@ class CycleVizElemObj(object):
         self.track_height_shift = 0
         self.start_trim = False
         self.end_trim = False
+        self.bed_data = {}
 
     def compute_label_posns(self):
         if self.direction == "+":
@@ -44,7 +64,7 @@ class CycleVizElemObj(object):
 
             if self.abs_end_pos is None:
                 self.abs_end_pos = self.aln_bound_posns[1] + self.scaling_factor * (
-                            self.cmap_vect[-1] - self.cmap_vect[self.aln_lab_ends[1] - 1])
+                        self.cmap_vect[-1] - self.cmap_vect[self.aln_lab_ends[1] - 1])
 
             for i in self.cmap_vect[:-1]:
                 self.label_posns.append(self.scaling_factor * i + self.abs_start_pos)
@@ -52,7 +72,7 @@ class CycleVizElemObj(object):
         else:
             if self.abs_start_pos is None:
                 self.abs_start_pos = self.aln_bound_posns[0] - self.scaling_factor * (
-                            self.cmap_vect[-1] - self.cmap_vect[self.aln_lab_ends[1] - 1])
+                        self.cmap_vect[-1] - self.cmap_vect[self.aln_lab_ends[1] - 1])
 
             if self.abs_end_pos is None:
                 self.abs_end_pos = self.aln_bound_posns[1] + self.scaling_factor * self.cmap_vect[
@@ -65,7 +85,8 @@ class CycleVizElemObj(object):
             self.label_posns = self.label_posns[::-1]
 
     def to_string(self):
-        return "{}{} | Start: {} | End: {} | scaling {}".format(self.id, self.direction, str(self.abs_start_pos),
+        return "{}{} | Start: {} | End: {} | scaling {}".format(self.id, self.direction, self.chrom,
+                                                                str(self.abs_start_pos),
                                                                 str(self.abs_end_pos), str(self.scaling_factor))
 
     # trim visualized contig if it's long and unaligned
@@ -99,16 +120,137 @@ class CycleVizElemObj(object):
 
 # makes a gene object from parsed refGene data
 class gene(object):
-    def __init__(self, gchrom, gstart, gend, gdata):
+    def __init__(self, gchrom, gstart, gend, gdata, highlight_name):
         self.gchrom = gchrom
         self.gstart = gstart
         self.gend = gend
         self.gname = gdata[-4]
         self.strand = gdata[3]
+        self.highlight_name = highlight_name
         estarts = [int(x) for x in gdata[9].rsplit(",") if x]
         eends = [int(x) for x in gdata[10].rsplit(",") if x]
         self.eposns = zip(estarts, eends)
+        self.gdrops = []
+        self.mdrop_shift = 1.07
+        self.gdrops_go_to_link = set()
 
+    def get_angles(self, seg_dir, normStart, normEnd, total_length):
+        tm = "X"
+        start_angle = normStart / total_length * 360
+        end_angle = normEnd / total_length * 360
+
+        if seg_dir == "+" and self.strand == "+":
+            # mdrop_shift = 1.07
+            s_ang = start_angle
+            e_ang = end_angle
+            sm = "<"
+            em = "s"
+
+        elif seg_dir == "+" and self.strand == "-":
+            self.mdrop_shift = 1.05
+
+            s_ang = end_angle
+            e_ang = start_angle
+            sm = ">"
+            em = "s"
+
+        elif seg_dir == "-" and self.strand == "+":
+            self.mdrop_shift = 1.05
+            s_ang = end_angle
+            e_ang = start_angle
+            sm = ">"
+            em = "s"
+
+        else:
+            # mdrop_shift = 1.07
+            s_ang = start_angle
+            e_ang = end_angle
+            sm = "<"
+            em = "s"
+
+        return s_ang, e_ang, sm, em, tm
+
+    def draw_marker_ends(self, outer_bar):
+        # iterate over gdrops and see how many times the gene appears.
+        if self.gdrops:
+            self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
+            for gd in self.gdrops:
+                normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
+                if hasStart or hasEnd:  # has start
+                    s_ang, e_ang, sm, em, tm = self.get_angles(seg_dir, normStart, normEnd, total_length)
+
+                    if hasStart:
+                        x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (s_ang / 360 * 2 * np.pi))
+                        t = matplotlib.markers.MarkerStyle(marker=sm)
+                        t._transform = t.get_transform().rotate_deg(s_ang - 89)
+                        plt.scatter(x_m, y_m, marker=t, s=20, color='k')
+
+                    if hasEnd:
+                        x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (e_ang / 360 * 2 * np.pi))
+                        t = matplotlib.markers.MarkerStyle(marker=em)
+                        t._transform = t.get_transform().rotate_deg(e_ang - 91)
+                        plt.scatter(x_m, y_m, marker=t, s=6, color='k')
+
+    def draw_trunc_spots(self, outer_bar):
+        if self.gdrops:
+            print(self.gname)
+            self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
+            for ind, gd in enumerate(self.gdrops):
+                normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
+                if not hasEnd and ind not in self.gdrops_go_to_link:
+                    s_ang, e_ang, sm, em, tm = self.get_angles(seg_dir, normStart, normEnd, total_length)
+                    x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (e_ang / 360 * 2 * np.pi))
+                    t = matplotlib.markers.MarkerStyle(marker=tm)
+                    t._transform = t.get_transform().rotate_deg(e_ang - 91)
+                    plt.scatter(x_m, y_m, marker=t, s=12, color='r')
+
+    def draw_seg_links(self, outer_bar, bar_width):
+        if len(self.gdrops) > 1:
+            self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
+            for ind, gd in enumerate(self.gdrops[1:]):
+                normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
+                pgd = self.gdrops[ind]
+                pposTup = pgd[-1]
+                pseg_ind = pgd[-3]
+                if abs(seg_ind - pseg_ind) == 1:
+                    print("RS")
+                    if (pTup[0] != pposTup[0] or pTup[1] - pposTup[2] > 1):
+                        if hasStart or hasEnd and (hasStart, hasEnd) == (pgd[-5], pgd[-4]):
+                            continue
+
+                        self.gdrops_go_to_link.add(ind)
+                        if seg_dir == "+":
+                            start_rad = pgd[1] / total_length * 2 * np.pi
+                            end_rad = normStart / total_length * 2 * np.pi
+                        else:
+                            start_rad = pgd[0] / total_length * 2 * np.pi
+                            end_rad = normEnd / total_length * 2 * np.pi
+
+                        mid_rad = (start_rad + end_rad)/2.0
+                        if self.mdrop_shift == 1.07:
+                            bd_sign = 1
+
+                        else:
+                            drop *= self.mdrop_shift
+                            bd_sign = -1
+
+
+                        thetas1 = np.linspace(start_rad, mid_rad, 100)
+                        rhos1 = np.linspace(outer_bar-drop, outer_bar-drop+bd_sign*bar_width/2.0, 100)
+                        x1, y1 = polar_series_to_cartesians(thetas1, rhos1)
+
+                        thetas2 = np.linspace(mid_rad, end_rad, 100)
+                        rhos2 = np.linspace(outer_bar-drop+bd_sign*bar_width/2.0, outer_bar-drop, 100)
+                        x2, y2 = polar_series_to_cartesians(thetas2, rhos2)
+
+                        plt.plot(x1, y1, linewidth=1, color='grey')
+                        plt.plot(x2, y2, linewidth=1, color='grey')
+
+                    # elif pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
+                    #     self.gdrops_go_to_link.add(ind)
+
+                if pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
+                    self.gdrops_go_to_link.add(ind)
 
 # SET COLORS
 def get_chr_colors():
@@ -123,7 +265,7 @@ def get_chr_colors():
                   "xkcd:purpley", "xkcd:brown", "lavender", "darkseagreen", "powderblue", "crimson", to_add[1],
                   "fuchsia", "pink"]
 
-    chrnames = [str(i) for i in (list(range(1, 23)) + ["X", "Y"])]
+    chrnames = [str(i) for i in (list(range(1, 23)))] + ["X", "Y"]
     chromosome_colors = dict(zip(["chr" + i for i in chrnames], color_vect))
     for i in range(len(chrnames)):
         chromosome_colors[chrnames[i]] = color_vect[i]
@@ -176,7 +318,7 @@ def parse_gene_subset_file(gene_list_file, gff=False):
     return gene_set
 
 
-def parse_genes(ref):
+def parse_genes(ref, gene_highlight_list):
     t = defaultdict(IntervalTree)
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
     if ref == "GRCh37" or ref == "hg19":
@@ -184,6 +326,7 @@ def parse_genes(ref):
     else:
         refGene_name = "refGene_" + ref + ".txt"
 
+    seenNames = set()
     with open(os.path.join(__location__, refGene_name)) as infile:
         for line in infile:
             fields = line.rsplit("\t")
@@ -193,8 +336,11 @@ def parse_genes(ref):
 
             tstart = int(fields[4])
             tend = int(fields[5])
-            currGene = gene(currChrom, tstart, tend, fields)
-            t[currChrom][tstart:tend] = currGene
+            gname = fields[-4]
+            if gname not in seenNames:
+                seenNames.add(gname)
+                currGene = gene(currChrom, tstart, tend, fields, gname in gene_highlight_list)
+                t[currChrom][tstart:tend] = currGene
 
     return t
 
@@ -211,7 +357,10 @@ def correct_text_angle(text_angle):
 
 
 # return list of relevant genes sorted by starting position
-def rel_genes(chrIntTree, pTup, gene_set=set()):
+def rel_genes(chrIntTree, pTup, gene_set=None):
+    if gene_set is None:
+        gene_set = set()
+
     currGenes = {}
     chrom = pTup[0]
     overlappingT = chrIntTree[chrom][pTup[1]:pTup[2]]
@@ -447,10 +596,9 @@ def place_path_segs_and_labels(path, ref_placements, seg_cmap_vects):
 
 # create an object for each contig encoding variables such as position of start and end of contig (absolute ends)
 # and positioning of contig labels
-def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig_cmap_vects, isCycle, circularViz):
-    used_contigs = set()
+def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig_cmap_vects, isCycle, circularViz,
+                             segSeqD):
     contig_aln_dict = defaultdict(list)
-    wraparound = []
     contig_list = []
     for i in aln_vect:
         c_id = i["contig_id"]
@@ -460,7 +608,7 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
     contig_span_dict = {}
     for c_id, i_list in contig_aln_dict.items():
         # print "placing contigs computation step"
-        # print c_id
+        # print(c_id)
         cc_vect = contig_cmap_vects[c_id]
         san_f = i_list[0]["seg_aln_number"]
         sal_f = i_list[0]["seg_label"]
@@ -469,9 +617,10 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
         sal_l = i_list[-1]["seg_label"]
         cal_l = i_list[-1]["contig_label"]
         contig_dir = i_list[0]["contig_dir"]
-        # print san_f,sal_f,cal_f
-        # print san_l,sal_l,cal_l
-        curr_contig_struct = CycleVizElemObj(c_id, contig_dir, None, None, cc_vect)
+        # print(san_f,sal_f,cal_f)
+        # print(san_l,sal_l,cal_l)
+        curr_contig_struct = CycleVizElemObj(c_id, segSeqD[c_id[0]][0], segSeqD[c_id[0]][1], segSeqD[c_id[0]][2],
+                                             contig_dir, None, None, cc_vect)
 
         # look up aln posns from path_seg_placements
         # look up position of first one
@@ -538,8 +687,10 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
     return contig_span_dict, contig_list
 
 
-def reduce_path(path, prev_seg_index_is_adj, inds, aln_vect=[]):
-    # pass
+def reduce_path(path, prev_seg_index_is_adj, inds, aln_vect=None):
+    if aln_vect is None:
+        aln_vect = []
+
     print("Reducing path by " + str(inds))
     print(path)
     left, right = inds
@@ -564,3 +715,48 @@ def reduce_path(path, prev_seg_index_is_adj, inds, aln_vect=[]):
 
     print(path)
     return path, prev_seg_index_is_adj, aln_vect
+
+
+def parse_yaml(args):
+    import yaml
+    with open(args.yaml_file) as f:
+        args.bedgraph = ''
+        sample_data = yaml.safe_load(f)
+        args.cycles_file = sample_data.get("cycles_file")
+        print(args.cycles_file)
+        args.cycle = str(sample_data.get("cycle"))
+        if "om_alignments" in sample_data:
+            args.om_alignments = sample_data.get("om_alignments")
+        if "contigs" in sample_data:
+            args.contigs = sample_data.get("contigs")
+        if "segs" in sample_data:
+            args.segs = sample_data.get("segs")
+        if "graph" in sample_data:
+            args.graph = sample_data.get("graph")
+        if "i" in sample_data:
+            args.path_alignment = sample_data.get("i")
+        if "ref" in sample_data:
+            args.ref = sample_data.get("ref")
+        if "sname" in sample_data:
+            args.sname = sample_data.get("sname")
+        if "rot" in sample_data:
+            args.rot = sample_data.get("rot")
+        if "label_segs" in sample_data:
+            args.label_segs = sample_data.get("label_segs")
+        if "gene_subset_file" in sample_data:
+            args.gene_subset_files = sample_data.get("gene_subset_file")
+        if "gene_subset_list" in sample_data:
+            args.gene_subset_list = sample_data.get("gene_subset_list")
+            print(args.gene_subset_list)
+        if "print_dup_genes" in sample_data:
+            args.print_dup_genes = sample_data.get("print_dup_genes")
+        if "gene_highlight_list" in sample_data:
+            args.gene_highlight_list = sample_data.get("gene_highlight_list")
+        if "gene_fontsize" in sample_data:
+            args.gene_fontsize = sample_data.get("gene_fontsize")
+        if "tick_fontsize" in sample_data:
+            args.tick_fontsize = sample_data.get("tick_fontsize")
+        if "bedgraph_file" in sample_data:
+            args.bedgraph = sample_data.get("begraph_file")
+
+    return args
