@@ -492,6 +492,7 @@ for gObj in all_relGenes:
     print("Decorating",gObj.gname)
     gObj.draw_marker_ends(outer_bar)
     gObj.draw_seg_links(outer_bar, bar_width)
+    gObj.draw_trunc_spots(outer_bar)
 
 if args.graph:
     plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)

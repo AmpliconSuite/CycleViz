@@ -7,7 +7,6 @@ from intervaltree import IntervalTree
 import matplotlib
 from matplotlib import pyplot as plt
 import numpy as np
-from scipy.interpolate import interp1d
 
 matplotlib.use('Agg')
 
@@ -132,6 +131,43 @@ class gene(object):
         self.eposns = zip(estarts, eends)
         self.gdrops = []
         self.mdrop_shift = 1.07
+        self.gdrops_go_to_link = set()
+
+    def get_angles(self, seg_dir, normStart, normEnd, total_length):
+        tm = "X"
+        start_angle = normStart / total_length * 360
+        end_angle = normEnd / total_length * 360
+
+        if seg_dir == "+" and self.strand == "+":
+            # mdrop_shift = 1.07
+            s_ang = start_angle
+            e_ang = end_angle
+            sm = "<"
+            em = "s"
+
+        elif seg_dir == "+" and self.strand == "-":
+            self.mdrop_shift = 1.05
+
+            s_ang = end_angle
+            e_ang = start_angle
+            sm = ">"
+            em = "s"
+
+        elif seg_dir == "-" and self.strand == "+":
+            self.mdrop_shift = 1.05
+            s_ang = end_angle
+            e_ang = start_angle
+            sm = ">"
+            em = "s"
+
+        else:
+            # mdrop_shift = 1.07
+            s_ang = start_angle
+            e_ang = end_angle
+            sm = "<"
+            em = "s"
+
+        return s_ang, e_ang, sm, em, tm
 
     def draw_marker_ends(self, outer_bar):
         # iterate over gdrops and see how many times the gene appears.
@@ -139,42 +175,8 @@ class gene(object):
             self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
             for gd in self.gdrops:
                 normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
-                if hasStart or hasEnd: #has start
-                    if seg_dir == "+" and self.strand == "+":
-                        # mdrop_shift = 1.07
-                        start_angle = normStart / total_length * 360
-                        end_angle = normEnd / total_length * 360
-                        s_ang = start_angle
-                        e_ang = end_angle
-                        sm = "<"
-                        em = "s"
-
-                    elif seg_dir == "+" and self.strand == "-":
-                        self.mdrop_shift = 1.05
-                        start_angle = normStart / total_length * 360
-                        end_angle = normEnd / total_length * 360
-                        s_ang = end_angle
-                        e_ang = start_angle
-                        sm = ">"
-                        em = "s"
-
-                    elif seg_dir == "-" and self.strand == "+":
-                        self.mdrop_shift = 1.05
-                        start_angle = normStart / total_length * 360
-                        end_angle = normEnd / total_length * 360
-                        s_ang = end_angle
-                        e_ang = start_angle
-                        sm = ">"
-                        em = "s"
-
-                    else:
-                        # mdrop_shift = 1.07
-                        start_angle = normStart / total_length * 360
-                        end_angle = normEnd / total_length * 360
-                        s_ang = start_angle
-                        e_ang = end_angle
-                        sm = "<"
-                        em = "s"
+                if hasStart or hasEnd:  # has start
+                    s_ang, e_ang, sm, em, tm = self.get_angles(seg_dir, normStart, normEnd, total_length)
 
                     if hasStart:
                         x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (s_ang / 360 * 2 * np.pi))
@@ -186,7 +188,20 @@ class gene(object):
                         x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (e_ang / 360 * 2 * np.pi))
                         t = matplotlib.markers.MarkerStyle(marker=em)
                         t._transform = t.get_transform().rotate_deg(e_ang - 91)
-                        plt.scatter(x_m, y_m, marker=t, s=10, color='k')
+                        plt.scatter(x_m, y_m, marker=t, s=8, color='k')
+
+    def draw_trunc_spots(self, outer_bar):
+        if len(self.gdrops) > 1:
+            print(self.gname)
+            self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
+            for ind, gd in enumerate(self.gdrops):
+                normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
+                if not hasEnd and ind not in self.gdrops_go_to_link:
+                    s_ang, e_ang, sm, em, tm = self.get_angles(seg_dir, normStart, normEnd, total_length)
+                    x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (e_ang / 360 * 2 * np.pi))
+                    t = matplotlib.markers.MarkerStyle(marker=tm)
+                    t._transform = t.get_transform().rotate_deg(e_ang - 91)
+                    plt.scatter(x_m, y_m, marker=t, s=12, color='r')
 
     def draw_seg_links(self, outer_bar, bar_width):
         if len(self.gdrops) > 1:
@@ -199,7 +214,11 @@ class gene(object):
                 pseg_ind = pgd[-3]
                 if abs(seg_ind - pseg_ind) == 1:
                     print("RS")
-                    if pTup[0] != pposTup[0] or pTup[1] - pposTup[2] > 1:
+                    if (pTup[0] != pposTup[0] or pTup[1] - pposTup[2] > 1):
+                        if hasStart or hasEnd and (hasStart, hasEnd) == (pgd[-5], pgd[-4]):
+                            continue
+
+                        self.gdrops_go_to_link.add(ind)
                         if seg_dir == "+":
                             start_rad = pgd[1] / total_length * 2 * np.pi
                             end_rad = normStart / total_length * 2 * np.pi
@@ -217,30 +236,18 @@ class gene(object):
 
 
                         thetas1 = np.linspace(start_rad, mid_rad, 100)
-                        # rhos1 = interp1d([start_rad, mid_rad], [outer_bar-drop, outer_bar-drop/1.5])(thetas1)
                         rhos1 = np.linspace(outer_bar-drop, outer_bar-drop+bd_sign*bar_width/2.0, 100)
                         x1, y1 = polar_series_to_cartesians(thetas1, rhos1)
 
                         thetas2 = np.linspace(mid_rad, end_rad, 100)
-                        #rhos2 = interp1d([mid_rad, end_rad], [outer_bar-drop/1.5, outer_bar-drop])(thetas2)
                         rhos2 = np.linspace(outer_bar-drop+bd_sign*bar_width/2.0, outer_bar-drop, 100)
                         x2, y2 = polar_series_to_cartesians(thetas2, rhos2)
 
                         plt.plot(x1, y1, linewidth=1, color='grey')
                         plt.plot(x2, y2, linewidth=1, color='grey')
 
-                        # x_s, y_s = pol2cart(outer_bar - drop, (start_angle / 360 * 2 * np.pi))
-                        # x_e, y_e = pol2cart(outer_bar - drop, (end_angle / 360 * 2 * np.pi))
-                        # width = x_e - x_s
-                        # height = y_e - y_s
-                        print("split pair")
-                        print(mid_rad,bar_width)
-                        #if #hit end, hit end
-                        print(gd)
-                        print(pgd)
-                        print("")
-
-
+                elif pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
+                    self.gdrops_go_to_link.add(ind)
 
 # SET COLORS
 def get_chr_colors():
@@ -255,7 +262,7 @@ def get_chr_colors():
                   "xkcd:purpley", "xkcd:brown", "lavender", "darkseagreen", "powderblue", "crimson", to_add[1],
                   "fuchsia", "pink"]
 
-    chrnames = [str(i) for i in (list(range(1, 23)) + ["X", "Y"])]
+    chrnames = [str(i) for i in (list(range(1, 23)))] + ["X", "Y"]
     chromosome_colors = dict(zip(["chr" + i for i in chrnames], color_vect))
     for i in range(len(chrnames)):
         chromosome_colors[chrnames[i]] = color_vect[i]
@@ -588,9 +595,7 @@ def place_path_segs_and_labels(path, ref_placements, seg_cmap_vects):
 # and positioning of contig labels
 def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig_cmap_vects, isCycle, circularViz,
                              segSeqD):
-    used_contigs = set()
     contig_aln_dict = defaultdict(list)
-    wraparound = []
     contig_list = []
     for i in aln_vect:
         c_id = i["contig_id"]
@@ -679,8 +684,10 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
     return contig_span_dict, contig_list
 
 
-def reduce_path(path, prev_seg_index_is_adj, inds, aln_vect=[]):
-    # pass
+def reduce_path(path, prev_seg_index_is_adj, inds, aln_vect=None):
+    if aln_vect is None:
+        aln_vect = []
+
     print("Reducing path by " + str(inds))
     print(path)
     left, right = inds
