@@ -135,9 +135,13 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
                 or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
             x_t, y_t = vu.pol2cart(outer_bar + bar_width + 2, (text_angle / 360 * 2 * np.pi))
             text_angle, ha = vu.correct_text_angle(text_angle)
-            ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center",
-                    fontsize=gene_fontsize,
-                    rotation_mode='anchor')
+
+            if gObj.highlight_name:
+                ax.text(x_t, y_t, gname, style='italic', color='r', rotation=text_angle, ha=ha, va="center",
+                        fontsize=gene_fontsize, rotation_mode='anchor')
+            else:
+                ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center",
+                        fontsize=gene_fontsize, rotation_mode='anchor')
 
         # draw something to show direction and truncation status
         if plot_gene_direction:
@@ -361,9 +365,10 @@ parser.add_argument("--gene_subset_file", help="file containing subset of genes 
 parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
 parser.add_argument("--print_dup_genes", help="if a gene appears multiple times print name every time.",
                     action='store_true', default=False)
+parser.add_argument("--gene_highlight_list", help="list of gene names to highlight", nargs="+", type=str)
 parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
-parser.add_argument("--bedgraph_file", "--begraph", help="bedgraph file specifying additional data")
+parser.add_argument("--bedgraph", help="bedgraph file specifying additional data")
 
 args = parser.parse_args()
 if args.yaml_file:
@@ -383,7 +388,7 @@ if outdir and not os.path.exists(outdir):
 fname = args.sname + "cycle_" + args.cycle
 
 print("Reading genes")
-gene_tree = vu.parse_genes(args.ref)
+gene_tree = vu.parse_genes(args.ref, args.gene_highlight_list)
 
 print("Unaligned fraction cutoff set to " + str(vu.unaligned_cutoff_frac))
 chromosome_colors = vu.get_chr_colors()
@@ -489,7 +494,6 @@ else:
 
 plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, args.label_segs, gene_set)
 for gObj in all_relGenes:
-    print("Decorating",gObj.gname)
     gObj.draw_marker_ends(outer_bar)
     gObj.draw_seg_links(outer_bar, bar_width)
     gObj.draw_trunc_spots(outer_bar)

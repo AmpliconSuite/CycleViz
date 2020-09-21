@@ -120,12 +120,13 @@ class CycleVizElemObj(object):
 
 # makes a gene object from parsed refGene data
 class gene(object):
-    def __init__(self, gchrom, gstart, gend, gdata):
+    def __init__(self, gchrom, gstart, gend, gdata, highlight_name):
         self.gchrom = gchrom
         self.gstart = gstart
         self.gend = gend
         self.gname = gdata[-4]
         self.strand = gdata[3]
+        self.highlight_name = highlight_name
         estarts = [int(x) for x in gdata[9].rsplit(",") if x]
         eends = [int(x) for x in gdata[10].rsplit(",") if x]
         self.eposns = zip(estarts, eends)
@@ -188,10 +189,10 @@ class gene(object):
                         x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (e_ang / 360 * 2 * np.pi))
                         t = matplotlib.markers.MarkerStyle(marker=em)
                         t._transform = t.get_transform().rotate_deg(e_ang - 91)
-                        plt.scatter(x_m, y_m, marker=t, s=8, color='k')
+                        plt.scatter(x_m, y_m, marker=t, s=6, color='k')
 
     def draw_trunc_spots(self, outer_bar):
-        if len(self.gdrops) > 1:
+        if self.gdrops:
             print(self.gname)
             self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
             for ind, gd in enumerate(self.gdrops):
@@ -205,7 +206,6 @@ class gene(object):
 
     def draw_seg_links(self, outer_bar, bar_width):
         if len(self.gdrops) > 1:
-            print(self.gname)
             self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
             for ind, gd in enumerate(self.gdrops[1:]):
                 normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
@@ -246,7 +246,10 @@ class gene(object):
                         plt.plot(x1, y1, linewidth=1, color='grey')
                         plt.plot(x2, y2, linewidth=1, color='grey')
 
-                elif pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
+                    # elif pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
+                    #     self.gdrops_go_to_link.add(ind)
+
+                if pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
                     self.gdrops_go_to_link.add(ind)
 
 # SET COLORS
@@ -315,7 +318,7 @@ def parse_gene_subset_file(gene_list_file, gff=False):
     return gene_set
 
 
-def parse_genes(ref):
+def parse_genes(ref, gene_highlight_list):
     t = defaultdict(IntervalTree)
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
     if ref == "GRCh37" or ref == "hg19":
@@ -336,7 +339,7 @@ def parse_genes(ref):
             gname = fields[-4]
             if gname not in seenNames:
                 seenNames.add(gname)
-                currGene = gene(currChrom, tstart, tend, fields)
+                currGene = gene(currChrom, tstart, tend, fields, gname in gene_highlight_list)
                 t[currChrom][tstart:tend] = currGene
 
     return t
@@ -747,6 +750,8 @@ def parse_yaml(args):
             print(args.gene_subset_list)
         if "print_dup_genes" in sample_data:
             args.print_dup_genes = sample_data.get("print_dup_genes")
+        if "gene_highlight_list" in sample_data:
+            args.gene_highlight_list = sample_data.get("gene_highlight_list")
         if "gene_fontsize" in sample_data:
             args.gene_fontsize = sample_data.get("gene_fontsize")
         if "tick_fontsize" in sample_data:
