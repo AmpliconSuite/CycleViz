@@ -365,7 +365,7 @@ parser.add_argument("--gene_subset_file", help="file containing subset of genes 
 parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
 parser.add_argument("--print_dup_genes", help="if a gene appears multiple times print name every time.",
                     action='store_true', default=False)
-parser.add_argument("--gene_highlight_list", help="list of gene names to highlight", nargs="+", type=str)
+parser.add_argument("--gene_highlight_list", help="list of gene names to highlight", nargs="+", type=str, default=[])
 parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
 parser.add_argument("--bedgraph", help="bedgraph file specifying additional data")
@@ -523,7 +523,7 @@ ax.add_collection(p)
 ax.set_aspect(1.0)
 plt.axis('off')
 
-plt.savefig(fname + '.png', dpi=300)
+plt.savefig(fname + '.png', dpi=600)
 plt.savefig(fname + '.pdf', format='pdf')
 
 plt.close()
