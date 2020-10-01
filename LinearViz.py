@@ -269,7 +269,9 @@ def construct_path_ref_placements(path, segSeqD, raw_path_length, prev_seg_index
     for ind, i in enumerate(path):
         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
         seg_end = curr_start + seg_len
-        curr_obj = vu.CycleVizElemObj(i[0], i[1], curr_start, seg_end)
+        curr_obj = vu.CycleVizElemObj(i[0], segSeqD[i[0]][0], segSeqD[i[0]][1], segSeqD[i[0]][2],
+                                      i[1], curr_start, seg_end)
+
         path_ref_placements[ind] = curr_obj
         next_start = seg_end
         mod_ind = (ind + 1) % (len(prev_seg_index_is_adj))
