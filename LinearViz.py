@@ -325,7 +325,7 @@ fname = args.sname + "_path_" + args.path + "_trim_" + str(args.reduce_path[0]) 
 print(args.reduce_path)
 
 print("Reading genes")
-gene_tree = vu.parse_genes(args.ref)
+gene_tree = vu.parse_genes(args.ref, [])
 
 print("Unaligned fraction cutoff set to " + str(vu.unaligned_cutoff_frac))
 
