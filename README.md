@@ -37,7 +37,7 @@ pip install intervaltree
 sudo apt-get install ttf-mscorefonts-installer
 ```
 
-If you are using this with AR, after cloning the CycleViz repo consider running the following to add a line to your `.bashrc` file to enable automatic generation of CycleViz figures at the end of an AR run. 
+After cloning the CycleViz repo consider running the following to add a line to your `.bashrc` file to enable automatic generation of CycleViz figures at the end of an AR run. 
 
 `cd CycleViz/`
 
