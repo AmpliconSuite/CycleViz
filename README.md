@@ -32,7 +32,7 @@ To install intervaltree python package.
 pip install intervaltree
 ```
 
-To get the Microsoft fonts on Ubuntu (CycleViz defaults to Arial font)
+[optional] To get the Microsoft fonts on Ubuntu (CycleViz defaults to Arial font)
 ```
 sudo apt-get install ttf-mscorefonts-installer
 ```
