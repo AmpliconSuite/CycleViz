@@ -68,6 +68,88 @@ def plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_a
             lw_v.append(0.2)
 
 
+def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total_length, seg_copies):
+    gc, gs, ge = pTup
+    granularity = cfc.track_props['granularity']
+    if granularity == 0:
+        granularity = max(1,int((ge - gs)/10000.0))
+
+    # print(cfc.track_max, cfc.track_min, cfc.top, cfc.base)
+    height_scale_factor = (cfc.top - cfc.base)/float(cfc.track_max - cfc.track_min)
+
+    # plot the legens
+    legend_points = np.linspace(currStart / total_length * 2 * np.pi, (currEnd + 1) / total_length * 2 * np.pi, 10000)
+    lheights = list(np.linspace(cfc.base, cfc.top, 5))
+    lheights.append(cfc.top)
+
+    lvals = list(np.linspace(cfc.track_min, cfc.track_max, 5))
+    lvals.append(cfc.track_max)
+
+    print("TRACK LEGEND HEIGHTS", lvals)
+    for lh in lheights:
+        x_v, y_v = vu.polar_series_to_cartesians(legend_points, lh)
+        plt.plot(x_v, y_v, color='lightgrey', linewidth=0.75, zorder=0)
+
+    tertiary_data = []
+    tertiary_style = 'lines'
+    tertiary_color = 'mediumorchid'
+    if cfc.track_props['show_segment_copy_count']:
+        v = 2*seg_copies*cfc.track_props['segment_copy_count_scaling']
+        tertiary_data = [[gs, ge, v]]
+
+    for data_it, style, curr_color, elem_ind in zip([cfc.primary_data[curr_chrom], cfc.secondary_data[curr_chrom],tertiary_data],
+                                          [cfc.track_props['primary_style'], cfc.track_props['secondary_style'], tertiary_style],
+                                          [cfc.track_props['primary_color'], cfc.track_props['secondary_color'], tertiary_color],
+                                          list(range(3))):
+
+        datalist = [(max(x[0],gs), min(x[1], ge), height_scale_factor*x[2] + cfc.base) for x in data_it] #restrict to the coordinates of the region
+
+        # convert the data into granular form
+        sortrevdir = False if seg_dir == "+" else True
+        datalist.sort(reverse=sortrevdir)
+        point_data = []
+        val_data = []
+        for p in datalist:
+            if p[1] - p[0] > granularity:
+                plocs = np.linspace(p[0], p[1], (p[1] - p[0])/granularity)
+                for newp in plocs:
+                    point_data.append(newp)
+                    val_data.append(p[2])
+
+                point_data.append(p[1])
+                val_data.append(p[2])
+
+            else:
+                point_data.append((p[0] + p[1])/2.0)
+                val_data.append(p[2])
+
+        # set the direction and convert to polars from proportional length
+        if seg_dir == "+":
+            normed_data = [(currStart + x - gs)/total_length * 2 * np.pi for x in point_data]
+        else:
+            normed_data = [(currStart + ge - x)/total_length * 2 * np.pi for x in point_data]
+
+        # convert to cartesians
+        x_v, y_v = vu.polar_series_to_cartesians(normed_data, val_data)
+
+        zorder = 0 if elem_ind == 1 else 1
+
+        # draw the points/lines
+        if style == "points":
+            plt.scatter(x_v, y_v, s=cfc.track_props['pointsize'], color=curr_color, zorder=zorder)
+
+        elif style == "lines":
+            plt.plot(x_v, y_v, linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
+
+            # if seg_dir == "+":
+            #     normeddata = [(currStart + x[0] - gs, currStart + x[1] - gs, x[2]) for x in datalist]
+            # else:
+            #     normeddata = [(currStart + ge - x[1], currStart + ge - x[0], x[2]) for x in datalist]
+
+        else:
+            print("feature_style must be either 'points' or 'lines'\n")
+
+
 def plot_gene_direction_indicator(normStart, normEnd, drop):
     start_angle = normStart / total_length * 360
     end_angle = normEnd / total_length * 360
@@ -131,8 +213,7 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
         e_color_v.append('k')
         lw_v.append(0)
 
-        if gname not in overlap_genes[len(overlap_genes)-2] or gstart > overlap_genes[len(overlap_genes)-2].get(gname)[0]\
-                or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
+        if gname not in overlap_genes[len(overlap_genes)-2] or not overlap_genes[len(overlap_genes)-2].get(gname)[0] or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
             x_t, y_t = vu.pol2cart(outer_bar + bar_width + 1.7, (text_angle / 360 * 2 * np.pi))
             text_angle, ha = vu.correct_text_angle(text_angle)
 
@@ -149,8 +230,9 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
             gObj.gdrops.append((normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, ind, drop, pTup))
             # gObj.gdrops = [(normStart, normEnd, total_length, seg_dir, currStart, currEnd, pTup), ]
 
-        if currEnd < gend:
-            overlap_genes[len(overlap_genes)-1][gname] = (gend, seg_dir)
+        print("PTUPCHECK",pTup,gstart,gend)
+        if not (pTup[2] >= gend and pTup[1] <= gstart):
+            overlap_genes[len(overlap_genes)-1][gname] = (True, seg_dir)
 
         for exon in e_posns:
             #fix exon orientation
@@ -172,7 +254,7 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
 
 
 # plot the reference genome
-def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, label_segs, onco_set=None):
+def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, label_segs, edge_ticks, onco_set=None):
     if onco_set is None:
         onco_set = set()
 
@@ -199,28 +281,47 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
         # makes the ticks on the reference genome wedges
         if cycle[ind][1] == "+":
             posns = zip(range(seg_coord_tup[1], seg_coord_tup[2] + 1),
-                        np.arange(refObj.abs_start_pos, refObj.abs_end_pos))
+                        np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
         else:
             posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
-                        np.arange(refObj.abs_start_pos, refObj.abs_end_pos))
+                        np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
 
         tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
         # if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
         # tick_freq = 25000
 
-        # if there are no labels present on the segment given the current frequency, AND this refobject is not adjacent
-        # to the previous, get positions in this segment divisible by 10kbp, set the middle one as the labelling site
-        # else just set it to 10000
-        if (not any(j[0] % tick_freq == 0 for j in posns)) and abs(refObj.abs_start_pos - p_end) > 1:
-            tens = [j[0] for j in posns if j[0] % 10000 == 0]
-            middleIndex = int((len(tens) - 1) / 2)
-            if tens:
-                tick_freq = tens[middleIndex]
-            else:
-                tick_freq = 10000
+        # put the positions on the ends of the joined segs
+        if edge_ticks:
+            newposns = []
+            tick_freq = 1
+            text_trunc = 1
+            # print(posns,seg_coord_tup,refObj.abs_start_pos, refObj.abs_end_pos)
+            if not refObj.prev_is_adjacent:
+                newposns.append(posns[0])
+
+            if not refObj.next_is_adjacent:
+                newposns.append(posns[-1])
+
+            posns = newposns
+
+
+        # put the positions not on the ends
+        else:
+            # if there are no labels present on the segment given the current frequency, AND this refobject is not adjacent
+            # to the previous, get positions in this segment divisible by 10kbp, set the middle one as the labelling site
+            # else just set it to 10000
+            text_trunc = 10000
+
+            if (not any(j[0] % tick_freq == 0 for j in posns)) and abs(refObj.abs_start_pos - p_end) > 1:
+                tens = [j[0] for j in posns if j[0] % 10000 == 0]
+                middleIndex = int((len(tens) - 1) / 2)
+                if tens:
+                    tick_freq = tens[middleIndex]
+                else:
+                    tick_freq = 10000
+
 
         p_end = refObj.abs_end_pos
-
         print("tick freq", tick_freq)
         for j in posns:
             if j[0] % tick_freq == 0:
@@ -230,7 +331,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
                 ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1)
 
                 text_angle, ha = vu.correct_text_angle(text_angle)
-                txt = " " + str(int(round((j[0]) / 10000))) if ha == "left" else str(int(round((j[0]) / 10000))) + " "
+                txt = " " + str(int(round((j[0]) / text_trunc))) if ha == "left" else str(int(round((j[0]) / text_trunc))) + " "
 
                 ax.text(x_t, y_t, txt, color='grey', rotation=text_angle,
                         ha=ha, va="center", fontsize=tick_fontsize, rotation_mode='anchor')
@@ -241,6 +342,9 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
         # plot the gene track
         # print(ind, refObj.to_string(), len(relGenes))
         plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1], ind)
+        for index, cfc in enumerate(refObj.feature_tracks):
+            plot_feature_track(refObj.abs_start_pos, refObj.abs_end_pos, refObj.direction, seg_coord_tup, cfc,
+                               refObj.chrom, total_length, refObj.seg_count)
 
         # label the segments by number in cycle
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
@@ -258,7 +362,19 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
                     ha=ha, fontsize=5, fontproperties=font, rotation_mode='anchor')
 
 
-# plot cmap track
+# set the heights of the bed track features
+def get_feature_heights(ntracks, intertrack_spacing):
+    if ntracks > 0:
+        maxtop = outer_bar-(intertrack_spacing+2)
+        bases = np.linspace(center_hole, maxtop, ntracks)
+        tops = [x - intertrack_spacing for x in bases[1:]]
+        tops.append(maxtop)
+        return bases, tops
+
+    return [], []
+
+
+# plot cmap track for bionano
 def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_id_labels=False):
     cycle_label_locs = defaultdict(list)
     for ind, segObj in seg_placements.items():
@@ -314,7 +430,8 @@ def plot_alignment(contig_locs, segment_locs, total_length):
         ax.plot([x_c, x_s], [y_c, y_s], color="grey", linewidth=linewidth)
 
 
-def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_index_is_adj, isCycle, aln_vect=None):
+def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_index_is_adj, next_seg_index_is_adj,
+                                   isCycle, cycle_seg_counts, aln_vect=None):
     if aln_vect is None:
         aln_vect = []
 
@@ -322,10 +439,12 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
     cycle_ref_placements = {}
     curr_start = 0.0 if isCycle else spacing_bp
     for ind, i in enumerate(cycle):
+        seg_id_count = cycle_seg_counts[i[0]]
         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
         seg_end = curr_start + seg_len
+        padj, nadj = prev_seg_index_is_adj[ind], next_seg_index_is_adj[ind]
         curr_obj = vu.CycleVizElemObj(i[0], segSeqD[i[0]][0], segSeqD[i[0]][1], segSeqD[i[0]][2], i[1], curr_start,
-                                      seg_end)
+                                      seg_end, seg_id_count, padj, nadj)
         cycle_ref_placements[ind] = curr_obj
         next_start = seg_end
         mod_ind = (ind + 1) % (len(prev_seg_index_is_adj))
@@ -338,15 +457,9 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
     return cycle_ref_placements, total_length
 
 
-def store_bed_data(bed_dict, ref_placements):
-    for obj in ref_placements:
-        for point in bed_dict[obj.chrom][obj.ref_start, obj.ref_end]:
-            obj.bed_data[(point.begin, point.end)] = point.data
-
-
 parser = argparse.ArgumentParser(description="Circular visualizations of AA & AR output")
 group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument("--yaml_file", help="Specifiy all desired arguments in this file, OR use the options below\n")
+group.add_argument("--input_yaml_file", help="Specifiy all desired arguments in this file, OR use the options below\n")
 group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file [required]")
 parser.add_argument("--cycle", help="cycle number to visualize [required]")
 parser.add_argument("-g", "--graph", help="breakpoint graph file [required]")
@@ -367,12 +480,17 @@ parser.add_argument("--print_dup_genes", help="if a gene appears multiple times 
                     action='store_true', default=False)
 parser.add_argument("--gene_highlight_list", help="list of gene names to highlight", nargs="+", type=str, default=[])
 parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
+parser.add_argument("--segment_end_ticks", help="Only place ticks at ends of non-contiguous segments",
+                    action='store_true', default=False)
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
-parser.add_argument("--bedgraph", help="bedgraph file specifying additional data")
+parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
+                                                             "specifying additional data. Will be plotted from outside"
+                                                             " to inside given the order the filenames appear in")
 
 args = parser.parse_args()
-if args.yaml_file:
-    args = vu.parse_yaml(args)
+if args.input_yaml_file:
+    vu.parse_main_args_yaml(args)
+
 if args.ref == "GRCh38":
     args.ref = "hg38"
 
@@ -403,7 +521,8 @@ cycles, segSeqD, circular_D = vu.parse_cycles_file(args.cycles_file)
 cycle_num = args.cycle
 isCycle = circular_D[cycle_num]
 cycle = cycles[cycle_num]
-prev_seg_index_is_adj = vu.adjacent_segs(cycle, segSeqD, isCycle)
+cycle_seg_counts = vu.get_seg_amplicon_count(cycle)
+prev_seg_index_is_adj, next_seg_index_is_adj = vu.adjacent_segs(cycle, segSeqD, isCycle)
 raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD)
 
 gene_fontsize = args.gene_fontsize
@@ -426,17 +545,22 @@ if args.gene_subset_file and not args.gene_subset_file == "NO":
 elif args.gene_subset_list:
     gene_set = set(args.gene_subset_list)
 
+
+fbases, ftops = get_feature_heights(len(args.feature_yaml_list), 0.5)
+
 if not args.om_alignments:
     ref_placements, total_length = construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length,
-                                                                  prev_seg_index_is_adj, isCycle)
+                                                                  prev_seg_index_is_adj, next_seg_index_is_adj,
+                                                                  isCycle, cycle_seg_counts)
     imputed_status = [False] * len(cycle)
 
     # bedgraph
-    if args.bedgraph:
-        bed_files = set(args.bedgraph)
-        for bed in bed_files:
-            bed_data = parse_bed(bed)
-            store_bed_data(bed_data, ref_placements)
+    if args.feature_yaml_list:
+        for ind, yaml_file in enumerate(args.feature_yaml_list):
+            cfc = vu.parse_feature_yaml(yaml_file, ind+1, len(args.feature_yaml_list))
+            cfc.base, cfc.top = fbases[ind], ftops[ind]
+            vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
+            vu.reset_track_min_max(ref_placements, len(args.feature_yaml_list))
 
 # only if bionano data present
 else:
@@ -453,19 +577,23 @@ else:
         print(cycle)
         isCycle = False
         prev_seg_index_is_adj = [False, True]
+        next_seg_index_is_adj = [True, False]
         for a_ind in range(split_ind, len(aln_vect)):
             aln_vect[a_ind]["seg_aln_number"] = 1
 
     ref_placements, total_length = construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length,
-                                                                  prev_seg_index_is_adj, isCycle, aln_vect)
+                                                                  prev_seg_index_is_adj, next_seg_index_is_adj, isCycle,
+                                                                  cycle_seg_counts, aln_vect)
+
     cycle_seg_placements = vu.place_path_segs_and_labels(cycle, ref_placements, seg_cmap_vects)
 
     # bedgraph
-    if args.bedgraph:
-        bed_files = set(args.bedgraph)
-        for bed in bed_files:
-            bed_data = parse_bed(bed)
-            store_bed_data(bed_data, ref_placements)
+    if args.feature_yaml_list:
+        for ind, yaml_file in enumerate(args.feature_yaml_list):
+            cfc = vu.parse_feature_yaml(yaml_file, ind + 1, len(args.feature_yaml_list))
+            cfc.base, cfc.top = fbases[ind], ftops[ind]
+            vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
+            vu.reset_track_min_max(ref_placements, len(args.feature_yaml_list))
 
     contig_cmaps = parse_cmap(args.contigs, True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
@@ -492,7 +620,9 @@ else:
     plot_alignment(contig_placements, cycle_seg_placements, total_length)
     imputed_status = vu.imputed_status_from_aln(aln_vect, len(cycle))
 
-plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, args.label_segs, gene_set)
+plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, args.label_segs, args.segment_end_ticks,
+                gene_set)
+
 for gObj in all_relGenes:
     gObj.draw_marker_ends(outer_bar)
     gObj.draw_seg_links(outer_bar, bar_width)

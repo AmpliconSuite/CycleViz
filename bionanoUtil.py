@@ -210,23 +210,6 @@ def vectorize_cmaps(cmap_d):
     return vectorized_dict
 
 
-def parse_bed(bedfile):
-    bedgraph_data = defaultdict(IntervalTree)
-    with open(bedfile) as infile:
-        for line in infile:
-            if not line.startswith("#"):
-                fields = line.rstrip().rsplit()
-                chrom = fields[0]
-                begin, end = int(fields[1]), int(fields[2])
-                if len(fields) == 4:
-                    data = float(fields[3])
-                else:
-                    data = None
-                bedgraph_data[chrom].addi(begin, end, data)
-
-    return bedgraph_data
-
-
 def dict_from_bed_list(bed_list):
     bed_dict = {}
     for fields in bed_list:
