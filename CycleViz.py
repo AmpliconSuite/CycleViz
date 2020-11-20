@@ -88,7 +88,7 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     print("TRACK LEGEND HEIGHTS", lvals)
     for lh in lheights:
         x_v, y_v = vu.polar_series_to_cartesians(legend_points, lh)
-        plt.plot(x_v, y_v, color='lightgrey', linewidth=0.75, zorder=0)
+        plt.plot(x_v, y_v, color='lightgrey', linewidth=0.25, zorder=0)
 
     tertiary_data = []
     tertiary_style = 'lines'
@@ -96,6 +96,14 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     if cfc.track_props['show_segment_copy_count']:
         v = 2*seg_copies*cfc.track_props['segment_copy_count_scaling']
         tertiary_data = [[gs, ge, v]]
+
+
+    hs = cfc.track_props['hide_secondary']
+    if cfc.track_props['hide_secondary'] == "viral" and not (curr_chrom.startswith('chr') or len(curr_chrom) < 3):
+        hs = True
+
+    elif cfc.track_props['hide_secondary'] == "viral":
+        hs = False
 
     for data_it, style, curr_color, elem_ind in zip([cfc.primary_data[curr_chrom], cfc.secondary_data[curr_chrom],tertiary_data],
                                           [cfc.track_props['primary_style'], cfc.track_props['secondary_style'], tertiary_style],
@@ -136,10 +144,12 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
 
         # draw the points/lines
         if style == "points":
-            plt.scatter(x_v, y_v, s=cfc.track_props['pointsize'], color=curr_color, zorder=zorder)
+            if elem_ind != 1 or not hs:
+                plt.scatter(x_v, y_v, s=cfc.track_props['pointsize'], color=curr_color, zorder=zorder)
 
         elif style == "lines":
-            plt.plot(x_v, y_v, linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
+            if elem_ind != 1 or not hs:
+                plt.plot(x_v, y_v, linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
 
             # if seg_dir == "+":
             #     normeddata = [(currStart + x[0] - gs, currStart + x[1] - gs, x[2]) for x in datalist]
@@ -275,7 +285,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
             chromosome_colors[chrom] = "red"
             f_color_v.append("red")
 
-        e_color_v.append('grey')
+        e_color_v.append(chromosome_colors[chrom])
         lw_v.append(0.2)
 
         # makes the ticks on the reference genome wedges
@@ -484,8 +494,8 @@ parser.add_argument("--segment_end_ticks", help="Only place ticks at ends of non
                     action='store_true', default=False)
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
-                                                             "specifying additional data. Will be plotted from outside"
-                                                             " to inside given the order the filenames appear in")
+                    "specifying additional data. Will be plotted from outside to inside given the order the filenames "
+                    "appear in", default = [])
 
 args = parser.parse_args()
 if args.input_yaml_file:

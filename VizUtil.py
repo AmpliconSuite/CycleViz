@@ -29,7 +29,10 @@ def pol2cart(rho, phi):
 
 # arguments: thetas, rhos, however rad_vect can be a single rho, and will get turned into a list of same length as theta
 def polar_series_to_cartesians(line_points, rad_vect):
-    if not isinstance(rad_vect,list):
+    if len(line_points) == 0:
+        return [], []
+
+    if not isinstance(rad_vect, list):
         rad_vect = [rad_vect,] * len(line_points)
 
     return zip(*[pol2cart(r, i) for r, i in zip(rad_vect, line_points)])
@@ -403,14 +406,53 @@ def parse_bed(bedfile):
     return bedgraph_data
 
 
-def normalize_by_secondary(primary_dset, secondary_dset, chrom):
+def normalize_by_secondary(primary_dset, secondary_dset, chrom, mode):
     # put secondary data into an intervaltree
+    if mode == True:
+        mode = "mean"
+
+    if mode != "mean" and mode != "each":
+        print("Incorrect norm by secondary mode selected, must be 'mean' or 'each'... using 'mean'")
+
+    if len(secondary_dset) == 0:
+        print("No secondary data! skipping normalization")
+        return primary_dset, secondary_dset
+
     sit = IntervalTree()
     normed_primary = defaultdict(list)
     normed_secondary = defaultdict(list)
-    for point in secondary_dset[chrom]:
-        sit.addi(point[0], point[1], point[2])
-        normed_secondary[chrom].append([point[0], point[1], 2])
+    if mode == "each":
+        for point in secondary_dset[chrom]:
+            sit.addi(point[0], point[1], point[2])
+            normed_secondary[chrom].append([point[0], point[1], 2])
+
+    elif mode == "mean":
+        print("Normalizing 'mean' for secondary will update secondary")
+        lscale = 100000.0
+        runl = 0.
+        runs = 0.
+        c = 0
+        #for everything in secondary, compute a mean
+        for ival in secondary_dset.values():
+            print(ival)
+            for point in ival:
+                c+=1
+                l = (point[1] - point[0])/lscale
+                runl+=l
+                runs+=(l*point[2])
+
+        if c > 0:
+            allmean = runs/runl
+        else:
+            print("no secondary data, setting scale to 1")
+            allmean = 1.0
+
+
+        #replace everything in secondary with that mean
+        for point in secondary_dset[chrom]:
+            sit.addi(point[0], point[1], allmean)
+            normed_secondary[chrom].append([point[0], point[1], 2.0])
+
 
     for point in primary_dset[chrom]:
         hit_sec = list(sit[point[0]:point[1]])
@@ -421,7 +463,7 @@ def normalize_by_secondary(primary_dset, secondary_dset, chrom):
             print(str(point) + ": multiple secondary track hits for normalization, using first hit " + "(" + str(hit_sec[0]) + ")")
 
         else:
-            normed_primary[chrom].append([point[0], point[1], point[2]/float(hit_sec[0].data)*2])
+            normed_primary[chrom].append([point[0], point[1], point[2]/float(hit_sec[0].data)])
 
     return normed_primary, normed_secondary
 
@@ -462,9 +504,19 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
         restricted_cfc = copy.copy(cfc)
         if cfc.track_props['normalize_by_secondary']:
             print(obj.to_string(), "normalizing by secondary")
-            normed_primary, normed_secondary = normalize_by_secondary(local_primary_data, local_secondary_data, obj.chrom)
+            normed_primary, normed_secondary = normalize_by_secondary(local_primary_data, local_secondary_data,
+                                                                      obj.chrom, cfc.track_props['normalize_by_secondary'])
             restricted_cfc.primary_data = normed_primary
             restricted_cfc.secondary_data = normed_secondary
+
+        elif cfc.track_props['normalize_by_count']:
+            print(obj.to_string(), "normalizing by count")
+            normed_primary = defaultdict(list)
+            for point in local_primary_data[obj.chrom]:
+                normed_primary[obj.chrom].append([point[0], point[1], point[2] / float(obj.seg_count)])
+
+            restricted_cfc.primary_data = normed_primary
+            restricted_cfc.secondary_data = local_secondary_data
 
         else:
             restricted_cfc.primary_data = local_primary_data
@@ -861,12 +913,20 @@ def reduce_path(path, prev_seg_index_is_adj, inds, aln_vect=None):
     return path, prev_seg_index_is_adj, aln_vect
 
 
-def reset_track_min_max(ref_placements,tcount):
+def reset_track_min_max(ref_placements, tcount):
     for index in range(tcount):
         tmin, tmax = 0, 0
         for obj in ref_placements.values():
             cfc = obj.feature_tracks[index]
-            curr_track_min, curr_track_max = track_min_max(cfc.primary_data, cfc.secondary_data, nice_ticks=True)
+            hs = cfc.track_props['hide_secondary']
+            if cfc.track_props['hide_secondary'] == "viral" and not (obj.chrom.startswith('chr') or len(obj.chrom) < 3):
+                hs = True
+
+            elif cfc.track_props['hide_secondary'] == "viral":
+                hs = False
+
+            curr_track_min, curr_track_max = track_min_max(cfc.primary_data, cfc.secondary_data, True,
+                                                           hide_secondary=hs)
             tmin = min(tmin, curr_track_min)
             tmax = max(tmax, curr_track_max)
             if cfc.track_props['show_segment_copy_count']:
@@ -880,9 +940,13 @@ def reset_track_min_max(ref_placements,tcount):
 
 # go over the bedgraph data and find min and max values, if not specified. pad those values by 2.5% above
 # and below for appearance.
-def track_min_max(primary_data, secondary_data, nice_ticks, pad_prop=0.025):
+def track_min_max(primary_data, secondary_data, nice_ticks, hide_secondary = False, pad_prop=0.025):
     dv = []
-    for ivallist in list(primary_data.values()) + list(secondary_data.values()):
+    iterlist = list(primary_data.values())
+    if not hide_secondary:
+        iterlist+=list(secondary_data.values())
+
+    for ivallist in iterlist:
         cdv = [x[2] for x in ivallist]
         dv.extend(cdv)
 
@@ -954,9 +1018,11 @@ def parse_feature_yaml(yaml_file, index, totfiles):
             'primary_color': 'k',
             'primary_style': 'points',
             'normalize_by_secondary': False,
+            'normalize_by_count': False,
             'log_transform_primary': None,
             'secondary_color': 'lightgreen',
             'secondary_style': 'lines',
+            'hide_secondary': False,
             'log_transform_secondary': None,
             'ticks_color': 'lightgrey',
             'nice_ticks': True,
@@ -980,7 +1046,8 @@ def parse_feature_yaml(yaml_file, index, totfiles):
         if dd["secondary_feature_bedgraph"]:
             secondary_data = parse_bed(dd['secondary_feature_bedgraph'])
 
-        dv_min, dv_max = track_min_max(primary_data, secondary_data, dd['nice_ticks'], pad_prop=0.025)
+        dv_min, dv_max = track_min_max(primary_data, secondary_data, dd['nice_ticks'],
+                                       hide_secondary=dd['hide_secondary'], pad_prop=0.025)
 
     return feature_track(index, primary_data, secondary_data, dd, dv_min, dv_max)
 
