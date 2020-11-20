@@ -156,7 +156,7 @@ class gene_viz_instance(object):
             sm = "<"
             em = "s"
 
-        elif self.seg_dir == "+" and self.gParent.self.strand == "-":
+        elif self.seg_dir == "+" and self.gParent.strand == "-":
             s_ang = end_angle
             e_ang = start_angle
             sm = ">"
