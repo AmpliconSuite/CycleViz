@@ -160,18 +160,55 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
             print("feature_style must be either 'points' or 'lines'\n")
 
 
-def plot_gene_direction_indicator(normStart, normEnd, drop):
-    start_angle = normStart / total_length * 360
-    end_angle = normEnd / total_length * 360
+def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
+    slant = 3.0
+    marker_freq = 0.005*total_length
+    fullspace_a = np.arange(0, total_length, marker_freq)
+    fullspace_b = np.arange(marker_freq/slant, total_length + marker_freq/slant, marker_freq)
 
-    patches.append(mpatches.Wedge((0, 0), outer_bar - drop, start_angle, end_angle, width=bar_width / 4.5))
-    f_color_v.append('k')
-    e_color_v.append('k')
-    lw_v.append(0)
+    trim = 1 * drop / 4
+    if drop < 0:
+        #posns_a, posns_b = posns_b, posns_a
+        fullspace_a, fullspace_b = fullspace_b, fullspace_a
+        trim*=-1
 
+    boolean_array = np.logical_and(fullspace_a >= s, fullspace_a <= e)
+    in_range_indices = np.where(boolean_array)[0]
+    # put one down if it's too skinny
+    if len(in_range_indices) == 0 and not flanked:
+        posns_a = [(e + s)/2.0]
+        posns_b = [(e + s)/2.0 + marker_freq/slant]
+        if drop < 0:
+            posns_a, posns_b = posns_b, posns_a
+
+    else:
+        posns_a =  [fullspace_a[x] for x in in_range_indices]
+        posns_b =  [fullspace_b[x] for x in in_range_indices]
+
+    ttop = outer_bar - bar_width / 4.0 + drop - trim
+    tbot = ttop - bar_width / 4.0 + trim
+
+    btop = tbot
+    bbot = tbot - bar_width/ 4.0 + trim
+
+    for fpos, rpos in zip(posns_a, posns_b):
+        pos_angle_a = fpos / total_length * 360
+        pos_angle_b = rpos / total_length * 360
+
+
+        x_b, y_b = vu.pol2cart(ttop, (pos_angle_a / 360 * 2 * np.pi))
+        x_t, y_t = vu.pol2cart(tbot, (pos_angle_b / 360 * 2 * np.pi))
+        plt.plot([x_b, x_t], [y_b, y_t], linewidth=0.4, color='grey')
+
+        x_b, y_b = vu.pol2cart(btop, (pos_angle_b / 360 * 2 * np.pi))
+        x_t, y_t = vu.pol2cart(bbot, (pos_angle_a / 360 * 2 * np.pi))
+        plt.plot([x_b, x_t], [y_b, y_t], linewidth=0.4, color='grey')
+
+    #draw marker starts and ends
+    gInstance.draw_marker_ends(tbot)
 
 # must return positions of transcribed regions of genes here
-def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, plot_gene_direction=True):
+def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, flanked, plot_gene_direction=True):
     overlap_genes.append({})
     for gObj in relGenes:
         # e_posns is a list of tuples of exon (start,end)
@@ -185,11 +222,9 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
             ts = max(0, gstart - pTup[1])
             te = min(seg_len, gend - pTup[1])
             if gObj.strand == "+":
-                drop = 1.4 * bar_width
                 if ts > 0: hasStart = True
                 if te < seg_len: hasEnd = True
             else:
-                drop = 2 * bar_width
                 if ts > 0: hasEnd = True
                 if te < seg_len: hasStart = True
 
@@ -200,11 +235,9 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
             te = min(seg_len, pTup[2] - gstart)
             ts = max(0, pTup[2] - gend)
             if gObj.strand == "+":
-                drop = 2 * bar_width
                 if te < seg_len: hasStart = True
                 if ts > 0: hasEnd = True
             else:
-                drop = 1.4 * bar_width
                 if te < seg_len: hasEnd = True
                 if ts > 0: hasStart = True
 
@@ -218,11 +251,16 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
         if end_angle < 0 and start_angle > 0:
             end_angle += 360
 
-        patches.append(mpatches.Wedge((0, 0), outer_bar, start_angle, end_angle, width=bar_width / 2.0))
+        gsign = 1 if seg_dir == gObj.strand else -1
+        drop = gsign * bar_width / 4.0
+        gbh = outer_bar - 5.0*bar_width/12 + drop
+        gObj.gdrops.append(gbh)
+        patches.append(mpatches.Wedge((0, 0), gbh , start_angle, end_angle, width=bar_width / 6.0))
         f_color_v.append('k')
         e_color_v.append('k')
         lw_v.append(0)
 
+        # TODO: REFACTOR TO OUTSIDE - put in the gParent
         if gname not in overlap_genes[len(overlap_genes)-2] or not overlap_genes[len(overlap_genes)-2].get(gname)[0] or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
             x_t, y_t = vu.pol2cart(outer_bar + bar_width + 1.7, (text_angle / 360 * 2 * np.pi))
             text_angle, ha = vu.correct_text_angle(text_angle)
@@ -236,8 +274,12 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
 
         # draw something to show direction and truncation status
         if plot_gene_direction:
-            plot_gene_direction_indicator(normStart, normEnd, drop)
-            gObj.gdrops.append((normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, ind, drop, pTup))
+            #gene instance
+            gInstance = vu.gene_viz_instance(gObj, normStart, normEnd, total_length, seg_dir, currStart, currEnd,
+                                             hasStart, hasEnd, ind, pTup)
+
+            gObj.gdrops.append(gInstance)
+            plot_gene_direction_indicator(normStart, normEnd, total_length, drop, flanked, gInstance)
             # gObj.gdrops = [(normStart, normEnd, total_length, seg_dir, currStart, currEnd, pTup), ]
 
         print("PTUPCHECK",pTup,gstart,gend)
@@ -256,8 +298,9 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
                     normStart = currStart + max(1, pTup[2] - exon[1])
 
                 start_angle, end_angle = start_end_angle(normStart, normEnd, total_length)
+
                 patches.append(
-                    mpatches.Wedge((0, 0), outer_bar - bar_width / 2.0, start_angle, end_angle, width=bar_width / 2.0))
+                    mpatches.Wedge((0, 0), outer_bar - bar_width / 4.0 + (drop), start_angle, end_angle, width=bar_width / 2.0))
                 f_color_v.append('k')
                 e_color_v.append('k')
                 lw_v.append(0)
@@ -351,7 +394,8 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
         all_relGenes.extend(relGenes)
         # plot the gene track
         # print(ind, refObj.to_string(), len(relGenes))
-        plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1], ind)
+        flanked = refObj.next_is_adjacent or refObj.prev_is_adjacent
+        plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1], ind, flanked)
         for index, cfc in enumerate(refObj.feature_tracks):
             plot_feature_track(refObj.abs_start_pos, refObj.abs_end_pos, refObj.direction, seg_coord_tup, cfc,
                                refObj.chrom, total_length, refObj.seg_count)
@@ -375,7 +419,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
 # set the heights of the bed track features
 def get_feature_heights(ntracks, intertrack_spacing):
     if ntracks > 0:
-        maxtop = outer_bar-(intertrack_spacing+2)
+        maxtop = outer_bar-(intertrack_spacing + 0.5)
         bases = np.linspace(center_hole, maxtop, ntracks)
         tops = [x - intertrack_spacing for x in bases[1:]]
         tops.append(maxtop)
@@ -633,10 +677,10 @@ else:
 plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, args.label_segs, args.segment_end_ticks,
                 gene_set)
 
-for gObj in all_relGenes:
-    gObj.draw_marker_ends(outer_bar)
-    gObj.draw_seg_links(outer_bar, bar_width)
-    gObj.draw_trunc_spots(outer_bar)
+# for gObj in all_relGenes:
+#     gObj.draw_marker_ends(outer_bar)
+#     gObj.draw_seg_links(outer_bar, bar_width)
+#     gObj.draw_trunc_spots(outer_bar)
 
 if args.graph:
     plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)

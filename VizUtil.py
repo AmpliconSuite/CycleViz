@@ -130,7 +130,73 @@ class CycleVizElemObj(object):
             self.label_posns[ind] -= s_diff
 
 
+# this stores the properties of each gene's visualization
+class gene_viz_instance(object):
+    def __init__(self, gParent, normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, pTup):
+        self.gParent = gParent
+        self.normStart = normStart
+        self.normEnd = normEnd
+        self.total_length = total_length
+        self.seg_dir = seg_dir
+        self.currStart = currStart
+        self.currEnd = currEnd
+        self.hasStart = hasStart
+        self.hasEnd = hasEnd
+        self.seg_ind = seg_ind
+        self.pTup = pTup
+
+    def get_angles(self):
+        tm = "X"
+        start_angle = self.normStart / self.total_length * 360
+        end_angle = self.normEnd / self.total_length * 360
+
+        if self.seg_dir == "+" and self.gParent.strand == "+":
+            s_ang = start_angle
+            e_ang = end_angle
+            sm = "<"
+            em = "s"
+
+        elif self.seg_dir == "+" and self.gParent.self.strand == "-":
+            s_ang = end_angle
+            e_ang = start_angle
+            sm = ">"
+            em = "s"
+
+        elif self.seg_dir == "-" and self.gParent.strand == "+":
+            s_ang = end_angle
+            e_ang = start_angle
+            sm = ">"
+            em = "s"
+
+        else:
+            s_ang = start_angle
+            e_ang = end_angle
+            sm = "<"
+            em = "s"
+
+        return s_ang, e_ang, sm, em, tm
+
+    def draw_marker_ends(self, gbh):
+        # iterate over gdrops and see how many times the gene appears.
+        # self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
+        if self.hasStart or self.hasEnd:
+            s_ang, e_ang, sm, em, tm = self.get_angles()
+
+            if self.hasStart:
+                x_m, y_m = pol2cart(gbh, (s_ang / 360 * 2 * np.pi))
+                t = matplotlib.markers.MarkerStyle(marker=sm)
+                t._transform = t.get_transform().rotate_deg(s_ang - 89)
+                plt.scatter(x_m, y_m, marker=t, s=15, color='silver',zorder=3,alpha=0.8)
+
+            if self.hasEnd:
+                x_m, y_m = pol2cart(gbh, (e_ang / 360 * 2 * np.pi))
+                t = matplotlib.markers.MarkerStyle(marker=em)
+                t._transform = t.get_transform().rotate_deg(e_ang - 91)
+                plt.scatter(x_m, y_m, marker=t, s=5, color='silver',zorder=3,alpha=0.8)
+
+
 # makes a gene object from parsed refGene data
+# this stores global properties for the gene
 class gene(object):
     def __init__(self, gchrom, gstart, gend, gdata, highlight_name):
         self.gchrom = gchrom
@@ -143,133 +209,77 @@ class gene(object):
         eends = [int(x) for x in gdata[10].rsplit(",") if x]
         self.eposns = zip(estarts, eends)
         self.gdrops = []
-        self.mdrop_shift = 1.07
+        # self.mdrop_shift
         self.gdrops_go_to_link = set()
 
-    def get_angles(self, seg_dir, normStart, normEnd, total_length):
-        tm = "X"
-        start_angle = normStart / total_length * 360
-        end_angle = normEnd / total_length * 360
-
-        if seg_dir == "+" and self.strand == "+":
-            # mdrop_shift = 1.07
-            s_ang = start_angle
-            e_ang = end_angle
-            sm = "<"
-            em = "s"
-
-        elif seg_dir == "+" and self.strand == "-":
-            self.mdrop_shift = 1.05
-
-            s_ang = end_angle
-            e_ang = start_angle
-            sm = ">"
-            em = "s"
-
-        elif seg_dir == "-" and self.strand == "+":
-            self.mdrop_shift = 1.05
-            s_ang = end_angle
-            e_ang = start_angle
-            sm = ">"
-            em = "s"
-
-        else:
-            # mdrop_shift = 1.07
-            s_ang = start_angle
-            e_ang = end_angle
-            sm = "<"
-            em = "s"
-
-        return s_ang, e_ang, sm, em, tm
-
-    def draw_marker_ends(self, outer_bar):
-        # iterate over gdrops and see how many times the gene appears.
-        if self.gdrops:
-            # self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
-            for gd in self.gdrops:
-                normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
-                if hasStart or hasEnd:  # has start
-                    s_ang, e_ang, sm, em, tm = self.get_angles(seg_dir, normStart, normEnd, total_length)
-
-                    if hasStart:
-                        x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (s_ang / 360 * 2 * np.pi))
-                        t = matplotlib.markers.MarkerStyle(marker=sm)
-                        t._transform = t.get_transform().rotate_deg(s_ang - 89)
-                        plt.scatter(x_m, y_m, marker=t, s=20, color='k')
-
-                    if hasEnd:
-                        x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (e_ang / 360 * 2 * np.pi))
-                        t = matplotlib.markers.MarkerStyle(marker=em)
-                        t._transform = t.get_transform().rotate_deg(e_ang - 91)
-                        plt.scatter(x_m, y_m, marker=t, s=6, color='k')
 
     # draw_trunc_spots must be pre-sorted
-    def draw_trunc_spots(self, outer_bar):
-        if self.gdrops:
-            # rev = True if self.strand == "-" else False
-            # self.gdrops = sorted(self.gdrops, key=lambda x: x[-1], reverse=rev)
-            for ind, gd in enumerate(self.gdrops):
-                normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
-                if not hasEnd and not ind in self.gdrops_go_to_link:
-                    print("X",self.gname,seg_ind, ind, hasEnd, self.gdrops_go_to_link)
-                    s_ang, e_ang, sm, em, tm = self.get_angles(seg_dir, normStart, normEnd, total_length)
-                    x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (e_ang / 360 * 2 * np.pi))
-                    t = matplotlib.markers.MarkerStyle(marker=tm)
-                    t._transform = t.get_transform().rotate_deg(e_ang - 91)
-                    # plt.scatter(x_m, y_m, marker=t, s=12, color='r')
-
-    def draw_seg_links(self, outer_bar, bar_width):
-        print(self.gname)
-        if len(self.gdrops) > 1:
-            rev = True if self.strand == "-" else False
-            self.gdrops = sorted(self.gdrops, key=lambda x: x[-1], reverse=rev)
-            for ind, gd in enumerate(self.gdrops[1:]):
-                normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
-                pgd = self.gdrops[ind]
-                pposTup = pgd[-1]
-                pseg_ind = pgd[-3]
-                diff = pTup[1] - pposTup[2] if self.strand == "+" else pposTup[1] - pTup[2]
-                if abs(seg_ind - pseg_ind) == 1:
-                    # print("NS",diff)
-                    if pTup[0] != pposTup[0] or diff > 1:
-                        # print("Adj",diff)
-                        if hasStart or hasEnd and (hasStart, hasEnd) == (pgd[-5], pgd[-4]):
-                            print("HS,HE",hasStart,hasEnd)
-                            continue
-
-                        self.gdrops_go_to_link.add(ind)
-                        if seg_dir == "+":
-                            start_rad = pgd[1] / total_length * 2 * np.pi
-                            end_rad = normStart / total_length * 2 * np.pi
-                        else:
-                            start_rad = pgd[0] / total_length * 2 * np.pi
-                            end_rad = normEnd / total_length * 2 * np.pi
-
-                        mid_rad = (start_rad + end_rad)/2.0
-                        if self.mdrop_shift == 1.07:
-                            bd_sign = 1
-
-                        else:
-                            drop *= self.mdrop_shift
-                            bd_sign = -1
-
-
-                        thetas1 = np.linspace(start_rad, mid_rad, 100)
-                        rhos1 = np.linspace(outer_bar-drop, outer_bar-drop+bd_sign*bar_width/2.0, 100)
-                        x1, y1 = polar_series_to_cartesians(thetas1, rhos1)
-
-                        thetas2 = np.linspace(mid_rad, end_rad, 100)
-                        rhos2 = np.linspace(outer_bar-drop+bd_sign*bar_width/2.0, outer_bar-drop, 100)
-                        x2, y2 = polar_series_to_cartesians(thetas2, rhos2)
-
-                        plt.plot(x1, y1, linewidth=1, color='grey')
-                        plt.plot(x2, y2, linewidth=1, color='grey')
-
-                    # elif pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
-                    #     self.gdrops_go_to_link.add(ind)
-
-                if pTup[0] == pposTup[0] and diff == 1:
-                    self.gdrops_go_to_link.add(ind)
+    # def draw_trunc_spots(self, outer_bar):
+    #     if self.gdrops:
+    #         # rev = True if self.strand == "-" else False
+    #         # self.gdrops = sorted(self.gdrops, key=lambda x: x[-1], reverse=rev)
+    #         for ind, gd in enumerate(self.gdrops):
+    #             normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
+    #             if not hasEnd and not ind in self.gdrops_go_to_link:
+    #                 print("X",self.gname,seg_ind, ind, hasEnd, self.gdrops_go_to_link)
+    #                 s_ang, e_ang, sm, em, tm = self.get_angles(seg_dir, normStart, normEnd, total_length)
+    #                 x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (e_ang / 360 * 2 * np.pi))
+    #                 t = matplotlib.markers.MarkerStyle(marker=tm)
+    #                 t._transform = t.get_transform().rotate_deg(e_ang - 91)
+    #                 # plt.scatter(x_m, y_m, marker=t, s=12, color='r')
+    #
+    # def draw_seg_links(self, outer_bar, bar_width):
+    #     print(self.gname)
+    #     if len(self.gdrops) > 1:
+    #         rev = True if self.strand == "-" else False
+    #         self.gdrops = sorted(self.gdrops, key=lambda x: x[-1], reverse=rev)
+    #         for ind, gd in enumerate(self.gdrops[1:]):
+    #             normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
+    #             pgd = self.gdrops[ind]
+    #             pposTup = pgd[-1]
+    #             pseg_ind = pgd[-3]
+    #             diff = pTup[1] - pposTup[2] if self.strand == "+" else pposTup[1] - pTup[2]
+    #             if abs(seg_ind - pseg_ind) == 1:
+    #                 # print("NS",diff)
+    #                 if pTup[0] != pposTup[0] or diff > 1:
+    #                     # print("Adj",diff)
+    #                     if hasStart or hasEnd and (hasStart, hasEnd) == (pgd[-5], pgd[-4]):
+    #                         print("HS,HE",hasStart,hasEnd)
+    #                         continue
+    #
+    #                     self.gdrops_go_to_link.add(ind)
+    #                     if seg_dir == "+":
+    #                         start_rad = pgd[1] / total_length * 2 * np.pi
+    #                         end_rad = normStart / total_length * 2 * np.pi
+    #                     else:
+    #                         start_rad = pgd[0] / total_length * 2 * np.pi
+    #                         end_rad = normEnd / total_length * 2 * np.pi
+    #
+    #                     mid_rad = (start_rad + end_rad)/2.0
+    #                     if self.mdrop_shift == 1.07:
+    #                         bd_sign = 1
+    #
+    #                     else:
+    #                         drop *= self.mdrop_shift
+    #                         bd_sign = -1
+    #
+    #
+    #                     thetas1 = np.linspace(start_rad, mid_rad, 100)
+    #                     rhos1 = np.linspace(outer_bar-drop, outer_bar-drop+bd_sign*bar_width/2.0, 100)
+    #                     x1, y1 = polar_series_to_cartesians(thetas1, rhos1)
+    #
+    #                     thetas2 = np.linspace(mid_rad, end_rad, 100)
+    #                     rhos2 = np.linspace(outer_bar-drop+bd_sign*bar_width/2.0, outer_bar-drop, 100)
+    #                     x2, y2 = polar_series_to_cartesians(thetas2, rhos2)
+    #
+    #                     plt.plot(x1, y1, linewidth=1, color='grey')
+    #                     plt.plot(x2, y2, linewidth=1, color='grey')
+    #
+    #                 # elif pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
+    #                 #     self.gdrops_go_to_link.add(ind)
+    #
+    #             if pTup[0] == pposTup[0] and diff == 1:
+    #                 self.gdrops_go_to_link.add(ind)
 
 
 class feature_track(object):
@@ -554,7 +564,7 @@ def rel_genes(chrIntTree, pTup, gene_set=None):
 
         if not is_other_feature and gname in gene_set:
             if gname not in currGenes:
-                currGenes[gname] = copy.copy(gObj)
+                currGenes[gname] = gObj
 
             # gene appears in file twice, if one is larger, use it. else just use the widest endpoints
             else:
