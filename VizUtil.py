@@ -533,6 +533,7 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
             restricted_cfc.secondary_data = local_secondary_data
 
         obj.feature_tracks.append(restricted_cfc)
+        print(obj.to_string(),"has",len(obj.feature_tracks),"tracks")
 
 
 # rotate text to be legible on both sides of circle
@@ -923,29 +924,28 @@ def reduce_path(path, prev_seg_index_is_adj, inds, aln_vect=None):
     return path, prev_seg_index_is_adj, aln_vect
 
 
-def reset_track_min_max(ref_placements, tcount):
-    for index in range(tcount):
-        tmin, tmax = 0, 0
-        for obj in ref_placements.values():
-            cfc = obj.feature_tracks[index]
-            hs = cfc.track_props['hide_secondary']
-            if cfc.track_props['hide_secondary'] == "viral" and not (obj.chrom.startswith('chr') or len(obj.chrom) < 3):
-                hs = True
+def reset_track_min_max(ref_placements, index):
+    tmin, tmax = 0, 0
+    for obj in ref_placements.values():
+        cfc = obj.feature_tracks[index]
+        hs = cfc.track_props['hide_secondary']
+        if cfc.track_props['hide_secondary'] == "viral" and not (obj.chrom.startswith('chr') or len(obj.chrom) < 3):
+            hs = True
 
-            elif cfc.track_props['hide_secondary'] == "viral":
-                hs = False
+        elif cfc.track_props['hide_secondary'] == "viral":
+            hs = False
 
-            curr_track_min, curr_track_max = track_min_max(cfc.primary_data, cfc.secondary_data, True,
-                                                           hide_secondary=hs)
-            tmin = min(tmin, curr_track_min)
-            tmax = max(tmax, curr_track_max)
-            if cfc.track_props['show_segment_copy_count']:
-                tmin = min(tmin, obj.seg_count)
-                tmax = max(tmax, obj.seg_count)
+        curr_track_min, curr_track_max = track_min_max(cfc.primary_data, cfc.secondary_data, True,
+                                                       hide_secondary=hs)
+        tmin = min(tmin, curr_track_min)
+        tmax = max(tmax, curr_track_max)
+        if cfc.track_props['show_segment_copy_count']:
+            tmin = min(tmin, obj.seg_count)
+            tmax = max(tmax, obj.seg_count)
 
-        for obj in ref_placements.values():
-            obj.feature_tracks[index].track_min = tmin
-            obj.feature_tracks[index].track_max = tmax
+    for obj in ref_placements.values():
+        obj.feature_tracks[index].track_min = tmin
+        obj.feature_tracks[index].track_max = tmax
 
 
 # go over the bedgraph data and find min and max values, if not specified. pad those values by 2.5% above
@@ -960,7 +960,12 @@ def track_min_max(primary_data, secondary_data, nice_ticks, hide_secondary = Fal
         cdv = [x[2] for x in ivallist]
         dv.extend(cdv)
 
-    min_dv, max_dv = min(dv), max(dv)
+    if dv:
+        min_dv, max_dv = min(dv), max(dv)
+
+    else:
+        return 0, 0
+
     if not nice_ticks and max_dv > 10:
         spread = max_dv - min_dv
         pad = spread*pad_prop
@@ -1039,9 +1044,10 @@ def parse_feature_yaml(yaml_file, index, totfiles):
             'granularity': 0,
             'end_trim': 50,
             'show_segment_copy_count': True,
-            'linewidth': 1.0 / totfiles,
-            'pointsize': 1.0 / totfiles,
+            'linewidth': 2.0 / (totfiles),
+            'pointsize': 1.0 / (2*totfiles),
             'segment_copy_count_scaling': 1,
+            'background_color': 'auto'
         }
 
         indd = yaml.safe_load(yf)

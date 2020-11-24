@@ -22,9 +22,10 @@ rcParams['font.sans-serif'] = ['Arial']
 seg_spacing = 0.009
 bar_width = 2.5 / 3
 global_rot = 90.0
-center_hole = 0.75
+center_hole = 1.25
 outer_bar = 10
-bed_spacing = .5
+intertrack_spacing = .5
+
 contig_bar_height = -14 / 3
 segment_bar_height = -8.0 / 3
 gene_to_locations = defaultdict(list)
@@ -68,7 +69,7 @@ def plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_a
             lw_v.append(0.2)
 
 
-def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total_length, seg_copies):
+def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total_length, seg_copies, f_ind):
     gc, gs, ge = pTup
     granularity = cfc.track_props['granularity']
     if granularity == 0:
@@ -77,7 +78,26 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     # print(cfc.track_max, cfc.track_min, cfc.top, cfc.base)
     height_scale_factor = (cfc.top - cfc.base)/float(cfc.track_max - cfc.track_min)
 
-    # plot the legens
+    # plot a background
+    lcolor = 'lightgrey'
+    if f_ind % 2 == 0:
+        if cfc.track_props['background_color'] == 'auto':
+            f_color_v.append('gainsboro')
+            patches.append(mpatches.Wedge((0, 0), cfc.top + intertrack_spacing / 2.0, 360, 0,
+                                          width=cfc.top - cfc.base + intertrack_spacing, zorder=-1))
+            e_color_v.append('gainsboro')
+            lw_v.append(0)
+            lcolor = 'white'
+
+        elif cfc.track_props['background_color']:
+            f_color_v.append(cfc.track_props['background_color'])
+            patches.append(mpatches.Wedge((0, 0), cfc.top + intertrack_spacing / 2.0, 360, 0,
+                                          width=cfc.top - cfc.base + intertrack_spacing, zorder=-1))
+            e_color_v.append(cfc.track_props['background_color'])
+            lw_v.append(0)
+
+
+    # plot the legends lines
     legend_points = np.linspace(currStart / total_length * 2 * np.pi, (currEnd + 1) / total_length * 2 * np.pi, 10000)
     lheights = list(np.linspace(cfc.base, cfc.top, 5))
     lheights.append(cfc.top)
@@ -88,7 +108,7 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     print("TRACK LEGEND HEIGHTS", lvals)
     for lh in lheights:
         x_v, y_v = vu.polar_series_to_cartesians(legend_points, lh)
-        plt.plot(x_v, y_v, color='lightgrey', linewidth=0.25, zorder=0)
+        plt.plot(x_v, y_v, color=lcolor, linewidth=0.25, zorder=1)
 
     tertiary_data = []
     tertiary_style = 'lines'
@@ -140,7 +160,7 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
         # convert to cartesians
         x_v, y_v = vu.polar_series_to_cartesians(normed_data, val_data)
 
-        zorder = 0 if elem_ind == 1 else 1
+        zorder = 1 if elem_ind == 1 else 2
 
         # draw the points/lines
         if style == "points":
@@ -398,7 +418,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
         plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1], ind, flanked)
         for index, cfc in enumerate(refObj.feature_tracks):
             plot_feature_track(refObj.abs_start_pos, refObj.abs_end_pos, refObj.direction, seg_coord_tup, cfc,
-                               refObj.chrom, total_length, refObj.seg_count)
+                               refObj.chrom, total_length, refObj.seg_count, index)
 
         # label the segments by number in cycle
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
@@ -420,9 +440,16 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
 def get_feature_heights(ntracks, intertrack_spacing):
     if ntracks > 0:
         maxtop = outer_bar-(intertrack_spacing + 0.5)
-        bases = np.linspace(center_hole, maxtop, ntracks)
-        tops = [x - intertrack_spacing for x in bases[1:]]
-        tops.append(maxtop)
+        divs = np.linspace(center_hole, maxtop, ntracks+1)
+        bases = [divs[0], ]
+        tops = []
+        for p in divs[1:-1]:
+            tops.append(p - intertrack_spacing/2.0)
+            bases.append(p + intertrack_spacing/2.0)
+
+        tops.append(divs[-1])
+
+        print("Intertrack spacing is ", bases, tops)
         return bases, tops
 
     return [], []
@@ -600,7 +627,7 @@ elif args.gene_subset_list:
     gene_set = set(args.gene_subset_list)
 
 
-fbases, ftops = get_feature_heights(len(args.feature_yaml_list), 0.5)
+fbases, ftops = get_feature_heights(len(args.feature_yaml_list), intertrack_spacing)
 
 if not args.om_alignments:
     ref_placements, total_length = construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length,
@@ -614,7 +641,7 @@ if not args.om_alignments:
             cfc = vu.parse_feature_yaml(yaml_file, ind+1, len(args.feature_yaml_list))
             cfc.base, cfc.top = fbases[ind], ftops[ind]
             vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
-            vu.reset_track_min_max(ref_placements, len(args.feature_yaml_list))
+            vu.reset_track_min_max(ref_placements, ind)
 
 # only if bionano data present
 else:
@@ -647,7 +674,7 @@ else:
             cfc = vu.parse_feature_yaml(yaml_file, ind + 1, len(args.feature_yaml_list))
             cfc.base, cfc.top = fbases[ind], ftops[ind]
             vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
-            vu.reset_track_min_max(ref_placements, len(args.feature_yaml_list))
+            vu.reset_track_min_max(ref_placements, ind)
 
     contig_cmaps = parse_cmap(args.contigs, True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
