@@ -151,9 +151,9 @@ def make_new_cycle(graph_path, cycle_path):
                     the_file.write(a[:-1])
                     the_file.write(circle)
                     if continues > 2:
-                        the_file.write(';TRIVAL=FALSE')
+                        the_file.write(';TRIVIAL=FALSE')
                     else:
-                        the_file.write(';TRIVAL=TRUE')
+                        the_file.write(';TRIVIAL=TRUE')
                    
                     the_file.write('\n')
                 elif line.startswith('List of cycle'):
