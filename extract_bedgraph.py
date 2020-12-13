@@ -34,6 +34,8 @@ parser.add_argument("--bam",type=str, help="path to bam file", required=True)
 parser.add_argument("--bed",type=str, help="path to bed file", required=True)
 parser.add_argument("--estimate_average_coverage", help="get an estimate of the average coverage per chromosome",
                     action='store_true')
+parser.add_argument("-o", type=str,help="output file prefix. Default to prefix of input bed")
+
 args = parser.parse_args()
 
 with open(args.bed) as infile:
@@ -42,10 +44,14 @@ with open(args.bed) as infile:
         fields = line.rstrip().rsplit()
         regions.append(fields)
 
-base_cmd = "samtools mpileup -B -d 10000 -q 5 -r "
+base_cmd = "samtools mpileup -B -d 50000 -q 5 -r "
 bambase = os.path.splitext(os.path.basename(args.bam))[0]
-bedbase = os.path.splitext(os.path.basename(args.bed))[0]
-bgout = bedbase + "_position_coverage_merged.bedgraph"
+if not args.o:
+    bedbase = os.path.splitext(os.path.basename(args.bed))[0]
+    bgout = bedbase + "_position_coverage.bedgraph"
+
+else:
+    bgout = args.o + "_position_coverage.bedgraph"
 
 # make the bedgraph
 with open(bgout, 'w') as outfile:
@@ -64,7 +70,8 @@ with open(bgout, 'w') as outfile:
             else:
                 prevpoint[2] = p
 
-        outfile.write("\t".join([str(x) for x in prevpoint]) + "\n")
+        if prevpoint[0]:
+            outfile.write("\t".join([str(x) for x in prevpoint]) + "\n")
 
 
 # get a bedgraph of the mean coverage values

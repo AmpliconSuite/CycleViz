@@ -8,9 +8,11 @@ import matplotlib
 matplotlib.use('Agg')  # this import must happen immediately after importing matplotlib
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
+from matplotlib.collections import LineCollection
 from matplotlib.collections import PatchCollection
 from matplotlib.font_manager import FontProperties
 import matplotlib.patches as mpatches
+from matplotlib.path import Path
 import numpy as np
 
 from bionanoUtil import *
@@ -24,7 +26,7 @@ bar_width = 2.5 / 3
 global_rot = 90.0
 center_hole = 1.25
 outer_bar = 10
-intertrack_spacing = .5
+intertrack_spacing = .7
 
 contig_bar_height = -14 / 3
 segment_bar_height = -8.0 / 3
@@ -69,6 +71,79 @@ def plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_a
             lw_v.append(0.2)
 
 
+def plot_links(cfc):
+    for currlinks, currcol in zip([cfc.primary_links, cfc.secondary_links], [cfc.track_props['primary_color'], cfc.track_props['secondary_color']]):
+        for cLink in currlinks:
+
+            for a_tup in cLink.posA_hits:
+                acenter = sum(a_tup) / 2.0
+                btuplist = []
+                if cfc.track_props['link_single_match']:
+                    btupmin = None
+                    mindist = float('inf')
+                    for b_tup in cLink.posB_hits:
+                        bcenter = sum(b_tup)/2.0
+                        tupdist1 = abs(bcenter - acenter)
+                        tupdist2 = (total_length - bcenter) + acenter
+                        tupdist = min(tupdist1, tupdist2)
+                        if tupdist < mindist:
+                            mindist = tupdist
+                            btupmin = b_tup
+
+                    if btupmin:
+                        btuplist = [btupmin,]
+
+                else:
+                    btuplist = cLink.posB_hits
+
+                for b_tup in btuplist:
+                    if cfc.track_props['linkpoint'] == 'start':
+                        aloc = a_tup[0]
+                        bloc = b_tup[0]
+
+                    elif cfc.track_props['linkpoint'] == 'end':
+                        aloc = a_tup[1]
+                        bloc = b_tup[1]
+
+                    #elif cfc.track_props['linkpoint'] == 'midpoint':
+                    else:
+                        aloc = acenter
+                        bloc = sum(b_tup)/2.0
+
+                    aphi = aloc / total_length * 2 * np.pi
+                    bphi = bloc / total_length * 2 * np.pi
+
+                    x_a, y_a = vu.pol2cart(cfc.top + intertrack_spacing/3, aphi)
+                    x_b, y_b = vu.pol2cart(cfc.top + intertrack_spacing/3, bphi)
+
+                    inner = cfc.base + intertrack_spacing
+                    x_a_i, y_a_i = vu.pol2cart(inner, aphi)
+                    x_b_i, y_b_i = vu.pol2cart(inner, bphi)
+
+                    # plt.plot([x_a, x_b], [y_a, y_b], ,
+                    #          , zorder=1)
+
+                    verts = [
+                        (x_a, y_a),  # P0
+                        (x_a_i, y_a_i),  # P1
+                        (x_b_i, y_b_i),  # P2
+                        (x_b, y_b),  # P3
+                    ]
+
+                    codes = [
+                        Path.MOVETO,
+                        Path.CURVE4,
+                        Path.CURVE4,
+                        Path.CURVE4,
+                    ]
+
+                    path = Path(verts, codes)
+                    patches.append(mpatches.PathPatch(path, alpha=0.5))
+                    f_color_v.append('none')
+                    e_color_v.append(currcol)
+                    lw_v.append(np.log2(cLink.score + 0.1)/10)
+
+
 def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total_length, seg_copies, f_ind):
     gc, gs, ge = pTup
     granularity = cfc.track_props['granularity']
@@ -80,7 +155,7 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
 
     # plot a background
     lcolor = 'lightgrey'
-    if f_ind % 2 == 0:
+    if f_ind % 2 == 1:
         if cfc.track_props['background_color'] == 'auto':
             f_color_v.append('gainsboro')
             patches.append(mpatches.Wedge((0, 0), cfc.top + intertrack_spacing / 2.0, 360, 0,
@@ -100,15 +175,17 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     # plot the legends lines
     legend_points = np.linspace(currStart / total_length * 2 * np.pi, (currEnd + 1) / total_length * 2 * np.pi, 10000)
     lheights = list(np.linspace(cfc.base, cfc.top, 5))
-    lheights.append(cfc.top)
+    # lheights.append(cfc.top)
+    legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, 5))
 
-    lvals = list(np.linspace(cfc.track_min, cfc.track_max, 5))
-    lvals.append(cfc.track_max)
-
-    print("TRACK LEGEND HEIGHTS", lvals)
+    print("TRACK LEGEND HEIGHTS", legend_ticks)
     for lh in lheights:
         x_v, y_v = vu.polar_series_to_cartesians(legend_points, lh)
         plt.plot(x_v, y_v, color=lcolor, linewidth=0.25, zorder=1)
+
+    if cfc.track_props['indicate_zero']:
+        x_v, y_v = vu.polar_series_to_cartesians(legend_points, (cfc.track_props['sec_resc_zero'] - cfc.track_min)/(cfc.track_max - cfc.track_min) * (cfc.top - cfc.base) + cfc.base)
+        plt.plot(x_v, y_v, color='purple', linewidth=0.5, zorder=1)
 
     tertiary_data = []
     tertiary_style = 'lines'
@@ -125,10 +202,17 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     elif cfc.track_props['hide_secondary'] == "viral":
         hs = False
 
-    for data_it, style, curr_color, elem_ind in zip([cfc.primary_data[curr_chrom], cfc.secondary_data[curr_chrom],tertiary_data],
+    for data_it, style, curr_color, smoothing, elem_ind in zip([cfc.primary_data[curr_chrom], cfc.secondary_data[curr_chrom],tertiary_data],
                                           [cfc.track_props['primary_style'], cfc.track_props['secondary_style'], tertiary_style],
                                           [cfc.track_props['primary_color'], cfc.track_props['secondary_color'], tertiary_color],
-                                          list(range(3))):
+                                          [cfc.track_props['primary_smoothing'], cfc.track_props['secondary_smoothing'], 0],
+                                            list(range(3))):
+
+        #check if hiding secondary (hs)
+        if elem_ind == 1 and hs:
+            continue
+
+        zorder = 3 if elem_ind == 1 else 2
 
         datalist = [(max(x[0],gs), min(x[1], ge), height_scale_factor*x[2] + cfc.base) for x in data_it] #restrict to the coordinates of the region
 
@@ -151,6 +235,14 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
                 point_data.append((p[0] + p[1])/2.0)
                 val_data.append(p[2])
 
+        if smoothing > 0 and val_data and style == 'points':
+            smvd = []
+            for ind, h in enumerate(val_data):
+                cr = val_data[max(0,ind-smoothing):min(len(val_data)-1, ind + smoothing + 1)]
+                smvd.append(np.mean(cr))
+
+            val_data = smvd
+
         # set the direction and convert to polars from proportional length
         if seg_dir == "+":
             normed_data = [(currStart + x - gs)/total_length * 2 * np.pi for x in point_data]
@@ -160,24 +252,31 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
         # convert to cartesians
         x_v, y_v = vu.polar_series_to_cartesians(normed_data, val_data)
 
-        zorder = 1 if elem_ind == 1 else 2
-
         # draw the points/lines
         if style == "points":
-            if elem_ind != 1 or not hs:
-                plt.scatter(x_v, y_v, s=cfc.track_props['pointsize'], color=curr_color, zorder=zorder)
+            plt.scatter(x_v, y_v, s=cfc.track_props['pointsize'], edgecolors='none', color=curr_color, marker='.', zorder=zorder)
+            # plt.plot(x_v, y_v, linewidth=cfc.track_props['pointsize'], color=curr_color, zorder=zorder)
 
         elif style == "lines":
-            if elem_ind != 1 or not hs:
-                plt.plot(x_v, y_v, linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
-
+            plt.plot(x_v, y_v, linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
             # if seg_dir == "+":
             #     normeddata = [(currStart + x[0] - gs, currStart + x[1] - gs, x[2]) for x in datalist]
             # else:
             #     normeddata = [(currStart + ge - x[1], currStart + ge - x[0], x[2]) for x in datalist]
 
+        elif style == "radial":
+            x0_vect, y0_vect = vu.polar_series_to_cartesians(normed_data, [cfc.base]*len(normed_data))
+            segs = []
+            for x0, y0, x1, y1 in zip(x0_vect, y0_vect, x_v, y_v):
+                segs.append([(x0, y0), (x1, y1)])
+
+            # plt.plot([x0, x1], [y0, y1], linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
+            line_segments = LineCollection(segs, linewidths=cfc.track_props['linewidth'], colors=curr_color,
+                                           linestyle='solid')
+            ax.add_collection(line_segments)
+
         else:
-            print("feature_style must be either 'points' or 'lines'\n")
+            print("feature_style must be either 'points', 'lines', or 'radial'\n")
 
 
 def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
@@ -188,9 +287,9 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
 
     trim = 1 * drop / 4
     if drop < 0:
-        #posns_a, posns_b = posns_b, posns_a
+        # posns_a, posns_b = posns_b, posns_a
         fullspace_a, fullspace_b = fullspace_b, fullspace_a
-        trim*=-1
+        trim *= -1
 
     boolean_array = np.logical_and(fullspace_a >= s, fullspace_a <= e)
     in_range_indices = np.where(boolean_array)[0]
@@ -202,8 +301,8 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
             posns_a, posns_b = posns_b, posns_a
 
     else:
-        posns_a =  [fullspace_a[x] for x in in_range_indices]
-        posns_b =  [fullspace_b[x] for x in in_range_indices]
+        posns_a = [fullspace_a[x] for x in in_range_indices]
+        posns_b = [fullspace_b[x] for x in in_range_indices]
 
     ttop = outer_bar - bar_width / 4.0 + drop - trim
     tbot = ttop - bar_width / 4.0 + trim
@@ -281,7 +380,8 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
         lw_v.append(0)
 
         # TODO: REFACTOR TO OUTSIDE - put in the gParent
-        if gname not in overlap_genes[len(overlap_genes)-2] or not overlap_genes[len(overlap_genes)-2].get(gname)[0] or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
+        if gname not in overlap_genes[len(overlap_genes)-2] or not overlap_genes[len(overlap_genes)-2].get(gname)[0] \
+                or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
             x_t, y_t = vu.pol2cart(outer_bar + bar_width + 1.7, (text_angle / 360 * 2 * np.pi))
             text_angle, ha = vu.correct_text_angle(text_angle)
 
@@ -302,12 +402,16 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
             plot_gene_direction_indicator(normStart, normEnd, total_length, drop, flanked, gInstance)
             # gObj.gdrops = [(normStart, normEnd, total_length, seg_dir, currStart, currEnd, pTup), ]
 
-        print("PTUPCHECK",pTup,gstart,gend)
         if not (pTup[2] >= gend and pTup[1] <= gstart):
             overlap_genes[len(overlap_genes)-1][gname] = (True, seg_dir)
 
         for exon in e_posns:
-            #fix exon orientation
+            if gObj.highlight_name:
+                ecolor = 'r'
+                lw = 0.3
+            else:
+                ecolor = 'k'
+                lw = 0
             if exon[1] > pTup[1] and exon[0] < pTup[2]:
                 if seg_dir == "+":
                     normStart = currStart + max(1, exon[0] - pTup[1])
@@ -321,9 +425,9 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
 
                 patches.append(
                     mpatches.Wedge((0, 0), outer_bar - bar_width / 4.0 + (drop), start_angle, end_angle, width=bar_width / 2.0))
-                f_color_v.append('k')
-                e_color_v.append('k')
-                lw_v.append(0)
+                f_color_v.append(ecolor)
+                e_color_v.append(ecolor)
+                lw_v.append(lw)
 
 
 # plot the reference genome
@@ -353,11 +457,11 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
 
         # makes the ticks on the reference genome wedges
         if cycle[ind][1] == "+":
-            posns = zip(range(seg_coord_tup[1], seg_coord_tup[2] + 1),
-                        np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
+            posns = list(zip(range(seg_coord_tup[1], seg_coord_tup[2] + 1),
+                             np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1)))
         else:
-            posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
-                        np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
+            posns = list(zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
+                             np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1)))
 
         tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
         # if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
@@ -417,8 +521,12 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
         flanked = refObj.next_is_adjacent or refObj.prev_is_adjacent
         plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1], ind, flanked)
         for index, cfc in enumerate(refObj.feature_tracks):
-            plot_feature_track(refObj.abs_start_pos, refObj.abs_end_pos, refObj.direction, seg_coord_tup, cfc,
-                               refObj.chrom, total_length, refObj.seg_count, index)
+            if cfc.track_props['tracktype'] == 'standard':
+                plot_feature_track(refObj.abs_start_pos, refObj.abs_end_pos, refObj.direction, seg_coord_tup, cfc,
+                                   refObj.chrom, total_length, refObj.seg_count, index)
+
+            # elif cfc.track_props['tracktype'] == 'links':
+            #     print(cfc.primary_data)
 
         # label the segments by number in cycle
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
@@ -519,6 +627,7 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
     spacing_bp = seg_spacing * raw_cycle_length
     cycle_ref_placements = {}
     curr_start = 0.0 if isCycle else spacing_bp
+    next_start = 0
     for ind, i in enumerate(cycle):
         seg_id_count = cycle_seg_counts[i[0]]
         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
@@ -567,6 +676,7 @@ parser.add_argument("--tick_fontsize", help="font size for genomic position tick
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
                     "specifying additional data. Will be plotted from outside to inside given the order the filenames "
                     "appear in", default = [])
+parser.add_argument("--center_hole", type=float, help="whitespace in center of plot",default=1.25)
 
 args = parser.parse_args()
 if args.input_yaml_file:
@@ -579,6 +689,8 @@ print(args.ref)
 
 if not args.sname:
     args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
+
+center_hole = args.center_hole
 
 outdir = os.path.dirname(args.sname)
 if outdir and not os.path.exists(outdir):
@@ -626,7 +738,6 @@ if args.gene_subset_file and not args.gene_subset_file == "NO":
 elif args.gene_subset_list:
     gene_set = set(args.gene_subset_list)
 
-
 fbases, ftops = get_feature_heights(len(args.feature_yaml_list), intertrack_spacing)
 
 if not args.om_alignments:
@@ -638,10 +749,14 @@ if not args.om_alignments:
     # bedgraph
     if args.feature_yaml_list:
         for ind, yaml_file in enumerate(args.feature_yaml_list):
+            print(ind, yaml_file)
             cfc = vu.parse_feature_yaml(yaml_file, ind+1, len(args.feature_yaml_list))
             cfc.base, cfc.top = fbases[ind], ftops[ind]
             vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
-            vu.reset_track_min_max(ref_placements, ind)
+            if cfc.track_props['tracktype'] == 'standard':
+                vu.reset_track_min_max(ref_placements, ind)
+            else:
+                plot_links(cfc)
 
 # only if bionano data present
 else:
@@ -674,7 +789,10 @@ else:
             cfc = vu.parse_feature_yaml(yaml_file, ind + 1, len(args.feature_yaml_list))
             cfc.base, cfc.top = fbases[ind], ftops[ind]
             vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
-            vu.reset_track_min_max(ref_placements, ind)
+            if cfc.track_props['tracktype'] == 'standard':
+                vu.reset_track_min_max(ref_placements, ind)
+            else:
+                plot_links(cfc)
 
     contig_cmaps = parse_cmap(args.contigs, True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
@@ -724,7 +842,7 @@ legend_patches = []
 for chrom, color in zip(sorted_chrom, sorted_chrom_colors):
     legend_patches.append(mpatches.Patch(color=color, label=chrom))
 
-plt.legend(handles=legend_patches, fontsize=8, loc=3, bbox_to_anchor=(-.3, .15))
+plt.legend(handles=legend_patches, fontsize=8, loc=3, bbox_to_anchor=(-.3, .15),frameon=False)
 
 p = PatchCollection(patches)
 p.set_facecolor(f_color_v)
@@ -734,7 +852,9 @@ ax.add_collection(p)
 ax.set_aspect(1.0)
 plt.axis('off')
 
+print("saving PNG")
 plt.savefig(fname + '.png', dpi=600)
+print("saving PDF")
 plt.savefig(fname + '.pdf', format='pdf')
 
 plt.close()

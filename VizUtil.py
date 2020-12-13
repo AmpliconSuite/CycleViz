@@ -2,6 +2,7 @@ import bisect
 from collections import defaultdict
 import copy
 import os
+import sys
 
 from intervaltree import IntervalTree
 import matplotlib
@@ -209,77 +210,7 @@ class gene(object):
         eends = [int(x) for x in gdata[10].rsplit(",") if x]
         self.eposns = zip(estarts, eends)
         self.gdrops = []
-        # self.mdrop_shift
         self.gdrops_go_to_link = set()
-
-
-    # draw_trunc_spots must be pre-sorted
-    # def draw_trunc_spots(self, outer_bar):
-    #     if self.gdrops:
-    #         # rev = True if self.strand == "-" else False
-    #         # self.gdrops = sorted(self.gdrops, key=lambda x: x[-1], reverse=rev)
-    #         for ind, gd in enumerate(self.gdrops):
-    #             normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
-    #             if not hasEnd and not ind in self.gdrops_go_to_link:
-    #                 print("X",self.gname,seg_ind, ind, hasEnd, self.gdrops_go_to_link)
-    #                 s_ang, e_ang, sm, em, tm = self.get_angles(seg_dir, normStart, normEnd, total_length)
-    #                 x_m, y_m = pol2cart(outer_bar - self.mdrop_shift * drop, (e_ang / 360 * 2 * np.pi))
-    #                 t = matplotlib.markers.MarkerStyle(marker=tm)
-    #                 t._transform = t.get_transform().rotate_deg(e_ang - 91)
-    #                 # plt.scatter(x_m, y_m, marker=t, s=12, color='r')
-    #
-    # def draw_seg_links(self, outer_bar, bar_width):
-    #     print(self.gname)
-    #     if len(self.gdrops) > 1:
-    #         rev = True if self.strand == "-" else False
-    #         self.gdrops = sorted(self.gdrops, key=lambda x: x[-1], reverse=rev)
-    #         for ind, gd in enumerate(self.gdrops[1:]):
-    #             normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, drop, pTup = gd
-    #             pgd = self.gdrops[ind]
-    #             pposTup = pgd[-1]
-    #             pseg_ind = pgd[-3]
-    #             diff = pTup[1] - pposTup[2] if self.strand == "+" else pposTup[1] - pTup[2]
-    #             if abs(seg_ind - pseg_ind) == 1:
-    #                 # print("NS",diff)
-    #                 if pTup[0] != pposTup[0] or diff > 1:
-    #                     # print("Adj",diff)
-    #                     if hasStart or hasEnd and (hasStart, hasEnd) == (pgd[-5], pgd[-4]):
-    #                         print("HS,HE",hasStart,hasEnd)
-    #                         continue
-    #
-    #                     self.gdrops_go_to_link.add(ind)
-    #                     if seg_dir == "+":
-    #                         start_rad = pgd[1] / total_length * 2 * np.pi
-    #                         end_rad = normStart / total_length * 2 * np.pi
-    #                     else:
-    #                         start_rad = pgd[0] / total_length * 2 * np.pi
-    #                         end_rad = normEnd / total_length * 2 * np.pi
-    #
-    #                     mid_rad = (start_rad + end_rad)/2.0
-    #                     if self.mdrop_shift == 1.07:
-    #                         bd_sign = 1
-    #
-    #                     else:
-    #                         drop *= self.mdrop_shift
-    #                         bd_sign = -1
-    #
-    #
-    #                     thetas1 = np.linspace(start_rad, mid_rad, 100)
-    #                     rhos1 = np.linspace(outer_bar-drop, outer_bar-drop+bd_sign*bar_width/2.0, 100)
-    #                     x1, y1 = polar_series_to_cartesians(thetas1, rhos1)
-    #
-    #                     thetas2 = np.linspace(mid_rad, end_rad, 100)
-    #                     rhos2 = np.linspace(outer_bar-drop+bd_sign*bar_width/2.0, outer_bar-drop, 100)
-    #                     x2, y2 = polar_series_to_cartesians(thetas2, rhos2)
-    #
-    #                     plt.plot(x1, y1, linewidth=1, color='grey')
-    #                     plt.plot(x2, y2, linewidth=1, color='grey')
-    #
-    #                 # elif pTup[0] == pposTup[0] and pTup[1] - pposTup[2] == 1:
-    #                 #     self.gdrops_go_to_link.add(ind)
-    #
-    #             if pTup[0] == pposTup[0] and diff == 1:
-    #                 self.gdrops_go_to_link.add(ind)
 
 
 class feature_track(object):
@@ -288,23 +219,22 @@ class feature_track(object):
         self.primary_data = primary_data
         self.secondary_data = secondary_data
         self.track_props = dd
-        # self.primary_color = dd['primary_feature_color']
-        # self.primary_style = dd['primary_feature_style']
-        # self.secondary_color = dd['secondary_feature_color']
-        # self.secondary_style = dd['secondary_feature_style']
-        # self.normalize_by_secondary = dd['normalize_by_secondary']
-        # self.ticks_color = dd['ticks_color']
-        # self.log_transform_primary = dd['log_transform_primary']
-        # self.log_transform_secondary = dd['log_transform_secondary']
-        # self.granularity = float(dd['point_granularity'])
-        # self.end_trim = float(dd['end_trim'])
-        # self.show_seg_copies = dd['show_segment_copy_count']
-        # self.linewidth = dd['linewidth']
-        # self.pointsize = dd['pointsize']
         self.track_min = dv_min
         self.track_max = dv_max
         self.base = 0
         self.top = 0
+        self.primary_links = []
+        self.secondary_links = []
+
+    class Link(object):
+        def __init__(self, chromA, chromB, data_tup):
+            self.chromA = chromA
+            self.chromB = chromB
+            self.startA, self.endA = data_tup[0],data_tup[1]
+            self.startB, self.endB = data_tup[2],data_tup[3]
+            self.score = data_tup[4]
+            self.posA_hits = []
+            self.posB_hits = []
 
 # SET COLORS
 def get_chr_colors():
@@ -400,20 +330,34 @@ def parse_genes(ref, gene_highlight_list):
 
 
 def parse_bed(bedfile):
-    bedgraph_data = defaultdict(list)
+    data_dict = defaultdict(list)
     with open(bedfile) as infile:
-        for line in infile:
-            if not line.startswith("#"):
-                fields = line.rstrip().rsplit()
-                chrom = fields[0]
-                begin, end = int(fields[1]), int(fields[2]) + 1
-                if len(fields) == 4:
-                    data = float(fields[3])
-                else:
-                    data = None
-                bedgraph_data[chrom].append((begin, end, data))
+        if bedfile.endswith(".bedpe"):
+            for line in infile:
+                if not line.startswith("#"):
+                    fields = line.rstrip().rsplit()
+                    chromA = fields[0]
+                    startA, endA = float(fields[1]), float(fields[2])
+                    chromB = fields[3]
+                    startB, endB = float(fields[4]), float(fields[5])
+                    data = float(fields[6])
+                    data_dict[(chromA, chromB)].append((startA, endA, startB, endB, data))
 
-    return bedgraph_data
+        else:
+            for line in infile:
+                if not line.startswith("#"):
+                    fields = line.rstrip().rsplit()
+                    chrom = fields[0]
+                    begin, end = int(fields[1]), int(fields[2]) + 1
+                    if len(fields) == 4:
+                        data = float(fields[3])
+                    elif len(fields) == 5:
+                        data = float(fields[4])
+                    else:
+                        data = None
+                    data_dict[chrom].append((begin, end, data))
+
+    return data_dict
 
 
 def normalize_by_secondary(primary_dset, secondary_dset, chrom, mode):
@@ -457,7 +401,6 @@ def normalize_by_secondary(primary_dset, secondary_dset, chrom, mode):
             print("no secondary data, setting scale to 1")
             allmean = 1.0
 
-
         #replace everything in secondary with that mean
         for point in secondary_dset[chrom]:
             sit.addi(point[0], point[1], allmean)
@@ -481,59 +424,123 @@ def normalize_by_secondary(primary_dset, secondary_dset, chrom, mode):
 # take the feature data (cfc) and extract only the regions overlapping the reference segment in question (obj)
 # append the coordinate restricted feature (restricted_cfc) to a list of features kept by the reference object (obj)
 def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0):
-    print(primary_end_trim)
-    print("extracting features, ET",primary_end_trim)
-    for obj in ref_placements.values():
-        primeTrim = primary_end_trim
-        if obj.ref_end - obj.ref_start <= primary_end_trim*2:
-            primeTrim = max(0,(obj.ref_end - obj.ref_start)/2 - 2)
-            print("reset ET ", primeTrim)
+    if cfc.track_props['tracktype'] == 'standard':
+        print("extracting features, ET", primary_end_trim)
+        for obj in ref_placements.values():
+            primeTrim = primary_end_trim
+            if obj.ref_end - obj.ref_start <= primary_end_trim*2:
+                primeTrim = max(0,(obj.ref_end - obj.ref_start)/2 - 2)
+                print("reset ET ", primeTrim)
 
-        secTrim = secondary_end_trim
-        if obj.ref_end - obj.ref_start <= primary_end_trim * 2:
-            secTrim = max(0, (obj.ref_end - obj.ref_start) / 2 - 2)
-            print("reset ET ", secTrim)
+            secTrim = secondary_end_trim
+            if obj.ref_end - obj.ref_start <= primary_end_trim * 2:
+                secTrim = max(0, (obj.ref_end - obj.ref_start) / 2 - 2)
+                print("reset ET ", secTrim)
 
-        local_primary_data = defaultdict(list)
-        local_secondary_data = defaultdict(list)
+            local_primary_data = defaultdict(list)
+            local_secondary_data = defaultdict(list)
 
-        #store primary data
-        for dstore, currdata, currTrim in zip([local_primary_data, local_secondary_data],
-                                    [cfc.primary_data[obj.chrom], cfc.secondary_data[obj.chrom]],
-                                    [primeTrim, secTrim]):
-            for point in currdata:
-                if obj.ref_start+currTrim <= point[0] <= obj.ref_end-currTrim or \
-                        obj.ref_start+currTrim <= point[1] <= obj.ref_end-currTrim:
-                    dstore[obj.chrom].append(point)
+            #store primary data
+            for dstore, currdata, currTrim, uc, lc, in zip([local_primary_data, local_secondary_data],
+                                        [cfc.primary_data[obj.chrom], cfc.secondary_data[obj.chrom]],
+                                        [primeTrim, secTrim], [cfc.track_props['primary_upper_cap'],
+                                                               cfc.track_props['secondary_upper_cap']],
+                                                           [cfc.track_props['primary_lower_cap'],
+                                                            cfc.track_props['secondary_lower_cap']]):
 
-                elif point[0] < obj.ref_start+currTrim and point[1] > obj.ref_end-currTrim:
-                    dstore[obj.chrom].append(point)
+                for point in currdata:
+                    if obj.ref_start+currTrim <= point[0] <= obj.ref_end-currTrim or \
+                            obj.ref_start+currTrim <= point[1] <= obj.ref_end-currTrim:
 
-        print(obj.to_string(), len(local_primary_data[obj.chrom]))
+                        if uc and point[2] > uc:
+                            point[2] = uc
 
-        restricted_cfc = copy.copy(cfc)
-        if cfc.track_props['normalize_by_secondary']:
-            print(obj.to_string(), "normalizing by secondary")
-            normed_primary, normed_secondary = normalize_by_secondary(local_primary_data, local_secondary_data,
-                                                                      obj.chrom, cfc.track_props['normalize_by_secondary'])
-            restricted_cfc.primary_data = normed_primary
-            restricted_cfc.secondary_data = normed_secondary
+                        if lc and point[2] < lc:
+                            point[2] = lc
 
-        elif cfc.track_props['normalize_by_count']:
-            print(obj.to_string(), "normalizing by count")
-            normed_primary = defaultdict(list)
-            for point in local_primary_data[obj.chrom]:
-                normed_primary[obj.chrom].append([point[0], point[1], point[2] / float(obj.seg_count)])
+                        dstore[obj.chrom].append(point)
 
-            restricted_cfc.primary_data = normed_primary
-            restricted_cfc.secondary_data = local_secondary_data
+                    elif point[0] < obj.ref_start+currTrim and point[1] > obj.ref_end-currTrim:
+                        dstore[obj.chrom].append(point)
 
-        else:
-            restricted_cfc.primary_data = local_primary_data
-            restricted_cfc.secondary_data = local_secondary_data
 
-        obj.feature_tracks.append(restricted_cfc)
-        print(obj.to_string(),"has",len(obj.feature_tracks),"tracks")
+            restricted_cfc = copy.copy(cfc)
+            if cfc.track_props['normalize_by_secondary']:
+                print(obj.to_string(), "normalizing by secondary")
+                normed_primary, normed_secondary = normalize_by_secondary(local_primary_data, local_secondary_data,
+                                                                          obj.chrom, cfc.track_props['normalize_by_secondary'])
+                restricted_cfc.primary_data = normed_primary
+                restricted_cfc.secondary_data = normed_secondary
+
+            elif cfc.track_props['normalize_by_count']:
+                print(obj.to_string(), "normalizing by count")
+                normed_primary = defaultdict(list)
+                for point in local_primary_data[obj.chrom]:
+                    normed_primary[obj.chrom].append([point[0], point[1], point[2] / float(obj.seg_count)])
+
+                restricted_cfc.primary_data = normed_primary
+                restricted_cfc.secondary_data = local_secondary_data
+
+            else:
+                restricted_cfc.primary_data = local_primary_data
+                restricted_cfc.secondary_data = local_secondary_data
+
+            obj.feature_tracks.append(restricted_cfc)
+            print(obj.to_string(),"now has",len(obj.feature_tracks),"tracks")
+
+    elif cfc.track_props['tracktype'] == 'links':
+        for cdat, c_link_store in zip([cfc.primary_data, cfc.secondary_data], [cfc.primary_links, cfc.secondary_links]):
+            for cp, data_tup_list in cdat.items():
+                currTrim = 0
+                for data_tup in data_tup_list:
+                    cLink = cfc.Link(cp[0], cp[1], data_tup)
+                    # hitA, hitB = False, False
+                    for obj in ref_placements.values():
+                        seg_len = obj.ref_end - obj.ref_start
+                        # check if it's chromA
+                        if obj.chrom == cLink.chromA:
+                            # check if overlap coord
+                            if obj.ref_start+currTrim <= cLink.startA <= obj.ref_end-currTrim or \
+                                    obj.ref_start + currTrim <= cLink.endA <= obj.ref_end - currTrim:
+                                # compute the normpos
+                                print("matched", cp, data_tup, "A")
+                                if obj.direction == "+":
+                                    normStart_A = obj.abs_start_pos + max(0, cLink.startA - obj.ref_start)
+                                    normEnd_A = obj.abs_start_pos + min(seg_len, cLink.endA - obj.ref_start)
+
+                                else:
+                                    normEnd_A = obj.abs_start_pos + min(seg_len, obj.ref_end - cLink.startA)
+                                    normStart_A = obj.abs_start_pos + max(0, obj.ref_end - cLink.endA)
+
+                                cLink.posA_hits.append((normStart_A, normEnd_A))
+                                hitA = True
+
+                        # check if it's chromB
+                        if obj.chrom == cLink.chromB:
+                            # check if overlap coord
+                            if obj.ref_start + currTrim <= cLink.startB <= obj.ref_end - currTrim or \
+                                    obj.ref_start + currTrim <= cLink.endB <= obj.ref_end - currTrim:
+                                print("matched", cp, data_tup, "B")
+                                # compute the normpos
+                                if obj.direction == "+":
+                                    normStart_B = obj.abs_start_pos + max(0, cLink.startB - obj.ref_start)
+                                    normEnd_B = obj.abs_start_pos + min(seg_len, cLink.endB - obj.ref_start)
+
+                                else:
+                                    normEnd_B = obj.abs_start_pos + min(seg_len, obj.ref_end - cLink.startB)
+                                    normStart_B = obj.abs_start_pos + max(0, obj.ref_end - cLink.endB)
+
+                                cLink.posB_hits.append((normStart_B, normEnd_B))
+                                hitB = True
+
+                        # if cfc.track_props['link_single_match'] and hitA and hitB:
+                        #     break
+
+                    c_link_store.append(cLink)
+
+        for obj in ref_placements.values():
+            obj.feature_tracks.append(cfc)
+            print(obj.to_string(),"now has",len(obj.feature_tracks),"tracks")
 
 
 # rotate text to be legible on both sides of circle
@@ -656,7 +663,6 @@ def check_segdup(aln_vect, cycle, circular):
                     split_ind = ind + 1
 
         s1, s2 = sorted([len(first_set), len(second_set)])
-        print(s1, s2, split_ind, s1 / float(s2))
         return (s1 / float(s2) > .25), split_ind
 
     return False, -1
@@ -957,7 +963,7 @@ def track_min_max(primary_data, secondary_data, nice_ticks, hide_secondary = Fal
         iterlist+=list(secondary_data.values())
 
     for ivallist in iterlist:
-        cdv = [x[2] for x in ivallist]
+        cdv = [x[-1] for x in ivallist]
         dv.extend(cdv)
 
     if dv:
@@ -983,6 +989,7 @@ def track_min_max(primary_data, secondary_data, nice_ticks, hide_secondary = Fal
         return min_dv, newmax
 
 
+# refactor to just use a dictionary
 def parse_main_args_yaml(args):
     with open(args.input_yaml_file) as f:
         sample_data = yaml.safe_load(f)
@@ -1022,23 +1029,28 @@ def parse_main_args_yaml(args):
             args.tick_fontsize = sample_data.get("tick_fontsize")
         if "segment_end_ticks" in sample_data:
             args.segment_end_ticks = sample_data.get("segment_end_ticks")
+        if "center_hole" in sample_data:
+            args.center_hole = sample_data.get("center_hole")
 
 
 def parse_feature_yaml(yaml_file, index, totfiles):
     with open(yaml_file) as yf:
         # specifies the default track properties
         dd = {
+            'tracktype': "standard",
             'primary_feature_bedgraph': "",
             'secondary_feature_bedgraph': "",
             'primary_color': 'k',
             'primary_style': 'points',
             'normalize_by_secondary': False,
+            'rescale_secondary_to_primary': False,
             'normalize_by_count': False,
             'log_transform_primary': None,
             'secondary_color': 'lightgreen',
-            'secondary_style': 'lines',
+            'secondary_style': 'points',
             'hide_secondary': False,
             'log_transform_secondary': None,
+            'indicate_zero': None,
             'ticks_color': 'lightgrey',
             'nice_ticks': True,
             'granularity': 0,
@@ -1047,36 +1059,101 @@ def parse_feature_yaml(yaml_file, index, totfiles):
             'linewidth': 2.0 / (totfiles),
             'pointsize': 1.0 / (2*totfiles),
             'segment_copy_count_scaling': 1,
-            'background_color': 'auto'
+            'background_color': 'auto',
+            'primary_smoothing': 0,
+            'secondary_smoothing': 0,
+            'primary_upper_cap': None,
+            'primary_lower_cap': None,
+            'secondary_upper_cap': None,
+            'secondary_lower_cap': None,
+            'sec_resc_zero': 0,
+            'linkpoint': 'midpoint',
+            'link_single_match': False
         }
 
         indd = yaml.safe_load(yf)
         print(indd)
         dd.update(indd)
 
-        primary_data = defaultdict(IntervalTree)
-        secondary_data = defaultdict(IntervalTree)
-        if dd["primary_feature_bedgraph"]:
-            primary_data = parse_bed(dd['primary_feature_bedgraph'])
+        lkeys = ['tracktype', 'primary_style', 'secondary_style', 'linkpoint']
+        for lkey in lkeys:
+            dd[lkey] = dd[lkey].lower()
 
-        if dd["secondary_feature_bedgraph"]:
-            secondary_data = parse_bed(dd['secondary_feature_bedgraph'])
+        primary_data = defaultdict(list)
+        secondary_data = defaultdict(list)
 
-        dv_min, dv_max = track_min_max(primary_data, secondary_data, dd['nice_ticks'],
-                                       hide_secondary=dd['hide_secondary'], pad_prop=0.025)
+        if dd['tracktype'] == 'standard':
+            if dd["primary_feature_bedgraph"]:
+                primary_data = parse_bed(dd['primary_feature_bedgraph'])
+
+            if dd["secondary_feature_bedgraph"]:
+                secondary_data = parse_bed(dd['secondary_feature_bedgraph'])
+            else:
+                dd['rescale_secondary_to_primary'] = False
+
+            minprimary = min([x[2] for y in primary_data for x in primary_data[y]])
+            maxprimary = max([x[2] for y in primary_data for x in primary_data[y]])
+            print("MAX PRIM, MINPRIM", maxprimary, minprimary)
+
+            if len(secondary_data) > 0:
+                minsecondary = min([x[2] for y in secondary_data for x in secondary_data[y]])
+                maxsecondary = max([x[2] for y in secondary_data for x in secondary_data[y]])
+            else:
+                minsecondary, maxsecondary = 0, 0
+
+            if dd['secondary_upper_cap']:
+                # maxprimary = min(maxprimary, dd['upper_cap'])
+                maxsecondary = min(maxsecondary, dd['secondary_upper_cap'])
+
+            if dd['secondary_lower_cap']:
+                # minprimary = max(minprimary, dd['lower_cap'])
+                minsecondary= max(minsecondary, dd['secondary_lower_cap'])
+
+            if dd['primary_upper_cap']:
+                maxprimary = min(maxprimary, dd['primary_upper_cap'])
+                # maxsecondary = min(maxsecondary, dd['upper_cap'])
+
+            if dd['primary_lower_cap']:
+                minprimary = max(minprimary, dd['primary_lower_cap'])
+                # minsecondary= max(minsecondary, dd['lower_cap'])
+
+            if dd['rescale_secondary_to_primary']:
+                print("RESCALNG secondary TO primary")
+                # print((maxsecondary - minsecondary),(maxprimary - minprimary))
+
+                rs_sec = defaultdict(list)
+                for chrom, ivall in secondary_data.items():
+                    for ival in ivall:
+                        cdat = ival[2]
+                        if dd['secondary_upper_cap']:
+                            cdat = min(cdat, dd['secondary_upper_cap'])
+                        if dd['secondary_lower_cap']:
+                            cdat = max(cdat, dd['secondary_lower_cap'])
+                        rsdat = (cdat - minsecondary)/(maxsecondary - minsecondary) * (maxprimary - minprimary) + minprimary
+                        rs_sec[chrom].append([ival[0], ival[1], rsdat])
+
+                secondary_data = rs_sec
+                dd['secondary_upper_cap'], dd['secondary_lower_cap'] = None, None
+                dd['sec_resc_zero'] = (-1.0*minsecondary) / (maxsecondary - minsecondary) * (maxprimary - minprimary) + minprimary
+                # print((-1.0*minsecondary) / (maxsecondary - minsecondary), dd['sec_resc_zero'],'sec_resc_zero')
+
+            dv_min, dv_max = track_min_max(primary_data, secondary_data, dd['nice_ticks'],
+                                           hide_secondary=dd['hide_secondary'], pad_prop=0.025)
+
+        elif dd['tracktype'] == 'links' or dd['tracktype'] == 'link':
+            dd['tracktype'] = 'links'
+
+            if dd["primary_feature_bedgraph"]:
+                primary_data = parse_bed(dd['primary_feature_bedgraph'])
+
+            if dd["secondary_feature_bedgraph"]:
+                secondary_data = parse_bed(dd['secondary_feature_bedgraph'])
+
+            dv_min, dv_max = track_min_max(primary_data, secondary_data, nice_ticks=False, hide_secondary=False,
+                                           pad_prop=0)
+
+        else:
+            print("ERROR: feature " + str(index) + ": Unrecognized track type - " + str(dd['tracktype']) + "\n")
+            sys.exit(1)
 
     return feature_track(index, primary_data, secondary_data, dd, dv_min, dv_max)
-
-'''
-        self.primary_color = dd['primary_feature_color']
-        self.primary_style = dd['primary_feature_style']
-        self.secondary_color = dd['secondary_feature_color']
-        self.secondary_style = dd['secondary_feature_style']
-        self.ticks_color = dd['ticks_color']
-        self.log_transform_primary = dd['log_transform_primary']
-        self.log_transform_secondary = dd['log_transform_secondary']         
-'''
-
-
-
-
