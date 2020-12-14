@@ -148,7 +148,7 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     gc, gs, ge = pTup
     granularity = cfc.track_props['granularity']
     if granularity == 0:
-        granularity = max(1,int((ge - gs)/10000.0))
+        granularity = max(1, int((ge - gs)/10000.0))
 
     # print(cfc.track_max, cfc.track_min, cfc.top, cfc.base)
     height_scale_factor = (cfc.top - cfc.base)/float(cfc.track_max - cfc.track_min)
@@ -174,9 +174,9 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
 
     # plot the legends lines
     legend_points = np.linspace(currStart / total_length * 2 * np.pi, (currEnd + 1) / total_length * 2 * np.pi, 10000)
-    lheights = list(np.linspace(cfc.base, cfc.top, 5))
+    lheights = list(np.linspace(cfc.base, cfc.top, cfc.track_props['num_ticks']))
     # lheights.append(cfc.top)
-    legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, 5))
+    legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, cfc.track_props['num_ticks']))
 
     print("TRACK LEGEND HEIGHTS", legend_ticks)
     for lh in lheights:
@@ -619,6 +619,82 @@ def plot_alignment(contig_locs, segment_locs, total_length):
         ax.plot([x_c, x_s], [y_c, y_s], color="grey", linewidth=linewidth)
 
 
+def plot_track_legend(refObj, ofpre, outer_bar, bar_width):
+    #create a figure that is ? tall
+    legw = 1
+    fig_l = plt.figure(figsize=(2, 8/3.0))
+    ax_l = fig_l.add_subplot(111, aspect='equal')
+
+    # plot the reference
+    try:
+        refcolor = chromosome_colors[refObj.chrom]
+    except KeyError:
+        # print("Color not found for " + chrom + ". Using red.")
+        refcolor = "red"
+    ax_l.add_patch(mpatches.Rectangle((0, outer_bar - bar_width), legw, bar_width/2, facecolor=refcolor,
+                                      edgecolor=refcolor, lw=0.2))
+
+    # TODO: plot the interior segments (if they exist)
+
+    # plot the tracks (with ticks)
+    for f_ind, cfc in enumerate(refObj.feature_tracks):
+        p_color = cfc.track_props['primary_color']
+        s_color = cfc.track_props['secondary_color']
+        if cfc.track_props['tracktype'] == 'standard':
+            height_scale_factor = (cfc.top - cfc.base) / float(cfc.track_max - cfc.track_min)
+
+            # plot a background
+            lcolor = 'lightgrey'
+            rh = cfc.top - cfc.base + intertrack_spacing
+            rb = cfc.base - intertrack_spacing/2
+            if f_ind % 2 == 1:
+                if cfc.track_props['background_color'] == 'auto':
+                    ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, facecolor='gainsboro', edgecolor='gainsboro',
+                                                      lw=0, zorder=-1))
+                    lcolor = 'white'
+
+                elif cfc.track_props['background_color']:
+                    ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, facecolor=cfc.track_props['background_color'],
+                                                      edgecolor=cfc.track_props['background_color'], lw=0, zorder=-1))
+
+            # plot the legends lines
+            lheights = list(np.linspace(cfc.base, cfc.top, cfc.track_props['num_ticks']))
+            legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, cfc.track_props['num_ticks']))
+            for lh, lt in zip(lheights, legend_ticks):
+                # sec_lt = (lt - cfc.minsec) * cfc.sec_rsf + cfc.sec_rss
+
+                if cfc.track_props['rescale_secondary_to_primary']:
+                    sec_lt = (lt - cfc.sec_rss) / cfc.sec_rsf + cfc.minsec # inverse the previous transformation
+                    sec_lt_str= '%s' % float('%.3g' % sec_lt)
+                else:
+                    sec_lt_str = str(lt)
+
+                ax_l.plot([0, legw], [lh, lh], color=lcolor, linewidth=0.5, zorder=1)
+                ax_l.text(-0.15, lh, str(lt), ha='right', va='center', fontsize=cfc.track_props['tick_legend_fontsize'],
+                          color=p_color)
+
+                if cfc.secondary_data:
+                    ax_l.text(legw + 0.15, lh, sec_lt_str, ha='left', va='center', color=s_color,
+                              fontsize=cfc.track_props['tick_legend_fontsize'])
+
+            ax_l.text(-1.4, rb + rh/2.0, "Primary data", rotation=90, ha='center', va='center', color=p_color,
+                      fontsize=cfc.track_props['tick_legend_fontsize'] + 1)
+
+            if cfc.secondary_data:
+                ax_l.text(legw + 1.4, rb + rh/2.0, "Secondary data", rotation=270, ha='center', va='center',
+                          fontsize=cfc.track_props['tick_legend_fontsize'] + 1, color=s_color)
+
+            ax_l.plot([0, legw], [cfc.top + intertrack_spacing/2]*2, color='k', linewidth=0.75, zorder=1)
+
+        # if it's links?
+        # else:
+
+    ax_l.axis('off')
+    fig_l.savefig(ofpre + '.png', dpi=600)
+    fig_l.savefig(ofpre + '.pdf', format='pdf')
+
+
+
 def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_index_is_adj, next_seg_index_is_adj,
                                    isCycle, cycle_seg_counts, aln_vect=None):
     if aln_vect is None:
@@ -657,8 +733,11 @@ parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
+parser.add_argument("--interior_segments",
+                    help="Enable visualization of an interior segment (e.g. long read transcript, etc.",
+                    action='store_true')
 parser.add_argument("-c", "--contigs", help="contig cmap file")
-parser.add_argument("-s", "--segs", help="segments cmap file")
+parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--sname", help="output prefix")
 parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
@@ -754,7 +833,7 @@ if not args.om_alignments:
             cfc.base, cfc.top = fbases[ind], ftops[ind]
             vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
             if cfc.track_props['tracktype'] == 'standard':
-                vu.reset_track_min_max(ref_placements, ind)
+                vu.reset_track_min_max(ref_placements, ind, cfc)
             else:
                 plot_links(cfc)
 
@@ -762,9 +841,9 @@ if not args.om_alignments:
 else:
     print("Visualizing with alignments")
     print("Contig spacing set to " + str(vu.contig_spacing))
-    seg_cmaps = parse_cmap(args.segs, True)
+    seg_cmaps = parse_cmap(args.om_segs, True)
     seg_cmap_vects = vectorize_cmaps(seg_cmaps)
-    seg_cmap_lens = get_cmap_lens(args.segs)
+    seg_cmap_lens = get_cmap_lens(args.om_segs)
     aln_vect, meta_dict = vu.parse_alnfile(args.path_alignment)
     is_segdup, split_ind = vu.check_segdup(aln_vect, cycle, isCycle)
     if is_segdup:
@@ -790,7 +869,7 @@ else:
             cfc.base, cfc.top = fbases[ind], ftops[ind]
             vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
             if cfc.track_props['tracktype'] == 'standard':
-                vu.reset_track_min_max(ref_placements, ind)
+                vu.reset_track_min_max(ref_placements, ind, cfc)
             else:
                 plot_links(cfc)
 
@@ -840,7 +919,7 @@ sorted_chrom = sorted(chrom_set, key=lambda x: x.rsplit("chr")[-1])
 sorted_chrom_colors = [chromosome_colors[x] for x in sorted_chrom]
 legend_patches = []
 for chrom, color in zip(sorted_chrom, sorted_chrom_colors):
-    legend_patches.append(mpatches.Patch(color=color, label=chrom))
+    legend_patches.append(mpatches.Patch(facecolor=color, label=chrom))
 
 plt.legend(handles=legend_patches, fontsize=8, loc=3, bbox_to_anchor=(-.3, .15),frameon=False)
 
@@ -856,6 +935,11 @@ print("saving PNG")
 plt.savefig(fname + '.png', dpi=600)
 print("saving PDF")
 plt.savefig(fname + '.pdf', format='pdf')
-
 plt.close()
+
+# make plots of the yaml tracks
+print("saving legend")
+if args.feature_yaml_list:
+    plot_track_legend(ref_placements[0], fname + "_legend", outer_bar, bar_width)
+
 print("finished")

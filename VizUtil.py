@@ -221,6 +221,9 @@ class feature_track(object):
         self.track_props = dd
         self.track_min = dv_min
         self.track_max = dv_max
+        self.sec_rsf = 1
+        self.sec_rss = 0
+        self.minsec = 0
         self.base = 0
         self.top = 0
         self.primary_links = []
@@ -235,6 +238,7 @@ class feature_track(object):
             self.score = data_tup[4]
             self.posA_hits = []
             self.posB_hits = []
+
 
 # SET COLORS
 def get_chr_colors():
@@ -930,7 +934,7 @@ def reduce_path(path, prev_seg_index_is_adj, inds, aln_vect=None):
     return path, prev_seg_index_is_adj, aln_vect
 
 
-def reset_track_min_max(ref_placements, index):
+def reset_track_min_max(ref_placements, index, primary_cfc):
     tmin, tmax = 0, 0
     for obj in ref_placements.values():
         cfc = obj.feature_tracks[index]
@@ -952,6 +956,9 @@ def reset_track_min_max(ref_placements, index):
     for obj in ref_placements.values():
         obj.feature_tracks[index].track_min = tmin
         obj.feature_tracks[index].track_max = tmax
+
+    primary_cfc.track_min = tmin
+    primary_cfc.track_max = tmax
 
 
 # go over the bedgraph data and find min and max values, if not specified. pad those values by 2.5% above
@@ -989,7 +996,7 @@ def track_min_max(primary_data, secondary_data, nice_ticks, hide_secondary = Fal
         return min_dv, newmax
 
 
-# refactor to just use a dictionary
+# TODO: refactor to just use a dictionary (like parse_feature_yaml)
 def parse_main_args_yaml(args):
     with open(args.input_yaml_file) as f:
         sample_data = yaml.safe_load(f)
@@ -1000,8 +1007,8 @@ def parse_main_args_yaml(args):
             args.om_alignments = sample_data.get("om_alignments")
         if "contigs" in sample_data:
             args.contigs = sample_data.get("contigs")
-        if "segs" in sample_data:
-            args.segs = sample_data.get("segs")
+        if "om_segs" in sample_data:
+            args.om_segs = sample_data.get("om_segs")
         if "graph" in sample_data:
             args.graph = sample_data.get("graph")
         if "i" in sample_data:
@@ -1052,7 +1059,9 @@ def parse_feature_yaml(yaml_file, index, totfiles):
             'log_transform_secondary': None,
             'indicate_zero': None,
             'ticks_color': 'lightgrey',
+            'num_ticks': 5,
             'nice_ticks': True,
+            'tick_legend_fontsize': 4,
             'granularity': 0,
             'end_trim': 50,
             'show_segment_copy_count': True,
@@ -1117,6 +1126,7 @@ def parse_feature_yaml(yaml_file, index, totfiles):
                 minprimary = max(minprimary, dd['primary_lower_cap'])
                 # minsecondary= max(minsecondary, dd['lower_cap'])
 
+            sec_rsf = (maxprimary - minprimary) / (maxsecondary - minsecondary)
             if dd['rescale_secondary_to_primary']:
                 print("RESCALNG secondary TO primary")
                 # print((maxsecondary - minsecondary),(maxprimary - minprimary))
@@ -1129,12 +1139,13 @@ def parse_feature_yaml(yaml_file, index, totfiles):
                             cdat = min(cdat, dd['secondary_upper_cap'])
                         if dd['secondary_lower_cap']:
                             cdat = max(cdat, dd['secondary_lower_cap'])
-                        rsdat = (cdat - minsecondary)/(maxsecondary - minsecondary) * (maxprimary - minprimary) + minprimary
+                        rsdat = (cdat - minsecondary) * sec_rsf + minprimary
                         rs_sec[chrom].append([ival[0], ival[1], rsdat])
 
                 secondary_data = rs_sec
                 dd['secondary_upper_cap'], dd['secondary_lower_cap'] = None, None
-                dd['sec_resc_zero'] = (-1.0*minsecondary) / (maxsecondary - minsecondary) * (maxprimary - minprimary) + minprimary
+                dd['sec_resc_zero'] = (-1.0*minsecondary) * sec_rsf + minprimary
+
                 # print((-1.0*minsecondary) / (maxsecondary - minsecondary), dd['sec_resc_zero'],'sec_resc_zero')
 
             dv_min, dv_max = track_min_max(primary_data, secondary_data, dd['nice_ticks'],
@@ -1156,4 +1167,10 @@ def parse_feature_yaml(yaml_file, index, totfiles):
             print("ERROR: feature " + str(index) + ": Unrecognized track type - " + str(dd['tracktype']) + "\n")
             sys.exit(1)
 
-    return feature_track(index, primary_data, secondary_data, dd, dv_min, dv_max)
+    new_cfc = feature_track(index, primary_data, secondary_data, dd, dv_min, dv_max)
+    if dd['rescale_secondary_to_primary']:
+        new_cfc.minsec = minsecondary
+        new_cfc.sec_rsf = sec_rsf
+        new_cfc.sec_rss = minprimary
+
+    return new_cfc
