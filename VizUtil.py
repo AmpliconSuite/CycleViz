@@ -47,7 +47,8 @@ def round_to_1_sig(x):
 
 
 class CycleVizElemObj(object):
-    def __init__(self, m_id, chrom, ref_start, ref_end, direction, s, t, seg_count, padj, nadj, cmap_vect=[]):
+    def __init__(self, m_id, chrom, ref_start, ref_end, direction, s, t, seg_count, padj, nadj, cmap_vect=None):
+        if cmap_vect is None: cmap_vect = []
         self.id = m_id
         self.chrom = chrom
         self.ref_start = ref_start
@@ -67,7 +68,8 @@ class CycleVizElemObj(object):
         self.feature_tracks = []
         self.prev_is_adjacent = padj
         self.next_is_adjacent = nadj
-
+        self.custom_color = None
+        self.custom_bh = None
 
     def compute_label_posns(self):
         if self.direction == "+":
@@ -261,6 +263,23 @@ def get_chr_colors():
     return chromosome_colors
 
 
+# rotate text to be legible on both sides of circle
+def correct_text_angle(text_angle):
+    if abs(text_angle > 90 and abs(text_angle) < 270):
+        text_angle -= 180
+        ha = "right"
+    else:
+        ha = "left"
+
+    return text_angle, ha
+
+
+def pair_is_edge(a_id, b_id, a_dir, b_dir, bpg_dict, seg_end_pos_d):
+    rObj1_end = seg_end_pos_d[a_id][-1] if a_dir == "+" else seg_end_pos_d[a_id][0]
+    rObj2_start = seg_end_pos_d[b_id][0] if b_dir == "+" else seg_end_pos_d[b_id][-1]
+    return rObj1_end in bpg_dict[rObj2_start]
+
+
 # parse the breakpoint graph to indicate for two endpoints if there is an edge.
 def parse_BPG(BPG_file):
     bidirectional_edge_dict = defaultdict(set)
@@ -284,6 +303,43 @@ def parse_BPG(BPG_file):
                 seg_end_pos_d[str(seqnum)] = (fields[1][:-1], fields[2][:-1])
 
     return bidirectional_edge_dict, seg_end_pos_d
+
+
+# return list of relevant genes sorted by starting position
+def rel_genes(chrIntTree, pTup, gene_set=None):
+    if gene_set is None:
+        gene_set = set()
+
+    currGenes = {}
+    chrom = pTup[0]
+    overlappingT = chrIntTree[chrom][pTup[1]:pTup[2]]
+    gene_set_only = (len(gene_set) == 0)
+    for i in overlappingT:
+        gObj = i.data
+        gname = gObj.gname
+        is_other_feature = (gname.startswith("LOC") or gname.startswith("LINC") or gname.startswith("MIR"))
+        if gene_set_only:
+            gene_set.add(gname)
+
+        if not is_other_feature and gname in gene_set:
+            if gname not in currGenes:
+                currGenes[gname] = gObj
+
+            # gene appears in file twice, if one is larger, use it. else just use the widest endpoints
+            else:
+                oldTStart = currGenes[gname].gstart
+                oldTEnd = currGenes[gname].gend
+                if gObj.gend - gObj.gstart > oldTEnd - oldTStart:
+                    currGenes[gname] = copy.copy(gObj)
+
+                else:
+                    if gObj.gstart < oldTStart:
+                        currGenes[gname].gstart = gObj.gstart
+                    if gObj.gend > oldTEnd:
+                        currGenes[gname].gend = gObj.gend
+
+    relGenes = sorted(currGenes.values(), key=lambda x: (x.gstart, x.gend))
+    return relGenes
 
 
 # extract oncogenes from a file.
@@ -495,7 +551,6 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
     elif cfc.track_props['tracktype'] == 'links':
         for cdat, c_link_store in zip([cfc.primary_data, cfc.secondary_data], [cfc.primary_links, cfc.secondary_links]):
             for cp, data_tup_list in cdat.items():
-                currTrim = 0
                 for data_tup in data_tup_list:
                     cLink = cfc.Link(cp[0], cp[1], data_tup)
                     # hitA, hitB = False, False
@@ -504,10 +559,10 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
                         # check if it's chromA
                         if obj.chrom == cLink.chromA:
                             # check if overlap coord
-                            if obj.ref_start+currTrim <= cLink.startA <= obj.ref_end-currTrim or \
-                                    obj.ref_start + currTrim <= cLink.endA <= obj.ref_end - currTrim:
+                            if obj.ref_start <= cLink.startA <= obj.ref_end or \
+                                    obj.ref_start <= cLink.endA <= obj.ref_end:
                                 # compute the normpos
-                                print("matched", cp, data_tup, "A")
+                                # print("matched", cp, data_tup, "A")
                                 if obj.direction == "+":
                                     normStart_A = obj.abs_start_pos + max(0, cLink.startA - obj.ref_start)
                                     normEnd_A = obj.abs_start_pos + min(seg_len, cLink.endA - obj.ref_start)
@@ -517,14 +572,14 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
                                     normStart_A = obj.abs_start_pos + max(0, obj.ref_end - cLink.endA)
 
                                 cLink.posA_hits.append((normStart_A, normEnd_A))
-                                hitA = True
+                                # hitA = True
 
                         # check if it's chromB
                         if obj.chrom == cLink.chromB:
                             # check if overlap coord
-                            if obj.ref_start + currTrim <= cLink.startB <= obj.ref_end - currTrim or \
-                                    obj.ref_start + currTrim <= cLink.endB <= obj.ref_end - currTrim:
-                                print("matched", cp, data_tup, "B")
+                            if obj.ref_start <= cLink.startB <= obj.ref_end or \
+                                    obj.ref_start <= cLink.endB <= obj.ref_end:
+                                # print("matched", cp, data_tup, "B")
                                 # compute the normpos
                                 if obj.direction == "+":
                                     normStart_B = obj.abs_start_pos + max(0, cLink.startB - obj.ref_start)
@@ -535,72 +590,92 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
                                     normStart_B = obj.abs_start_pos + max(0, obj.ref_end - cLink.endB)
 
                                 cLink.posB_hits.append((normStart_B, normEnd_B))
-                                hitB = True
+                                # hitB = True
 
                         # if cfc.track_props['link_single_match'] and hitA and hitB:
                         #     break
 
                     c_link_store.append(cLink)
 
+        # holds the place of the feature
         for obj in ref_placements.values():
             obj.feature_tracks.append(cfc)
-            print(obj.to_string(),"now has",len(obj.feature_tracks),"tracks")
+        #     print(obj.to_string(), "now has", len(obj.feature_tracks), "tracks")
 
 
-# rotate text to be legible on both sides of circle
-def correct_text_angle(text_angle):
-    if abs(text_angle > 90 and abs(text_angle) < 270):
-        text_angle -= 180
-        ha = "right"
-    else:
-        ha = "left"
+# Assign interior track data to a location(s) in a refobj, and create a new refobj for that overlapping region,
+# to represent the interior track data
 
-    return text_angle, ha
+# TODO: What if it's scrambled w.r.t the reference track?
+def handle_IS_data(ref_placements, IS_cycle, IS_segSeqD, IS_isCircular, IS_bh, cycleColor='lightskyblue'):
+    cycle_seg_counts = get_seg_amplicon_count(IS_cycle)
+    prev_seg_index_is_adj, next_seg_index_is_adj = adjacent_segs(IS_cycle, IS_segSeqD, IS_isCircular)
+    # need to match to the ref_placements
+    valid_link_pairs = set(zip(IS_cycle[:-1],IS_cycle[1:]))
+    if IS_isCircular:
+        valid_link_pairs.add((IS_cycle[-1],IS_cycle[0]))
 
+    new_IS_cycle = []
+    new_IS_links = []
+    # lastIndHit = -1
+    IS_rObj_placements = {}
+    u_ind = 0
+    for obj in ref_placements.values():
+        s_to_add = []
+        c_to_add = []
+        seg_len = obj.ref_end - obj.ref_start
+        for ind, (segID, segdir) in enumerate(IS_cycle):
+            padj, nadj = prev_seg_index_is_adj[ind], next_seg_index_is_adj[ind]
+            seg_id_count = cycle_seg_counts[segID]
+            c, s, e = IS_segSeqD[segID]
+            if c != obj.chrom:
+                continue
 
-# return list of relevant genes sorted by starting position
-def rel_genes(chrIntTree, pTup, gene_set=None):
-    if gene_set is None:
-        gene_set = set()
-
-    currGenes = {}
-    chrom = pTup[0]
-    overlappingT = chrIntTree[chrom][pTup[1]:pTup[2]]
-    gene_set_only = (len(gene_set) == 0)
-    for i in overlappingT:
-        gObj = i.data
-        gname = gObj.gname
-        is_other_feature = (gname.startswith("LOC") or gname.startswith("LINC") or gname.startswith("MIR"))
-        if gene_set_only:
-            gene_set.add(gname)
-
-        if not is_other_feature and gname in gene_set:
-            if gname not in currGenes:
-                currGenes[gname] = gObj
-
-            # gene appears in file twice, if one is larger, use it. else just use the widest endpoints
-            else:
-                oldTStart = currGenes[gname].gstart
-                oldTEnd = currGenes[gname].gend
-                if gObj.gend - gObj.gstart > oldTEnd - oldTStart:
-                    currGenes[gname] = copy.copy(gObj)
+            # overlaps the ref seg
+            if obj.ref_start <= s <= obj.ref_end or obj.ref_start <= e <= obj.ref_end:
+                # compute the normpos
+                if obj.direction == "+":
+                    normStart = obj.abs_start_pos + max(0, s - obj.ref_start)
+                    normEnd = obj.abs_start_pos + min(seg_len, e - obj.ref_start)
 
                 else:
-                    if gObj.gstart < oldTStart:
-                        currGenes[gname].gstart = gObj.gstart
-                    if gObj.gend > oldTEnd:
-                        currGenes[gname].gend = gObj.gend
+                    normEnd = obj.abs_start_pos + min(seg_len, obj.ref_end - s)
+                    normStart = obj.abs_start_pos + max(0, obj.ref_end - e)
 
-    relGenes = sorted(currGenes.values(), key=lambda x: (x.gstart, x.gend))
-    return relGenes
+                # make a refobj
+                currObj = CycleVizElemObj(segID, c, s, e, obj.direction, normStart, normEnd, seg_id_count, padj, nadj)
+                currObj.custom_color = cycleColor
+                currObj.custom_bh = IS_bh
+                s_to_add.append(currObj)
+                c_to_add.append((segID, segdir))
+
+        if not s_to_add:
+            continue
+
+        ssta, scta = zip(*sorted(zip(s_to_add, c_to_add), key=lambda x: x[0].abs_start_pos))
+        new_IS_cycle.extend(scta)
+        for rObj, ct in zip(ssta, scta):
+            IS_rObj_placements[u_ind] = rObj
+            u_ind+=1
+
+    for a, b in zip(new_IS_cycle[:-1], new_IS_cycle[1:]):
+        if (a,b) in valid_link_pairs or (b,a) in valid_link_pairs:
+            new_IS_links.append(True)
+
+        else:
+            new_IS_links.append(False)
+
+    if (new_IS_cycle[-1], new_IS_cycle[0]) in valid_link_pairs or (new_IS_cycle[0], new_IS_cycle[-1]) in valid_link_pairs:
+        new_IS_links.append(True)
+    else:
+        new_IS_links.append(False)
+
+    print(new_IS_links)
+    print(new_IS_cycle)
+    return IS_rObj_placements, new_IS_cycle, new_IS_links
 
 
-def pair_is_edge(a_id, b_id, a_dir, b_dir, bpg_dict, seg_end_pos_d):
-    rObj1_end = seg_end_pos_d[a_id][-1] if a_dir == "+" else seg_end_pos_d[a_id][0]
-    rObj2_start = seg_end_pos_d[b_id][0] if b_dir == "+" else seg_end_pos_d[b_id][-1]
-    return rObj1_end in bpg_dict[rObj2_start]
-
-
+# Read an AA-formatted cycles file
 def parse_cycles_file(cycles_file):
     cycles = {}
     segSeqD = {}
@@ -1038,6 +1113,8 @@ def parse_main_args_yaml(args):
             args.segment_end_ticks = sample_data.get("segment_end_ticks")
         if "center_hole" in sample_data:
             args.center_hole = sample_data.get("center_hole")
+        if "interior_segments_cycle" in sample_data:
+            args.interior_segments_cycle = sample_data.get("interior_segments_cycle")
 
 
 def parse_feature_yaml(yaml_file, index, totfiles):

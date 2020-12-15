@@ -3,6 +3,7 @@
 import argparse
 import copy
 import os
+import sys
 
 import matplotlib
 matplotlib.use('Agg')  # this import must happen immediately after importing matplotlib
@@ -50,14 +51,38 @@ def start_end_angle(normStart, normEnd, total_length):
     return start_angle, end_angle
 
 
-def plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d):
-    connect_width = bar_width / 2.
+def plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj=None, bpg_dict=None, seg_end_pos_d=None,
+                        manual_links=None):
+    if prev_seg_index_is_adj and bpg_dict and seg_end_pos_d:
+        connect_width = bar_width / 2.
+        ch = bar_width/4
+
+    else:
+        connect_width = bar_width/15.0
+        ch = bar_width/2
+        prev_seg_index_is_adj = defaultdict(bool)
+
     for ind, refObj in ref_placements.items():
+        if refObj.custom_bh:
+            curr_bh = refObj.custom_bh
+        else:
+            curr_bh = outer_bar
+
+        if refObj.custom_color:
+            connect_col = refObj.custom_color
+
+        else:
+            connect_col = 'grey'
+
         next_ind = (ind + 1) % len(ref_placements)
         next_refObj = ref_placements[next_ind]
         if not prev_seg_index_is_adj[next_ind]:  # or next_ind == 0 to try and close
-            bpg_adjacency = vu.pair_is_edge(refObj.id, next_refObj.id, refObj.direction, next_refObj.direction,
+            if not manual_links:
+                bpg_adjacency = vu.pair_is_edge(refObj.id, next_refObj.id, refObj.direction, next_refObj.direction,
                                             bpg_dict, seg_end_pos_d)
+
+            else:
+                bpg_adjacency = manual_links[ind]
 
             if not bpg_adjacency:
                 continue
@@ -65,10 +90,10 @@ def plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_a
             start_angle, end_angle = start_end_angle(next_refObj.abs_start_pos, refObj.abs_end_pos, total_length)
             # makes the reference genome wedges
             patches.append(
-                mpatches.Wedge((0, 0), outer_bar - bar_width / 4, end_angle, start_angle, width=connect_width))
-            f_color_v.append('grey')
-            e_color_v.append('grey')
-            lw_v.append(0.2)
+                mpatches.Wedge((0, 0), curr_bh - ch, end_angle, start_angle, width=connect_width))
+            f_color_v.append(connect_col)
+            e_color_v.append(connect_col)
+            lw_v.append(0)
 
 
 def plot_links(cfc):
@@ -178,7 +203,7 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     # lheights.append(cfc.top)
     legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, cfc.track_props['num_ticks']))
 
-    print("TRACK LEGEND HEIGHTS", legend_ticks)
+    # print("TRACK LEGEND HEIGHTS", legend_ticks)
     for lh in lheights:
         x_v, y_v = vu.polar_series_to_cartesians(legend_points, lh)
         plt.plot(x_v, y_v, color=lcolor, linewidth=0.25, zorder=1)
@@ -431,7 +456,7 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
 
 
 # plot the reference genome
-def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, label_segs, edge_ticks, onco_set=None):
+def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_segs, edge_ticks, onco_set=None):
     if onco_set is None:
         onco_set = set()
 
@@ -439,20 +464,33 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
     p_end = 0
     # rot_sp = global_rot / 360. * total_length
     for ind, refObj in ref_placements.items():
-        seg_coord_tup = segSeqD[cycle[ind][0]]
+        if refObj.custom_bh:
+            curr_bh = refObj.custom_bh
+        else:
+            curr_bh = outer_bar
+
+        # seg_coord_tup = segSeqD[cycle[ind][0]]
+        chrom = refObj.chrom
+        seg_coord_tup = (refObj.chrom, refObj.ref_start, refObj.ref_end)
         start_angle, end_angle = start_end_angle(refObj.abs_end_pos, refObj.abs_start_pos, total_length)
 
         # makes the reference genome wedges
-        patches.append(mpatches.Wedge((0, 0), outer_bar, end_angle, start_angle, width=bar_width))
-        chrom = segSeqD[cycle[ind][0]][0]
-        try:
-            f_color_v.append(chromosome_colors[chrom])
-        except KeyError:
-            print("Color not found for " + chrom + ". Using red.")
-            chromosome_colors[chrom] = "red"
-            f_color_v.append("red")
+        patches.append(mpatches.Wedge((0, 0), curr_bh, end_angle, start_angle, width=bar_width))
+        if not refObj.custom_color:
+            try:
+                f_color_v.append(chromosome_colors[chrom])
+                e_color_v.append(chromosome_colors[chrom])
 
-        e_color_v.append(chromosome_colors[chrom])
+            except KeyError:
+                print("Color not found for " + chrom + ". Using red.")
+                chromosome_colors[chrom] = "red"
+                f_color_v.append(chromosome_colors[chrom])
+                e_color_v.append(chromosome_colors[chrom])
+
+        else:
+            f_color_v.append(refObj.custom_color)
+            e_color_v.append('k')
+
         lw_v.append(0.2)
 
         # makes the ticks on the reference genome wedges
@@ -464,15 +502,11 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
                              np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1)))
 
         tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
-        # if refObj.abs_end_pos - refObj.abs_start_pos < 30000:
-        # tick_freq = 25000
-
+        text_trunc = 1
         # put the positions on the ends of the joined segs
         if edge_ticks:
             newposns = []
             tick_freq = 1
-            text_trunc = 1
-            # print(posns,seg_coord_tup,refObj.abs_start_pos, refObj.abs_end_pos)
             if not refObj.prev_is_adjacent:
                 newposns.append(posns[0])
 
@@ -483,7 +517,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
 
 
         # put the positions not on the ends
-        else:
+        elif edge_ticks == False:
             # if there are no labels present on the segment given the current frequency, AND this refobject is not adjacent
             # to the previous, get positions in this segment divisible by 10kbp, set the middle one as the labelling site
             # else just set it to 10000
@@ -497,14 +531,16 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
                 else:
                     tick_freq = 10000
 
+        else:
+            tick_freq = float('inf')
 
         p_end = refObj.abs_end_pos
         print("tick freq", tick_freq)
         for j in posns:
             if j[0] % tick_freq == 0:
                 text_angle = j[1] / total_length * 360
-                x, y = vu.pol2cart(outer_bar, (text_angle / 360 * 2 * np.pi))
-                x_t, y_t = vu.pol2cart(outer_bar + 0.2, (text_angle / 360 * 2 * np.pi))
+                x, y = vu.pol2cart(curr_bh, (text_angle / 360 * 2 * np.pi))
+                x_t, y_t = vu.pol2cart(curr_bh + 0.2, (text_angle / 360 * 2 * np.pi))
                 ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1)
 
                 text_angle, ha = vu.correct_text_angle(text_angle)
@@ -531,7 +567,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
         # label the segments by number in cycle
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
         text_angle = mid_sp / total_length * 360.
-        x, y = vu.pol2cart((outer_bar - 2 * bar_width), (text_angle / 360. * 2. * np.pi))
+        x, y = vu.pol2cart((curr_bh - 2 * bar_width), (text_angle / 360. * 2. * np.pi))
         font = font0.copy()
         if imputed_status[ind]:
             font.set_style('italic')
@@ -545,9 +581,19 @@ def plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status
 
 
 # set the heights of the bed track features
-def get_feature_heights(ntracks, intertrack_spacing):
+def get_feature_heights(ntracks, intertrack_spacing, has_OM, has_IS):
+    IS_height = segment_bar_height/2
     if ntracks > 0:
         maxtop = outer_bar-(intertrack_spacing + 0.5)
+        if has_OM:
+            maxtop += contig_bar_height
+        if has_IS:
+            maxtop += IS_height
+
+        if maxtop < center_hole:
+            print("ERROR: om and segment height exceeds allowed height in track")
+            sys.exit(1)
+
         divs = np.linspace(center_hole, maxtop, ntracks+1)
         bases = [divs[0], ]
         tops = []
@@ -556,11 +602,15 @@ def get_feature_heights(ntracks, intertrack_spacing):
             bases.append(p + intertrack_spacing/2.0)
 
         tops.append(divs[-1])
+        # establish the top of the segment bar
+        smt = maxtop
+        if has_IS:
+            smt = maxtop - IS_height
 
         print("Intertrack spacing is ", bases, tops)
-        return bases, tops
+        return bases, tops, smt
 
-    return [], []
+    return [], [], 0
 
 
 # plot cmap track for bionano
@@ -733,9 +783,9 @@ parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
-parser.add_argument("--interior_segments",
-                    help="Enable visualization of an interior segment (e.g. long read transcript, etc.",
-                    action='store_true')
+parser.add_argument("--interior_segments_cycle",
+                    help="Enable visualization of an interior segment (e.g. long read transcript, etc.", type=str,
+                    default="")
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
@@ -817,7 +867,8 @@ if args.gene_subset_file and not args.gene_subset_file == "NO":
 elif args.gene_subset_list:
     gene_set = set(args.gene_subset_list)
 
-fbases, ftops = get_feature_heights(len(args.feature_yaml_list), intertrack_spacing)
+fbases, ftops, IS_bh = get_feature_heights(len(args.feature_yaml_list), intertrack_spacing, args.om_alignments,
+                                    args.interior_segments_cycle)
 
 if not args.om_alignments:
     ref_placements, total_length = construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length,
@@ -825,17 +876,17 @@ if not args.om_alignments:
                                                                   isCycle, cycle_seg_counts)
     imputed_status = [False] * len(cycle)
 
-    # bedgraph
-    if args.feature_yaml_list:
-        for ind, yaml_file in enumerate(args.feature_yaml_list):
-            print(ind, yaml_file)
-            cfc = vu.parse_feature_yaml(yaml_file, ind+1, len(args.feature_yaml_list))
-            cfc.base, cfc.top = fbases[ind], ftops[ind]
-            vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
-            if cfc.track_props['tracktype'] == 'standard':
-                vu.reset_track_min_max(ref_placements, ind, cfc)
-            else:
-                plot_links(cfc)
+    # # bedgraph
+    # if args.feature_yaml_list:
+    #     for ind, yaml_file in enumerate(args.feature_yaml_list):
+    #         print(ind, yaml_file)
+    #         cfc = vu.parse_feature_yaml(yaml_file, ind+1, len(args.feature_yaml_list))
+    #         cfc.base, cfc.top = fbases[ind], ftops[ind]
+    #         vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
+    #         if cfc.track_props['tracktype'] == 'standard':
+    #             vu.reset_track_min_max(ref_placements, ind, cfc)
+    #         else:
+    #             plot_links(cfc)
 
 # only if bionano data present
 else:
@@ -861,25 +912,8 @@ else:
                                                                   cycle_seg_counts, aln_vect)
 
     cycle_seg_placements = vu.place_path_segs_and_labels(cycle, ref_placements, seg_cmap_vects)
-
-    # bedgraph
-    if args.feature_yaml_list:
-        for ind, yaml_file in enumerate(args.feature_yaml_list):
-            cfc = vu.parse_feature_yaml(yaml_file, ind + 1, len(args.feature_yaml_list))
-            cfc.base, cfc.top = fbases[ind], ftops[ind]
-            vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
-            if cfc.track_props['tracktype'] == 'standard':
-                vu.reset_track_min_max(ref_placements, ind, cfc)
-            else:
-                plot_links(cfc)
-
     contig_cmaps = parse_cmap(args.contigs, True)
     contig_cmap_vects = vectorize_cmaps(contig_cmaps)
-
-    ###
-    # TODO: TRIM REF SEGS
-    ###
-
     contig_cmap_lens = get_cmap_lens(args.contigs)
     contig_placements, contig_list = vu.place_contigs_and_labels(cycle_seg_placements, aln_vect, total_length,
                                                                  contig_cmap_vects, isCycle, True, segSeqD)
@@ -898,16 +932,34 @@ else:
     plot_alignment(contig_placements, cycle_seg_placements, total_length)
     imputed_status = vu.imputed_status_from_aln(aln_vect, len(cycle))
 
-plot_ref_genome(ref_placements, cycle, total_length, segSeqD, imputed_status, args.label_segs, args.segment_end_ticks,
-                gene_set)
+# Interior segments
+if args.interior_segments_cycle:
+    IS_cycles, IS_segSeqD, IS_circular_D = vu.parse_cycles_file(args.interior_segments_cycle)
+    print("Interior segment cycles handles first cycle only. Multi-cycle support coming soon")
+    IS_cycle, IS_isCircular = IS_cycles["1"], IS_circular_D["1"]
+    IS_rObj_placements, new_IS_cycle, new_IS_links = vu.handle_IS_data(ref_placements, IS_cycle, IS_segSeqD,
+                                                                            IS_isCircular, IS_bh)
+    plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, None,
+                    {"InteriorSegment"})
 
-# for gObj in all_relGenes:
-#     gObj.draw_marker_ends(outer_bar)
-#     gObj.draw_seg_links(outer_bar, bar_width)
-#     gObj.draw_trunc_spots(outer_bar)
+    plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links)
+
+# bedgraph
+if args.feature_yaml_list:
+    for ind, yaml_file in enumerate(args.feature_yaml_list):
+        cfc = vu.parse_feature_yaml(yaml_file, ind + 1, len(args.feature_yaml_list))
+        cfc.base, cfc.top = fbases[ind], ftops[ind]
+        vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
+        if cfc.track_props['tracktype'] == 'standard':
+            vu.reset_track_min_max(ref_placements, ind, cfc)
+        else:
+            plot_links(cfc)
+
+
+plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.segment_end_ticks, gene_set)
 
 if args.graph:
-    plot_bpg_connection(ref_placements, cycle, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)
+    plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)
 
 ax.set_xlim(-(outer_bar + 1.25), (outer_bar + 1.25))
 ax.set_ylim(-(outer_bar + 3.3), (outer_bar + 3.3))
