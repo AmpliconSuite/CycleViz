@@ -306,7 +306,13 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
 
 def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
     slant = 3.0
-    marker_freq = 0.005*total_length
+    if args.figure_size_style == "small":
+        marker_freq = 0.015 * total_length
+        clw = 0.8
+    else:
+        marker_freq = 0.007 * total_length
+        clw = 0.4
+
     fullspace_a = np.arange(0, total_length, marker_freq)
     fullspace_b = np.arange(marker_freq/slant, total_length + marker_freq/slant, marker_freq)
 
@@ -342,11 +348,11 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
 
         x_b, y_b = vu.pol2cart(ttop, (pos_angle_a / 360 * 2 * np.pi))
         x_t, y_t = vu.pol2cart(tbot, (pos_angle_b / 360 * 2 * np.pi))
-        plt.plot([x_b, x_t], [y_b, y_t], linewidth=0.4, color='grey')
+        plt.plot([x_b, x_t], [y_b, y_t], linewidth=clw, color='grey')
 
         x_b, y_b = vu.pol2cart(btop, (pos_angle_b / 360 * 2 * np.pi))
         x_t, y_t = vu.pol2cart(bbot, (pos_angle_a / 360 * 2 * np.pi))
-        plt.plot([x_b, x_t], [y_b, y_t], linewidth=0.4, color='grey')
+        plt.plot([x_b, x_t], [y_b, y_t], linewidth=clw, color='grey')
 
     #draw marker starts and ends
     gInstance.draw_marker_ends(tbot)
@@ -419,8 +425,9 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
 
         # draw something to show direction and truncation status
         if plot_gene_direction:
-            #gene instance
-            gInstance = vu.gene_viz_instance(gObj, normStart, normEnd, total_length, seg_dir, currStart, currEnd,
+            # gene instance
+            gInstance = vu.gene_viz_instance(gObj, normStart, normEnd, total_length, seg_dir, currStart,
+                                             currEnd,
                                              hasStart, hasEnd, ind, pTup)
 
             gObj.gdrops.append(gInstance)
@@ -436,7 +443,7 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
                 lw = 0.3
             else:
                 ecolor = 'k'
-                lw = 0
+                lw = 0.3
             if exon[1] > pTup[1] and exon[0] < pTup[2]:
                 if seg_dir == "+":
                     normStart = currStart + max(1, exon[0] - pTup[1])
@@ -449,7 +456,8 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
                 start_angle, end_angle = start_end_angle(normStart, normEnd, total_length)
 
                 patches.append(
-                    mpatches.Wedge((0, 0), outer_bar - bar_width / 4.0 + (drop), start_angle, end_angle, width=bar_width / 2.0))
+                    mpatches.Wedge((0, 0), outer_bar - bar_width / 4.0 + (drop), start_angle, end_angle,
+                                   width=bar_width / 2.0))
                 f_color_v.append(ecolor)
                 e_color_v.append(ecolor)
                 lw_v.append(lw)
@@ -806,6 +814,7 @@ parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input ya
                     "specifying additional data. Will be plotted from outside to inside given the order the filenames "
                     "appear in", default = [])
 parser.add_argument("--center_hole", type=float, help="whitespace in center of plot",default=1.25)
+parser.add_argument("--figure_size_style", choices=["normal", "small"], default="normal")
 
 args = parser.parse_args()
 if args.input_yaml_file:
@@ -818,6 +827,11 @@ print(args.ref)
 
 if not args.sname:
     args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
+
+if args.figure_size_style == "small":
+    bar_width *= 1.5
+    args.gene_fontsize *= 2
+    args.tick_fontsize *= 1.5
 
 center_hole = args.center_hole
 
