@@ -729,18 +729,31 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width):
 
                 ax_l.plot([0, legw], [lh, lh], color=lcolor, linewidth=0.5, zorder=1)
                 ax_l.text(-0.15, lh, str(lt), ha='right', va='center', fontsize=cfc.track_props['tick_legend_fontsize'],
-                          color=p_color)
+                          color='k')
 
                 if cfc.secondary_data:
-                    ax_l.text(legw + 0.15, lh, sec_lt_str, ha='left', va='center', color=s_color,
+                    ax_l.text(legw + 0.15, lh, sec_lt_str, ha='left', va='center', color='k',
                               fontsize=cfc.track_props['tick_legend_fontsize'])
 
-            ax_l.text(-1.4, rb + rh/2.0, "Primary data", rotation=90, ha='center', va='center', color=p_color,
-                      fontsize=cfc.track_props['tick_legend_fontsize'] + 1)
+            # background to text label will be the data color, so the font will need to be colored appropriately.
+            r, g, b, a = matplotlib.colors.to_rgba(p_color, alpha=None)
+            if r == g == b < 0.5:
+                p_fc = 'white'
+            else:
+                p_fc = 'k'
+
+            ax_l.text(-1.4, rb + rh/2.0, "Primary data", rotation=90, ha='center', va='center', color=p_fc,
+                      fontsize=cfc.track_props['tick_legend_fontsize'] + 1, backgroundcolor=p_color)
 
             if cfc.secondary_data:
+                r, g, b, a = matplotlib.colors.to_rgba(s_color, alpha=None)
+                if r == g == b < 0.5:
+                    s_fc = 'white'
+                else:
+                    s_fc = 'k'
+
                 ax_l.text(legw + 1.4, rb + rh/2.0, "Secondary data", rotation=270, ha='center', va='center',
-                          fontsize=cfc.track_props['tick_legend_fontsize'] + 1, color=s_color)
+                          fontsize=cfc.track_props['tick_legend_fontsize'] + 1, color=s_fc, backgroundcolor=s_color)
 
             ax_l.plot([0, legw], [cfc.top + intertrack_spacing/2]*2, color='k', linewidth=0.75, zorder=1)
 
@@ -784,16 +797,17 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
 parser = argparse.ArgumentParser(description="Circular visualizations of AA & AR output")
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--input_yaml_file", help="Specifiy all desired arguments in this file, OR use the options below\n")
-group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file [required]")
-parser.add_argument("--cycle", help="cycle number to visualize [required]")
-parser.add_argument("-g", "--graph", help="breakpoint graph file [required]")
+group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
+group.add_argument("--structure_bed", help="bed file specifying the structure of the regions to be plotted")
+parser.add_argument("--cycle", help="cycle number to visualize [required with --cycles_file]")
+parser.add_argument("-g", "--graph", help="breakpoint graph file [required with --cycles_file]")
 parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
 parser.add_argument("--interior_segments_cycle",
-                    help="Enable visualization of an interior segment (e.g. long read transcript, etc.", type=str,
-                    default="")
+                    help="Enable visualization of an interior segment (e.g. long read transcript, etc.",
+                    type=str, default="")
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
@@ -813,7 +827,7 @@ parser.add_argument("--tick_fontsize", help="font size for genomic position tick
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
                     "specifying additional data. Will be plotted from outside to inside given the order the filenames "
                     "appear in", default = [])
-parser.add_argument("--center_hole", type=float, help="whitespace in center of plot",default=1.25)
+parser.add_argument("--center_hole", type=float, help="whitespace in center of plot", default=1.25)
 parser.add_argument("--figure_size_style", choices=["normal", "small"], default="normal")
 
 args = parser.parse_args()
@@ -825,21 +839,12 @@ if args.ref == "GRCh38":
 
 print(args.ref)
 
-if not args.sname:
-    args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
-
 if args.figure_size_style == "small":
     bar_width *= 1.5
     args.gene_fontsize *= 2
     args.tick_fontsize *= 1.5
 
 center_hole = args.center_hole
-
-outdir = os.path.dirname(args.sname)
-if outdir and not os.path.exists(outdir):
-    os.makedirs(outdir)
-
-fname = args.sname + "cycle_" + args.cycle
 
 print("Reading genes")
 gene_tree = vu.parse_genes(args.ref, args.gene_highlight_list)
@@ -853,23 +858,34 @@ f_color_v = []
 e_color_v = []
 lw_v = []
 
-cycles, segSeqD, circular_D = vu.parse_cycles_file(args.cycles_file)
-cycle_num = args.cycle
-isCycle = circular_D[cycle_num]
-cycle = cycles[cycle_num]
+gene_fontsize = args.gene_fontsize
+tick_fontsize = args.tick_fontsize
+bpg_dict, seg_end_pos_d = {}, {}
+
+# use AA files to determine the structure
+if args.cycles_file:
+    if not args.sname:
+        args.sname = os.path.splitext(os.path.basename(args.cycles_file))[0] + "_"
+    fname = args.sname + "cycle_" + args.cycle
+    cycles, segSeqD, circular_D = vu.parse_cycles_file(args.cycles_file)
+    isCycle = circular_D[args.cycle]
+    cycle = cycles[args.cycle]
+    if args.graph:
+        bpg_dict, seg_end_pos_d = vu.parse_BPG(args.graph)
+
+# use the structure_bed format to determine the structure
+else:
+    if not args.sname:
+        args.sname = os.path.splitext(os.path.basename(args.structure_bed))[0] + "_"
+    fname = args.sname + "cycle_1"
+    struct_data = vu.parse_bed(args.structure_bed, store_all_additional_fields=True)
+    cycle, isCycle, segSeqD, seg_end_pos_d, bpg_dict = vu.handle_struct_bed_data(struct_data)
+
 cycle_seg_counts = vu.get_seg_amplicon_count(cycle)
 prev_seg_index_is_adj, next_seg_index_is_adj = vu.adjacent_segs(cycle, segSeqD, isCycle)
 raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD)
 
-gene_fontsize = args.gene_fontsize
-tick_fontsize = args.tick_fontsize
-
-bpg_dict, seg_end_pos_d = {}, {}
-if args.graph:
-    bpg_dict, seg_end_pos_d = vu.parse_BPG(args.graph)
-
 gene_set = set()
-
 if args.gene_subset_file.upper() == "BUSHMAN":
     sourceDir = os.path.dirname(os.path.abspath(__file__))
     args.gene_subset_file = sourceDir + "/Bushman_group_allOnco_May2018.tsv"
@@ -972,7 +988,7 @@ if args.feature_yaml_list:
 
 plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.segment_end_ticks, gene_set)
 
-if args.graph:
+if bpg_dict:
     plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)
 
 ax.set_xlim(-(outer_bar + 1.25), (outer_bar + 1.25))

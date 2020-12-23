@@ -133,7 +133,7 @@ class CycleVizElemObj(object):
             self.label_posns[ind] -= s_diff
 
 
-# this stores the properties of each gene's visualization
+# this stores the local properties of each gene's visualization
 class gene_viz_instance(object):
     def __init__(self, gParent, normStart, normEnd, total_length, seg_dir, currStart, currEnd, hasStart, hasEnd, seg_ind, pTup):
         self.gParent = gParent
@@ -305,6 +305,89 @@ def parse_BPG(BPG_file):
     return bidirectional_edge_dict, seg_end_pos_d
 
 
+# Read an AA-formatted cycles file
+def parse_cycles_file(cycles_file):
+    cycles = {}
+    segSeqD = {}
+    circular_D = {}
+    with open(cycles_file) as infile:
+        for line in infile:
+            if line.startswith("Segment"):
+                fields = line.rstrip().split()
+                lowerBound = int(fields[3])
+                upperBound = int(fields[4])
+                chrom = fields[2]
+                segNum = fields[1]
+                segSeqD[segNum] = (chrom, lowerBound, upperBound)
+
+            elif "Cycle=" in line:
+                isCycle = True
+                curr_cycle = []
+                fields = line.rstrip().rsplit(";")
+                lineD = {x.rsplit("=")[0]: x.rsplit("=")[1] for x in fields}
+                segs = lineD["Segments"].rsplit(",")
+                for i in segs:
+                    seg = i[:-1]
+                    if seg != "0" and i:
+                        strand = i[-1]
+                        curr_cycle.append((seg, strand))
+
+                    else:
+                        isCycle = False
+
+                cycles[lineD["Cycle"]] = curr_cycle
+                circular_D[lineD["Cycle"]] = isCycle
+
+    return cycles, segSeqD, circular_D
+
+
+def handle_struct_bed_data(struct_data):
+    #sort by the index
+    flatvals = [[chrom] + list(x) for chrom, cl in struct_data.items() for x in cl]
+    flatvals.sort(key=lambda x: x[3][0])
+    segSeqD = {}
+    rev_segSeqD = {}
+    seg_end_pos_d = {}
+    bidirectional_edge_dict = defaultdict(set)
+    cycle = []
+    connections = []
+    isCycle = True
+    uind = 0
+    for ind, i in enumerate(flatvals):
+        print(i)
+        # 0 is chrom, 1 is index, 2 is start, 3 is end, 4 is tuple of datastuff
+        # datastuff is strand, connected
+        pt = (i[0], i[1], i[2])
+        if pt not in segSeqD.values():
+            uind += 1
+            segSeqD[uind] = pt
+            rev_segSeqD[pt] = uind
+
+        cind = rev_segSeqD[pt]
+        cycle.append((cind, i[3][1]))
+        seg_end_pos_d[cind] = (pt[0] + ':' + str(pt[1]), pt[0] + ':' + str(pt[2]))
+        connections.append(i[3][2] == 'True')  # expecting 'True' or 'False' string in this column from the file
+
+    # if non-cyclic path, put zeros on it
+    if not all(connections):
+        # put zeros on it -- no, those are ordinarily stripped!
+        # cycle = [(0, '+')] + cycle + [(0, '+')]
+        isCycle = False
+
+    # make the bpg dict
+    print(cycle)
+    for a, b, conn in zip(cycle, cycle[1:] + [cycle[0]], connections):
+        print(a,b,conn)
+        if conn:
+            ae = seg_end_pos_d[a[0]][1] if a[1] == '+' else seg_end_pos_d[a[0]][0]
+            bs = seg_end_pos_d[b[0]][0] if b[1] == '+' else seg_end_pos_d[b[0]][1]
+            bidirectional_edge_dict[ae].add(bs)
+            bidirectional_edge_dict[bs].add(ae)
+
+    print(bidirectional_edge_dict)
+    return cycle, isCycle, segSeqD, seg_end_pos_d, bidirectional_edge_dict
+
+
 # return list of relevant genes sorted by starting position
 def rel_genes(chrIntTree, pTup, gene_set=None):
     if gene_set is None:
@@ -389,7 +472,7 @@ def parse_genes(ref, gene_highlight_list):
     return t
 
 
-def parse_bed(bedfile):
+def parse_bed(bedfile, store_all_additional_fields=False):
     data_dict = defaultdict(list)
     with open(bedfile) as infile:
         if bedfile.endswith(".bedpe"):
@@ -404,17 +487,19 @@ def parse_bed(bedfile):
                     data_dict[(chromA, chromB)].append((startA, endA, startB, endB, data))
 
         else:
-            for line in infile:
+            for entry_index, line in enumerate(infile):
                 if not line.startswith("#"):
                     fields = line.rstrip().rsplit()
                     chrom = fields[0]
-                    begin, end = int(fields[1]), int(fields[2]) + 1
-                    if len(fields) == 4:
-                        data = float(fields[3])
-                    elif len(fields) == 5:
-                        data = float(fields[4])
+                    begin, end = int(fields[1]), int(fields[2])
+                    if not store_all_additional_fields:
+                        if len(fields) > 3:
+                            data = float(fields[-1])
+                        else:
+                            data = None
                     else:
-                        data = None
+                        data = tuple([entry_index] + fields[3:])
+
                     data_dict[chrom].append((begin, end, data))
 
     return data_dict
@@ -508,7 +593,9 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
                                                            [cfc.track_props['primary_lower_cap'],
                                                             cfc.track_props['secondary_lower_cap']]):
 
-                for point in currdata:
+                for init_point in currdata:
+                    #open the interval by 1
+                    point = [init_point[0], init_point[1]+1, init_point[2]]
                     if obj.ref_start+currTrim <= point[0] <= obj.ref_end-currTrim or \
                             obj.ref_start+currTrim <= point[1] <= obj.ref_end-currTrim:
 
@@ -606,7 +693,7 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
 # Assign interior track data to a location(s) in a refobj, and create a new refobj for that overlapping region,
 # to represent the interior track data
 
-# TODO: What if it's scrambled w.r.t the reference track?
+# TODO: What if the segments in the inside track are scrambled w.r.t the reference track?
 def handle_IS_data(ref_placements, IS_cycle, IS_segSeqD, IS_isCircular, IS_bh, cycleColor='lightskyblue'):
     cycle_seg_counts = get_seg_amplicon_count(IS_cycle)
     prev_seg_index_is_adj, next_seg_index_is_adj = adjacent_segs(IS_cycle, IS_segSeqD, IS_isCircular)
@@ -675,40 +762,8 @@ def handle_IS_data(ref_placements, IS_cycle, IS_segSeqD, IS_isCircular, IS_bh, c
     return IS_rObj_placements, new_IS_cycle, new_IS_links
 
 
-# Read an AA-formatted cycles file
-def parse_cycles_file(cycles_file):
-    cycles = {}
-    segSeqD = {}
-    circular_D = {}
-    with open(cycles_file) as infile:
-        for line in infile:
-            if line.startswith("Segment"):
-                fields = line.rstrip().split()
-                lowerBound = int(fields[3])
-                upperBound = int(fields[4])
-                chrom = fields[2]
-                segNum = fields[1]
-                segSeqD[segNum] = (chrom, lowerBound, upperBound)
-
-            elif "Cycle=" in line:
-                isCycle = True
-                curr_cycle = []
-                fields = line.rstrip().rsplit(";")
-                lineD = {x.rsplit("=")[0]: x.rsplit("=")[1] for x in fields}
-                segs = lineD["Segments"].rsplit(",")
-                for i in segs:
-                    seg = i[:-1]
-                    if seg != "0" and i:
-                        strand = i[-1]
-                        curr_cycle.append((seg, strand))
-
-                    else:
-                        isCycle = False
-
-                cycles[lineD["Cycle"]] = curr_cycle
-                circular_D[lineD["Cycle"]] = isCycle
-
-    return cycles, segSeqD, circular_D
+# BIONANO PLOTTING FUNCTIONS
+# -----------------------------------------
 
 
 def check_segdup(aln_vect, cycle, circular):
@@ -767,6 +822,7 @@ def parse_alnfile(path_aln_file):
 
     return aln_vect, meta_dict
 
+# -----------------------------------------
 
 # determine segments linearly adjacent in ref genome
 def adjacent_segs(cycle, segSeqD, isCycle):
@@ -1075,9 +1131,13 @@ def track_min_max(primary_data, secondary_data, nice_ticks, hide_secondary = Fal
 def parse_main_args_yaml(args):
     with open(args.input_yaml_file) as f:
         sample_data = yaml.safe_load(f)
-        args.cycles_file = sample_data.get("cycles_file")
-        print(args.cycles_file)
-        args.cycle = str(sample_data.get("cycle"))
+        if "cycles_file" in sample_data:
+            args.cycles_file = sample_data.get("cycles_file")
+            print(args.cycles_file)
+            args.cycle = str(sample_data.get("cycle"))
+        else:
+            args.structure_bed = sample_data.get("structure_bed")
+
         if "om_alignments" in sample_data:
             args.om_alignments = sample_data.get("om_alignments")
         if "contigs" in sample_data:
