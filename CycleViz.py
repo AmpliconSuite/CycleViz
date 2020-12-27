@@ -68,6 +68,7 @@ def plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj=None
         else:
             curr_bh = outer_bar
 
+        # this is for interior segment tracks
         if refObj.custom_color:
             connect_col = refObj.custom_color
 
@@ -794,7 +795,7 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
     return cycle_ref_placements, total_length
 
 
-parser = argparse.ArgumentParser(description="Circular visualizations of AA & AR output")
+parser = argparse.ArgumentParser(description="Circular visualizations of genome structures")
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--input_yaml_file", help="Specifiy all desired arguments in this file, OR use the options below\n")
 group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
@@ -812,7 +813,7 @@ parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--sname", help="output prefix")
-parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
+# parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
 parser.add_argument("--label_segs", help="label segs with graph IDs", action='store_true')
 parser.add_argument("--gene_subset_file", help="file containing subset of genes to plot (e.g. oncogene genelist file)",
                     default="")
@@ -890,7 +891,7 @@ if args.gene_subset_file.upper() == "BUSHMAN":
     sourceDir = os.path.dirname(os.path.abspath(__file__))
     args.gene_subset_file = sourceDir + "/Bushman_group_allOnco_May2018.tsv"
 
-if args.gene_subset_file and not args.gene_subset_file == "NO":
+if args.gene_subset_file:
     gff = True if args.gene_subset_file.endswith(".gff") else False
     gene_set = vu.parse_gene_subset_file(args.gene_subset_file, gff)
 
@@ -905,18 +906,6 @@ if not args.om_alignments:
                                                                   prev_seg_index_is_adj, next_seg_index_is_adj,
                                                                   isCycle, cycle_seg_counts)
     imputed_status = [False] * len(cycle)
-
-    # # bedgraph
-    # if args.feature_yaml_list:
-    #     for ind, yaml_file in enumerate(args.feature_yaml_list):
-    #         print(ind, yaml_file)
-    #         cfc = vu.parse_feature_yaml(yaml_file, ind+1, len(args.feature_yaml_list))
-    #         cfc.base, cfc.top = fbases[ind], ftops[ind]
-    #         vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
-    #         if cfc.track_props['tracktype'] == 'standard':
-    #             vu.reset_track_min_max(ref_placements, ind, cfc)
-    #         else:
-    #             plot_links(cfc)
 
 # only if bionano data present
 else:
@@ -968,7 +957,7 @@ if args.interior_segments_cycle:
     print("Interior segment cycles handles first cycle only. Multi-cycle support coming soon")
     IS_cycle, IS_isCircular = IS_cycles["1"], IS_circular_D["1"]
     IS_rObj_placements, new_IS_cycle, new_IS_links = vu.handle_IS_data(ref_placements, IS_cycle, IS_segSeqD,
-                                                                            IS_isCircular, IS_bh)
+                                                                       IS_isCircular, IS_bh)
     plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, None,
                     {"InteriorSegment"})
 
@@ -984,7 +973,6 @@ if args.feature_yaml_list:
             vu.reset_track_min_max(ref_placements, ind, cfc)
         else:
             plot_links(cfc)
-
 
 plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.segment_end_ticks, gene_set)
 
