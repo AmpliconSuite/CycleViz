@@ -1236,8 +1236,8 @@ def parse_main_args_yaml(args):
             args.interior_segments_cycle = sample_data.get("interior_segments_cycle")
         if "hide_chrom_color_legend" in sample_data:
             args.hide_chrom_color_legend = sample_data["hide_chrom_color_legend"]
-        if "structure_coloring" in sample_data:
-            args.structure_coloring = sample_data["structure_coloring"]
+        if "structure_color" in sample_data:
+            args.structure_color = sample_data["structure_color"]
         if "annotate_structure" in sample_data:
             args.annotate_structure = sample_data["annotate_structure"]
 
