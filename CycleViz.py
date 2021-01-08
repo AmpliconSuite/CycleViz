@@ -759,20 +759,41 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         # Segment labeling
         # TODO: Refactor to outside
         # label the segments by number in cycle
-        mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
-        text_angle = mid_sp / total_length * 360.
-        x, y = vu.pol2cart((curr_bh - 2 * bar_width), (text_angle / 360. * 2. * np.pi))
-        font = font0.copy()
-        if imputed_status[ind]:
-            font.set_style('italic')
-            # font.set_weight('bold')
-
-        text_angle, ha = vu.correct_text_angle(text_angle)
-
         if label_segs:
+            mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2.0
+            centerpoint_angle = mid_sp / total_length * 360.
+            x, y = vu.pol2cart((curr_bh - 2 * bar_width), (centerpoint_angle / 360. * 2. * np.pi))
+            font = font0.copy()
+            if imputed_status[ind]:
+                font.set_style('italic')
+                # font.set_weight('bold')
 
-            ax.text(x, y, str(cycle[ind][0]) + cycle[ind][1], color='grey', rotation=text_angle,
-                    ha=ha, fontsize=5, fontproperties=font, rotation_mode='anchor')
+            if label_segs == "numbers":
+                t = str(cycle[ind][0]) + cycle[ind][1]
+                text_angle, ha = vu.correct_text_angle(centerpoint_angle)
+                va = 'baseline'
+
+            elif label_segs == "names":
+                t = refObj.chrom.lstrip("chr")
+                text_angle, temp = vu.correct_text_angle(centerpoint_angle + 90)
+                ha = 'center'
+                if temp == 'right':
+                    va = 'bottom'
+                else:
+                    va = 'top'
+
+            else:
+                t = label_segs
+                text_angle, temp = vu.correct_text_angle(centerpoint_angle + 90)
+                ha = 'center'
+                if temp == 'right':
+                    va = 'bottom'
+                else:
+                    va = 'top'
+
+            ax.text(x, y, t, color='grey', rotation=text_angle, ha=ha, va=va, fontsize=5, fontproperties=font,
+                    rotation_mode='anchor')
+
 
 
 # set the heights of the bed track features
@@ -897,7 +918,9 @@ parser = argparse.ArgumentParser(description="Circular visualizations of genome 
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--input_yaml_file", help="Specifiy all desired arguments in this file, OR use the options below\n")
 group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
-group.add_argument("--structure_bed", help="bed file specifying the structure of the regions to be plotted")
+group.add_argument("--structure_bed", help="bed file specifying the structure of the regions to be plotted. To use a "
+                                           "standard reference genome as the structure, specify 'hg19, GRCh37, hg38 or "
+                                           "GRCh38")
 parser.add_argument("--cycle", help="cycle number to visualize [required with --cycles_file]")
 parser.add_argument("-g", "--graph", help="breakpoint graph file [required with --cycles_file]")
 parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
@@ -912,7 +935,8 @@ parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--sname", help="output prefix")
 # parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
-parser.add_argument("--label_segs", help="label segs with graph IDs", action='store_true')
+parser.add_argument("--label_segs", help="label segs with segments number-direction or names", default='numbers',
+                    choices=["numbers, names"])
 parser.add_argument("--gene_subset_file", help="file containing subset of genes to plot (e.g. oncogene genelist file)",
                     default="")
 parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
@@ -980,8 +1004,12 @@ if args.cycles_file:
 # use the structure_bed format to determine the structure
 else:
     if not args.sname:
-        args.sname = os.path.splitext(os.path.basename(args.structure_bed))[0] + "_"
+        print("Must specify --sname with --structure-bed")
+        sys.exit(1)
+        # args.sname = os.path.splitext(os.path.basename(args.structure_bed))[0] + "_"
     fname = args.sname + "cycle_1"
+    if args.structure_bed in {"hg19", "GRCh37", "hg38", "GRCh38"}:
+        args.structure_bed = sourceDir + "resources/" + args.structure_bed + "_structure.bed"
     struct_data = vu.parse_bed(args.structure_bed, store_all_additional_fields=True)
     cycle, isCycle, segSeqD, seg_end_pos_d, bpg_dict = vu.handle_struct_bed_data(struct_data)
 
@@ -1063,10 +1091,6 @@ if args.annotate_structure == 'genes':
     gene_tree = vu.parse_genes(args.ref, args.gene_highlight_list)
     print("plotting genes")
     plot_genes(ref_placements, cycle, gene_set)
-
-# elif args.annotate_structure == "cytoband":
-#     args.annotate_structure = sourceDir + "resources/cytoBand_" + args.ref + "_colored.bed"
-#     print("using cytoband file: " + args.annotate_structure)
 
 
 # Interior segments

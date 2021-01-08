@@ -1269,7 +1269,7 @@ def parse_feature_yaml(yaml_file, index, totfiles):
             'secondary_upper_cap': None,
             'secondary_lower_cap': None,
             'sec_resc_zero': 0, #this is a 'private' param. User setting it won't change anything.
-            'linkpoint': None, #or 'midpoint'
+            'linkpoint': "", #or 'midpoint'
             'link_single_match': False,
             'primary_kwargs': {},
             'secondary_kwargs': {},
