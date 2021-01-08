@@ -678,7 +678,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
 
         # makes the reference genome wedges
         if not refObj.custom_color:
-            if args.structure_coloring == "auto":
+            if args.structure_color == "auto":
                 if chrom not in chromosome_colors:
                     print("Color not found for " + chrom + ". Using red.")
                     chromosome_colors[chrom] = "red"
@@ -686,7 +686,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
                 f_color = chromosome_colors[chrom]
                 e_color = chromosome_colors[chrom]
             else:
-                f_color, e_color = args.structure_coloring, args.structure_coloring
+                f_color, e_color = args.structure_color, args.structure_color
                 if e_color == f_color and (e_color == 'w' or e_color == 'white'):
                     e_color = 'k'
 
@@ -952,7 +952,7 @@ parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input ya
                     "appear in", default=[])
 parser.add_argument("--annotate_structure", help="What to plot on the outer structure indicator. Either give a bed file"
                     " or use predefined 'genes' or 'cytoband' arguments", type=str, default="genes")
-parser.add_argument("--structure_coloring", help="Use 'auto' coloring, or specify a single color for everything",
+parser.add_argument("--structure_color", help="Use 'auto' coloring, or specify a single color for everything",
                     type=str, default='auto')
 parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of the chromosome colors",
                     action='store_true', default=False)
@@ -1131,7 +1131,7 @@ if bpg_dict:
 ax.set_xlim(-(outer_bar + 1.25), (outer_bar + 1.25))
 ax.set_ylim(-(outer_bar + 3.3), (outer_bar + 3.3))
 
-if not args.hide_chrom_color_legend and args.structure_coloring == 'auto':
+if not args.hide_chrom_color_legend and args.structure_color == 'auto':
     chrom_set = set()
     for i in cycle:
         chrom_set.add(segSeqD[i[0]][0])
