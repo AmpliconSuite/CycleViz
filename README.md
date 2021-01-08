@@ -127,8 +127,8 @@ The arguments that can be specified inside a YAML file for each data track.
 | Argument      | Default | Choices | Description |
 | :---        |    :----:  | :----:  | :--- |
 | `tracktype` | `standard` | `['standard', 'links', 'rects']`  | Thetrack will show numeric data (`standard`), links between points (`links`), or colored rectangles (`rects`).|
-| `primary_feature_bedgraph` | | `path to a file formatted as bed, with position value in column 4` | Required argument. This is the data that will be shown. |
-| `secondary_feature_bedgraph` | | `path to a file formatted as bed, with position value in column 4`| Put a second source of data on the same track. | 
+| `primary_feature_bedgraph` | | path to a file formatted as bed, with position value in column 4 | Required argument. This is the data that will be shown. |
+| `secondary_feature_bedgraph` | | path to a file formatted as bed, with position value in column 4 | Put a second source of data on the same track. | 
 | `primary_style` | `points` | `['points', 'lines', 'radial']` | Plot primary data track as `points`, connected `lines`, or `radial` lines from the bottom of the track. |
 | `secondary_style` | `points` | `['points', 'lines', 'radial']` | Plot secondary data track as `points`, connected `lines`, or `radial` lines from the bottom of the track. |
 | `rescale_by_secondary` | `False` | `[True, False]` | Divide entries in the primary data track by entries in the secondary track's data, at the corresponding position. Uses mean if multiple overlapping.|
@@ -151,11 +151,11 @@ The arguments that can be specified inside a YAML file for each data track.
 | `secondary_lower_cap` | `None` | number | Set the following value as minimum value to allow in secondary data. Assessed after rescaling. Values below this parameter will be set to this parameter.|
 | `linkpoint` | `None` | `[None, 'midpoint']` | When drawing links, setting 'midpoint' will draw a line between the centers of the link bedpe entry start and end positions. |
 | `link_single_match` | `False` | `[True, False]` | If a link object can go to multiple locations (because the segment is shown multiple times), draw it for all combinations of endpoints (`False`). If `True`, draw only closest pairing of start/end in the structure.|
-| `primary_kwargs` | `{}` | A [Line2D](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) or [Scatter](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.pyplot.scatter.html) **kwargs object | **kwargs for the primary data. Will override CycleViz defaults. Requires user to know which **kwargs parent they are working with. `trackstyle: points` is Scatter, others are Line2D. |
-| `secondary_kwargs` | `{}` | A [Line2D](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) or [Scatter](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.pyplot.scatter.html) **kwargs object | **kwargs for the secondary data. Will override CycleViz defaults. Requires user to know which **kwargs parent they are working with. |
-| `link_kwargs` | `{}` | A [Patch **kwargs object](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.patches.Patch.html#matplotlib.patches.Patch) | **kwargs for link data. Will override CycleViz defaults. Requires user to know which **kwargs parent they are working with. |
-| `hline_kwargs` | `{}` | A [Line2D **kwargs object](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) | **kwargs for horizontal gridlines. Will override CycleViz defaults. |
-| `background_kwargs` | `{}` | A [Patch **kwargs object](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) | **kwargs for background of the track. Will override CycleViz defaults. |
+| `primary_kwargs` | `{}` | [Line2D](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) or [Scatter](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.pyplot.scatter.html) **kwargs dict | **kwargs for the primary data. Will override CycleViz defaults. Requires user to know which **kwargs parent they are working with. `trackstyle: points` is Scatter, others are Line2D. |
+| `secondary_kwargs` | `{}` | [Line2D](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) or [Scatter](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.pyplot.scatter.html) **kwargs dict | **kwargs for the secondary data. Will override CycleViz defaults. Requires user to know which **kwargs parent they are working with. |
+| `link_kwargs` | `{}` | [Patch](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.patches.Patch.html#matplotlib.patches.Patch) **kwargs dict| **kwargs for link data. Will override CycleViz defaults. Requires user to know which **kwargs parent they are working with. |
+| `hline_kwargs` | `{}` | [Line2D](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) **kwargs dict| **kwargs for horizontal gridlines. Will override CycleViz defaults. |
+| `background_kwargs` | `{}` | [Patch](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) **kwargs dict| **kwargs for background of the track. Will override CycleViz defaults. |
 
 
 ### Examples
