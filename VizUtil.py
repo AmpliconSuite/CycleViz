@@ -46,6 +46,13 @@ def round_to_1_sig(x):
     return round(x, -int(np.floor(np.log10(abs(x)))))
 
 
+def convert_gpos_to_ropos(cgpos, ro_start, ro_end, g_start, dir):
+    if dir == "+":
+        return (cgpos - g_start) + ro_start
+    else:
+        return ro_end - (cgpos - g_start)
+
+
 class CycleVizElemObj(object):
     def __init__(self, m_id, chrom, ref_start, ref_end, direction, s, t, seg_count, padj, nadj, cmap_vect=None):
         if cmap_vect is None: cmap_vect = []
@@ -235,9 +242,10 @@ class feature_track(object):
         def __init__(self, chromA, chromB, data_tup):
             self.chromA = chromA
             self.chromB = chromB
-            self.startA, self.endA = data_tup[0],data_tup[1]
-            self.startB, self.endB = data_tup[2],data_tup[3]
-            self.score = data_tup[4]
+            self.startA, self.endA = data_tup[0], data_tup[1]
+            self.startB, self.endB = data_tup[2], data_tup[3]
+            self.score = data_tup[4][0]
+            self.link_color = data_tup[4][1]
             self.posA_hits = []
             self.posB_hits = []
 
@@ -454,7 +462,7 @@ def parse_genes(ref, gene_highlight_list):
         refGene_name = "refGene_" + ref + ".txt"
 
     seenNames = set()
-    with open(os.path.join(__location__, refGene_name)) as infile:
+    with open(os.path.join(__location__, "resources", refGene_name)) as infile:
         for line in infile:
             fields = line.rsplit("\t")
             currChrom = fields[2]
@@ -477,21 +485,23 @@ def parse_bed(bedfile, store_all_additional_fields=False):
     with open(bedfile) as infile:
         if bedfile.endswith(".bedpe"):
             for line in infile:
-                if not line.startswith("#"):
-                    fields = line.rstrip().rsplit()
+                line = line.rstrip()
+                if not line.startswith("#") and line:
+                    fields = line.rsplit("\t")
                     chromA = fields[0]
                     startA, endA = float(fields[1]), float(fields[2])
                     chromB = fields[3]
                     startB, endB = float(fields[4]), float(fields[5])
-                    data = float(fields[6])
+                    data = (float(fields[6]), fields[7])
                     data_dict[(chromA, chromB)].append((startA, endA, startB, endB, data))
 
         else:
             for entry_index, line in enumerate(infile):
-                if not line.startswith("#"):
-                    fields = line.rstrip().rsplit()
+                line = line.rstrip("\t")
+                if not line.startswith("#") and line:
+                    fields = line.rsplit()
                     chrom = fields[0]
-                    begin, end = int(fields[1]), int(fields[2])
+                    begin, end = float(fields[1]), float(fields[2])
                     if not store_all_additional_fields:
                         if len(fields) > 3:
                             data = float(fields[-1])
@@ -505,7 +515,7 @@ def parse_bed(bedfile, store_all_additional_fields=False):
     return data_dict
 
 
-def normalize_by_secondary(primary_dset, secondary_dset, chrom, mode):
+def rescale_by_secondary(primary_dset, secondary_dset, chrom, mode):
     # put secondary data into an intervaltree
     if mode == True:
         mode = "mean"
@@ -533,7 +543,6 @@ def normalize_by_secondary(primary_dset, secondary_dset, chrom, mode):
         c = 0
         #for everything in secondary, compute a mean
         for ival in secondary_dset.values():
-            print(ival)
             for point in ival:
                 c+=1
                 l = (point[1] - point[0])/lscale
@@ -569,7 +578,7 @@ def normalize_by_secondary(primary_dset, secondary_dset, chrom, mode):
 # take the feature data (cfc) and extract only the regions overlapping the reference segment in question (obj)
 # append the coordinate restricted feature (restricted_cfc) to a list of features kept by the reference object (obj)
 def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0):
-    if cfc.track_props['tracktype'] == 'standard':
+    if cfc.track_props['tracktype'] == 'standard' or cfc.track_props['tracktype'] == 'rects':
         print("extracting features, ET", primary_end_trim)
         for obj in ref_placements.values():
             primeTrim = primary_end_trim
@@ -612,15 +621,15 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
 
 
             restricted_cfc = copy.copy(cfc)
-            if cfc.track_props['normalize_by_secondary']:
+            if cfc.track_props['rescale_by_secondary']:
                 print(obj.to_string(), "normalizing by secondary")
-                normed_primary, normed_secondary = normalize_by_secondary(local_primary_data, local_secondary_data,
-                                                                          obj.chrom, cfc.track_props['normalize_by_secondary'])
+                normed_primary, normed_secondary = rescale_by_secondary(local_primary_data, local_secondary_data,
+                                                                    obj.chrom, cfc.track_props['rescale_by_secondary'])
                 restricted_cfc.primary_data = normed_primary
                 restricted_cfc.secondary_data = normed_secondary
 
-            elif cfc.track_props['normalize_by_count']:
-                print(obj.to_string(), "normalizing by count")
+            elif cfc.track_props['rescale_by_count']:
+                print(obj.to_string(), "recaling by count")
                 normed_primary = defaultdict(list)
                 for point in local_primary_data[obj.chrom]:
                     normed_primary[obj.chrom].append([point[0], point[1], point[2] / float(obj.seg_count)])
@@ -861,7 +870,6 @@ def get_seg_amplicon_count(cycle):
     for x, _ in cycle:
         cycle_id_countd[x]+=1
 
-    print(cycle_id_countd)
     return cycle_id_countd
 
 
@@ -1094,15 +1102,18 @@ def reset_track_min_max(ref_placements, index, primary_cfc):
 
 # go over the bedgraph data and find min and max values, if not specified. pad those values by 2.5% above
 # and below for appearance.
-def track_min_max(primary_data, secondary_data, nice_ticks, hide_secondary = False, pad_prop=0.025):
+def track_min_max(primary_data, secondary_data, nice_hlines, hide_secondary = False, pad_prop=0.025):
     dv = []
     iterlist = list(primary_data.values())
     if not hide_secondary:
         iterlist+=list(secondary_data.values())
 
     for ivallist in iterlist:
-        cdv = [x[-1] for x in ivallist]
-        dv.extend(cdv)
+        for x in ivallist:
+            if isinstance(x[-1], tuple):
+                dv.append(x[-1][0])  # assume score is in first data column
+            else:
+                dv.append(x[-1])
 
     if dv:
         min_dv, max_dv = min(dv), max(dv)
@@ -1110,10 +1121,9 @@ def track_min_max(primary_data, secondary_data, nice_ticks, hide_secondary = Fal
     else:
         return 0, 0
 
-    if not nice_ticks and max_dv > 10:
+    if not nice_hlines and max_dv > 10:
         spread = max_dv - min_dv
         pad = spread*pad_prop
-        print(min_dv,max_dv,pad)
         return max(0,min_dv - pad), max_dv + pad
 
     else:
@@ -1125,6 +1135,53 @@ def track_min_max(primary_data, secondary_data, nice_ticks, hide_secondary = Fal
             newmax-=cap/2
 
         return min_dv, newmax
+
+
+def create_kwargs(kwtype="Collection", facecolors=None, edgecolors=None, marker='.', markersize=1., linewidth=1.,
+                  alpha=1., fontsize=7.):
+    if kwtype == "Scatter":
+        curr_kwargs = {
+            'edgecolors': edgecolors,
+            'facecolors': facecolors,
+            'marker': marker,
+            's': markersize,
+            'linewidth': linewidth
+        }
+
+    elif kwtype == "Line2D":
+        if facecolors is None:
+            facecolors = 'none'
+        if edgecolors is None:
+            edgecolors = 'none'
+        curr_kwargs = {
+            'markeredgecolor': edgecolors,
+            'markerfacecolor': facecolors,
+            'marker': marker,
+            'markersize': markersize,
+            'linewidth': linewidth
+        }
+
+    elif kwtype == "Patch":
+        if facecolors is None:
+            facecolors = 'none'
+        if edgecolors is None:
+            edgecolors = 'none'
+        curr_kwargs = {
+            "edgecolor": edgecolors,
+            "facecolor": facecolors,
+            "linewidth": linewidth
+        }
+
+    elif kwtype == "Text":
+        curr_kwargs = {
+            "fontsize": fontsize,
+            "facecolor": facecolors
+        }
+
+    else:
+        curr_kwargs = {}
+
+    return curr_kwargs
 
 
 # TODO: refactor to just use a dictionary (like parse_feature_yaml)
@@ -1169,12 +1226,18 @@ def parse_main_args_yaml(args):
             args.gene_fontsize = sample_data.get("gene_fontsize")
         if "tick_fontsize" in sample_data:
             args.tick_fontsize = sample_data.get("tick_fontsize")
-        if "segment_end_ticks" in sample_data:
-            args.segment_end_ticks = sample_data.get("segment_end_ticks")
+        if "tick_type" in sample_data:
+            args.tick_type = sample_data.get("tick_type")
         if "center_hole" in sample_data:
             args.center_hole = sample_data.get("center_hole")
         if "interior_segments_cycle" in sample_data:
             args.interior_segments_cycle = sample_data.get("interior_segments_cycle")
+        if "hide_chrom_color_legend" in sample_data:
+            args.hide_chrom_color_legend = sample_data["hide_chrom_color_legend"]
+        if "structure_coloring" in sample_data:
+            args.structure_coloring = sample_data["structure_coloring"]
+        if "annotate_structure" in sample_data:
+            args.annotate_structure = sample_data["annotate_structure"]
 
 
 def parse_feature_yaml(yaml_file, index, totfiles):
@@ -1184,37 +1247,35 @@ def parse_feature_yaml(yaml_file, index, totfiles):
             'tracktype': "standard",
             'primary_feature_bedgraph': "",
             'secondary_feature_bedgraph': "",
-            'primary_color': 'k',
             'primary_style': 'points',
-            'normalize_by_secondary': False,
+            'rescale_by_secondary': False,
             'rescale_secondary_to_primary': False,
-            'normalize_by_count': False,
-            'log_transform_primary': None,
-            'secondary_color': 'lightgreen',
+            'rescale_by_count': False,
             'secondary_style': 'points',
             'hide_secondary': False,
-            'log_transform_secondary': None,
             'indicate_zero': None,
-            'ticks_color': 'lightgrey',
-            'num_ticks': 5,
-            'nice_ticks': True,
-            'tick_legend_fontsize': 4,
+            'num_hlines': 5,
+            'nice_hlines': True,
+            'grid_legend_fontsize': 4,
             'granularity': 0,
             'end_trim': 50,
-            'show_segment_copy_count': True,
-            'linewidth': 2.0 / (totfiles),
-            'pointsize': 1.0 / (2*totfiles),
+            'show_segment_copy_count': False,
             'segment_copy_count_scaling': 1,
-            'background_color': 'auto',
+            #'background_color': 'auto',
             'primary_smoothing': 0,
             'secondary_smoothing': 0,
             'primary_upper_cap': None,
             'primary_lower_cap': None,
             'secondary_upper_cap': None,
             'secondary_lower_cap': None,
-            'sec_resc_zero': 0,
-            'linkpoint': 'midpoint',
-            'link_single_match': False
+            'sec_resc_zero': 0, #this is a 'private' param. User setting it won't change anything.
+            'linkpoint': None, #or 'midpoint'
+            'link_single_match': False,
+            'primary_kwargs': {},
+            'secondary_kwargs': {},
+            'link_kwargs': {},
+            'hline_kwargs': {},
+            'background_kwargs': {}
         }
 
         indd = yaml.safe_load(yf)
@@ -1225,6 +1286,38 @@ def parse_feature_yaml(yaml_file, index, totfiles):
         for lkey in lkeys:
             dd[lkey] = dd[lkey].lower()
 
+        # set kwargs
+        # primary
+        if dd['primary_style'] == "points":
+            ktype = 'Scatter'
+        else:
+            ktype = 'Line2D'
+        pkw = create_kwargs(kwtype=ktype, facecolors='k', markersize=1.0 / (2*totfiles), linewidth=2.0 / (totfiles))
+        pkw.update(dd["primary_kwargs"])
+        dd['primary_kwargs'] = pkw
+        # secondary
+        if dd['secondary_style'] == "points":
+            ktype = 'Scatter'
+        else:
+            ktype = 'Line2D'
+        skw = create_kwargs(kwtype=ktype, facecolors='lightgreen', markersize=1.0 / (2*totfiles), linewidth=2.0 / (totfiles))
+        skw.update(dd["secondary_kwargs"])
+        dd['secondary_kwargs'] = skw
+        # feature 'links'
+        linkw = create_kwargs(kwtype="Patch", facecolors='r', alpha=0.5)
+        linkw.update(dd["link_kwargs"])
+        dd['link_kwargs'] = linkw
+        # legend lines
+        llkw = create_kwargs(kwtype="Line2D", facecolors="auto", linewidth=0.25) #auto - should be lightgrey
+        llkw.update(dd['hline_kwargs'])
+        dd['hline_kwargs'] = llkw
+        # background color for track
+        bgkw = create_kwargs(kwtype="Patch", facecolors="auto", linewidth=0)
+        bgkw.update(dd['background_kwargs'])
+        dd['background_kwargs'] = bgkw
+
+        # preprocess data.
+        # TODO: refactor to function
         primary_data = defaultdict(list)
         secondary_data = defaultdict(list)
 
@@ -1263,8 +1356,8 @@ def parse_feature_yaml(yaml_file, index, totfiles):
                 minprimary = max(minprimary, dd['primary_lower_cap'])
                 # minsecondary= max(minsecondary, dd['lower_cap'])
 
-            sec_rsf = (maxprimary - minprimary) / (maxsecondary - minsecondary)
             if dd['rescale_secondary_to_primary']:
+                sec_rsf = (maxprimary - minprimary) / (maxsecondary - minsecondary)
                 print("RESCALNG secondary TO primary")
                 # print((maxsecondary - minsecondary),(maxprimary - minprimary))
 
@@ -1285,7 +1378,7 @@ def parse_feature_yaml(yaml_file, index, totfiles):
 
                 # print((-1.0*minsecondary) / (maxsecondary - minsecondary), dd['sec_resc_zero'],'sec_resc_zero')
 
-            dv_min, dv_max = track_min_max(primary_data, secondary_data, dd['nice_ticks'],
+            dv_min, dv_max = track_min_max(primary_data, secondary_data, dd['nice_hlines'],
                                            hide_secondary=dd['hide_secondary'], pad_prop=0.025)
 
         elif dd['tracktype'] == 'links' or dd['tracktype'] == 'link':
@@ -1297,8 +1390,17 @@ def parse_feature_yaml(yaml_file, index, totfiles):
             if dd["secondary_feature_bedgraph"]:
                 secondary_data = parse_bed(dd['secondary_feature_bedgraph'])
 
-            dv_min, dv_max = track_min_max(primary_data, secondary_data, nice_ticks=False, hide_secondary=False,
-                                           pad_prop=0)
+            dv_min, dv_max = track_min_max(primary_data, secondary_data, nice_hlines=False,
+                                           hide_secondary=dd['hide_secondary'], pad_prop=0)
+
+        elif dd['tracktype'] == 'rects':
+            if dd["primary_feature_bedgraph"]:
+                primary_data = parse_bed(dd['primary_feature_bedgraph'], store_all_additional_fields=True)
+
+            if dd["secondary_feature_bedgraph"]:
+                secondary_data = parse_bed(dd['secondary_feature_bedgraph'], store_all_additional_fields=True)
+
+            dv_min, dv_max = 0, 1
 
         else:
             print("ERROR: feature " + str(index) + ": Unrecognized track type - " + str(dd['tracktype']) + "\n")

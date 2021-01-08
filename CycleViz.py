@@ -5,6 +5,7 @@ import copy
 import os
 import sys
 
+from ast import literal_eval as make_tuple
 import matplotlib
 matplotlib.use('Agg')  # this import must happen immediately after importing matplotlib
 from matplotlib import pyplot as plt
@@ -90,17 +91,19 @@ def plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj=None
 
             start_angle, end_angle = start_end_angle(next_refObj.abs_start_pos, refObj.abs_end_pos, total_length)
             # makes the reference genome wedges
-            patches.append(
-                mpatches.Wedge((0, 0), curr_bh - ch, end_angle, start_angle, width=connect_width))
-            f_color_v.append(connect_col)
-            e_color_v.append(connect_col)
-            lw_v.append(0)
+            ax.add_patch(
+                mpatches.Wedge((0, 0), curr_bh - ch, end_angle, start_angle, edgecolor=connect_col,
+                               facecolor=connect_col, linewidth=0, width=connect_width))
+            # f_color_v.append(connect_col)
+            # e_color_v.append(connect_col)
+            # lw_v.append(0)
 
 
 def plot_links(cfc):
-    for currlinks, currcol in zip([cfc.primary_links, cfc.secondary_links], [cfc.track_props['primary_color'], cfc.track_props['secondary_color']]):
+    ig = cfc.base + intertrack_spacing  # radial location on the inside of the plot where the link passes over
+    og = cfc.top + intertrack_spacing/3  # radial location on the edge of the plot where the link originates
+    for currlinks in [cfc.primary_links, cfc.secondary_links]:
         for cLink in currlinks:
-
             for a_tup in cLink.posA_hits:
                 acenter = sum(a_tup) / 2.0
                 btuplist = []
@@ -123,54 +126,113 @@ def plot_links(cfc):
                     btuplist = cLink.posB_hits
 
                 for b_tup in btuplist:
-                    if cfc.track_props['linkpoint'] == 'start':
-                        aloc = a_tup[0]
-                        bloc = b_tup[0]
+                    bcenter = sum(b_tup) / 2.0
+                    if a_tup[0] - a_tup[1] != 0 or b_tup[0] - b_tup[1] != 0 and not cfc.track_props['linkpoint'] == "midpoint":
+                        aloc_0 = a_tup[0]
+                        bloc_0 = b_tup[0]
+                        aloc_1 = a_tup[1]
+                        bloc_1 = b_tup[1]
+                        # a0, am, a1, a1, b1, b1, bm, b0, b0, a0, a0
+                        alocs = [aloc_0, acenter, aloc_1, aloc_1, bloc_0, bloc_0, bcenter, bloc_1, bloc_1, aloc_0, aloc_0, aloc_0]
+                        aguides = [og, og, og, ig, ig, og, og, og, ig, ig, og, og]
+                        aphis = np.multiply(alocs, ((1.0 / total_length) * 2 * np.pi))
+                        point_zip = zip(aphis, aguides)
+                        codes = [
+                            Path.MOVETO,
+                            Path.CURVE3,
+                            Path.CURVE3,
+                            Path.CURVE4,
+                            Path.CURVE4,
+                            Path.CURVE4,
+                            Path.CURVE3,
+                            Path.CURVE3,
+                            Path.CURVE4,
+                            Path.CURVE4,
+                            Path.CURVE4,
+                            Path.CLOSEPOLY
+                        ]
+                        fc = cLink.link_color
+                        ec = 'lightgrey'
 
-                    elif cfc.track_props['linkpoint'] == 'end':
-                        aloc = a_tup[1]
-                        bloc = b_tup[1]
-
-                    #elif cfc.track_props['linkpoint'] == 'midpoint':
                     else:
-                        aloc = acenter
-                        bloc = sum(b_tup)/2.0
+                        aphi = acenter / total_length * 2 * np.pi
+                        bphi = bcenter / total_length * 2 * np.pi
+                        codes = [
+                            Path.MOVETO,
+                            Path.CURVE4,
+                            Path.CURVE4,
+                            Path.CURVE4,
+                        ]
+                        point_zip = zip([aphi, aphi, bphi, bphi], [og, ig, ig, og])
+                        fc = 'none'
+                        ec = cLink.link_color
 
-                    aphi = aloc / total_length * 2 * np.pi
-                    bphi = bloc / total_length * 2 * np.pi
-
-                    x_a, y_a = vu.pol2cart(cfc.top + intertrack_spacing/3, aphi)
-                    x_b, y_b = vu.pol2cart(cfc.top + intertrack_spacing/3, bphi)
-
-                    inner = cfc.base + intertrack_spacing
-                    x_a_i, y_a_i = vu.pol2cart(inner, aphi)
-                    x_b_i, y_b_i = vu.pol2cart(inner, bphi)
-
-                    # plt.plot([x_a, x_b], [y_a, y_b], ,
-                    #          , zorder=1)
-
-                    verts = [
-                        (x_a, y_a),  # P0
-                        (x_a_i, y_a_i),  # P1
-                        (x_b_i, y_b_i),  # P2
-                        (x_b, y_b),  # P3
-                    ]
-
-                    codes = [
-                        Path.MOVETO,
-                        Path.CURVE4,
-                        Path.CURVE4,
-                        Path.CURVE4,
-                    ]
-
+                    verts = []
+                    for phi, g in point_zip:
+                        x, y = vu.pol2cart(g, phi)
+                        verts.append((x, y))
+                    # x_a, y_a = vu.pol2cart(outer_guide, aphi)
+                    # x_b, y_b = vu.pol2cart(outer_guide, bphi)
+                    # x_a_i, y_a_i = vu.pol2cart(inner_guide, aphi)
+                    # x_b_i, y_b_i = vu.pol2cart(inner_guide, bphi)
+                    # verts = [
+                    #     (x_a, y_a),  # P0
+                    #     (x_a_i, y_a_i),  # P1
+                    #     (x_b_i, y_b_i),  # P2
+                    #     (x_b, y_b),  # P3
+                    # ]
+                    lw_val = np.log2(cLink.score + 0.1) / 10
                     path = Path(verts, codes)
-                    patches.append(mpatches.PathPatch(path, alpha=0.5))
-                    f_color_v.append('none')
-                    e_color_v.append(currcol)
-                    lw_v.append(np.log2(cLink.score + 0.1)/10)
+                    # patches.append(mpatches.PathPatch(path, facecolor='none', edgecolor=currcol, linewidth=lw_val,
+                    #                                   alpha=0.5))
+                    ax.add_patch(mpatches.PathPatch(path, facecolor=fc, edgecolor=ec, linewidth=lw_val, alpha=0.5))
+                    # f_color_v.append('none')
+                    # e_color_v.append(currcol)
+                    # lw_v.append(np.log2(cLink.score + 0.1)/10)
 
 
-def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total_length, seg_copies, f_ind):
+def plot_rects(refObj, index):
+    cfc = None
+    for cfc_x in refObj.feature_tracks:
+        if cfc_x.index == index:
+            cfc = cfc_x
+
+    currStart = refObj.abs_start_pos
+    pTup = (refObj.chrom, refObj.ref_start, refObj.ref_end)
+    for k, klist in cfc.primary_data.items():
+        for x in klist:
+            # pTup = (k, x[0], x[1])
+            istart, iend = x[0], x[1]
+            seg_len = pTup[2] - pTup[1]
+            hasStart = False
+            hasEnd = False
+            if refObj.direction == "+":
+                ts = max(0, istart - pTup[1])
+                te = min(seg_len, iend - pTup[1])
+
+                normStart = currStart + max(0, istart - pTup[1])
+                normEnd = currStart + min(seg_len, iend - pTup[1])
+
+            else:
+                te = min(seg_len, pTup[2] - istart)
+                ts = max(0, pTup[2] - iend)
+
+                normEnd = currStart + min(seg_len, pTup[2] - istart)
+                normStart = currStart + max(0, pTup[2] - iend)
+
+            start_angle = normStart / total_length * 360
+            end_angle = normEnd / total_length * 360
+            text_angle = (start_angle + end_angle) / 2.0
+            if end_angle < 0 and start_angle > 0:
+                end_angle += 360
+
+            width = cfc.top - cfc.base
+            ctup = make_tuple("".join(x[2][2].split()))
+            ax.add_patch(mpatches.Wedge((0, 0), cfc.base, start_angle, end_angle, facecolor=ctup, linewidth=0,
+                                        width=width))
+
+
+def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total_length, seg_copies, f_ind):
     gc, gs, ge = pTup
     granularity = cfc.track_props['granularity']
     if granularity == 0:
@@ -180,42 +242,44 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     height_scale_factor = (cfc.top - cfc.base)/float(cfc.track_max - cfc.track_min)
 
     # plot a background
-    lcolor = 'lightgrey'
-    if f_ind % 2 == 1:
-        if cfc.track_props['background_color'] == 'auto':
-            f_color_v.append('gainsboro')
-            patches.append(mpatches.Wedge((0, 0), cfc.top + intertrack_spacing / 2.0, 360, 0,
-                                          width=cfc.top - cfc.base + intertrack_spacing, zorder=-1))
-            e_color_v.append('gainsboro')
-            lw_v.append(0)
-            lcolor = 'white'
+    if cfc.track_props['background_kwargs']['facecolor'] == 'auto':
+        if f_ind % 2 == 1:
+            cfc.track_props['background_kwargs']['facecolor'] = 'gainsboro'
+            if cfc.track_props['hline_kwargs']['markerfacecolor'] == 'auto':
+                cfc.track_props['hline_kwargs']['markerfacecolor'] = 'white'
 
-        elif cfc.track_props['background_color']:
-            f_color_v.append(cfc.track_props['background_color'])
-            patches.append(mpatches.Wedge((0, 0), cfc.top + intertrack_spacing / 2.0, 360, 0,
-                                          width=cfc.top - cfc.base + intertrack_spacing, zorder=-1))
-            e_color_v.append(cfc.track_props['background_color'])
-            lw_v.append(0)
+        else:
+            cfc.track_props['background_kwargs']['facecolor'] = 'none'
 
+    if cfc.track_props['hline_kwargs']['markerfacecolor'] == 'auto':
+        cfc.track_props['hline_kwargs']['markerfacecolor'] = 'lightgrey'
+
+    ax.add_patch(mpatches.Wedge((0, 0), cfc.top + intertrack_spacing / 2.0, 360, 0,
+                                width=cfc.top - cfc.base + intertrack_spacing,
+                                **cfc.track_props['background_kwargs']))
 
     # plot the legends lines
     legend_points = np.linspace(currStart / total_length * 2 * np.pi, (currEnd + 1) / total_length * 2 * np.pi, 10000)
-    lheights = list(np.linspace(cfc.base, cfc.top, cfc.track_props['num_ticks']))
-    # lheights.append(cfc.top)
-    legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, cfc.track_props['num_ticks']))
+    lheights = list(np.linspace(cfc.base, cfc.top, cfc.track_props['num_hlines']))
+    # legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, cfc.track_props['num_hlines']))
 
     # print("TRACK LEGEND HEIGHTS", legend_ticks)
     for lh in lheights:
         x_v, y_v = vu.polar_series_to_cartesians(legend_points, lh)
-        plt.plot(x_v, y_v, color=lcolor, linewidth=0.25, zorder=1)
+        # print(cfc.track_props['hline_kwargs'])
+        plt.plot(x_v, y_v, zorder=1, **cfc.track_props['hline_kwargs'])
+        #plt.plot(x_v, y_v, color=lcolor, linewidth=0.25, zorder=1)
 
     if cfc.track_props['indicate_zero']:
-        x_v, y_v = vu.polar_series_to_cartesians(legend_points, (cfc.track_props['sec_resc_zero'] - cfc.track_min)/(cfc.track_max - cfc.track_min) * (cfc.top - cfc.base) + cfc.base)
-        plt.plot(x_v, y_v, color='purple', linewidth=0.5, zorder=1)
+        x_v, y_v = vu.polar_series_to_cartesians(legend_points,
+                                                 (cfc.track_props['sec_resc_zero'] - cfc.track_min)/(cfc.track_max -
+                                                                    cfc.track_min) * (cfc.top - cfc.base) + cfc.base)
+        plt.plot(x_v, y_v, color=cfc.track_props['indicate_zero'], linewidth=0.5, zorder=1)
 
     tertiary_data = []
     tertiary_style = 'lines'
-    tertiary_color = 'mediumorchid'
+    cfc.track_props['tertiary_kwargs'] = vu.create_kwargs(kwtype="Line2D", facecolors='mediumorchid',
+                                                          edgecolors='mediumorchid')
     if cfc.track_props['show_segment_copy_count']:
         v = 2*seg_copies*cfc.track_props['segment_copy_count_scaling']
         tertiary_data = [[gs, ge, v]]
@@ -228,18 +292,17 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
     elif cfc.track_props['hide_secondary'] == "viral":
         hs = False
 
-    for data_it, style, curr_color, smoothing, elem_ind in zip([cfc.primary_data[curr_chrom], cfc.secondary_data[curr_chrom],tertiary_data],
+    for data_it, style, kwargs, smoothing, elem_ind in zip([cfc.primary_data[curr_chrom], cfc.secondary_data[curr_chrom], tertiary_data],
                                           [cfc.track_props['primary_style'], cfc.track_props['secondary_style'], tertiary_style],
-                                          [cfc.track_props['primary_color'], cfc.track_props['secondary_color'], tertiary_color],
+                                          [cfc.track_props['primary_kwargs'], cfc.track_props['secondary_kwargs'], cfc.track_props['tertiary_kwargs']],
                                           [cfc.track_props['primary_smoothing'], cfc.track_props['secondary_smoothing'], 0],
-                                            list(range(3))):
+                                          list(range(3))):
 
         #check if hiding secondary (hs)
         if elem_ind == 1 and hs:
             continue
 
         zorder = 3 if elem_ind == 1 else 2
-
         datalist = [(max(x[0],gs), min(x[1], ge), height_scale_factor*x[2] + cfc.base) for x in data_it] #restrict to the coordinates of the region
 
         # convert the data into granular form
@@ -280,11 +343,17 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
 
         # draw the points/lines
         if style == "points":
-            plt.scatter(x_v, y_v, s=cfc.track_props['pointsize'], edgecolors='none', color=curr_color, marker='.', zorder=zorder)
+            # trying a kwargs-based method
+            # print(kwargs)
+            plt.scatter(x_v, y_v, zorder=zorder, **kwargs)
+
+            #plt.scatter(x_v, y_v, s=cfc.track_props['pointsize'], edgecolors='none', color=curr_color, marker='.',
+            #            zorder=zorder)
             # plt.plot(x_v, y_v, linewidth=cfc.track_props['pointsize'], color=curr_color, zorder=zorder)
 
         elif style == "lines":
-            plt.plot(x_v, y_v, linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
+            plt.plot(x_v, y_v, zorder=zorder, **kwargs)
+            # plt.plot(x_v, y_v, linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
             # if seg_dir == "+":
             #     normeddata = [(currStart + x[0] - gs, currStart + x[1] - gs, x[2]) for x in datalist]
             # else:
@@ -296,13 +365,130 @@ def plot_feature_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total
             for x0, y0, x1, y1 in zip(x0_vect, y0_vect, x_v, y_v):
                 segs.append([(x0, y0), (x1, y1)])
 
-            # plt.plot([x0, x1], [y0, y1], linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
-            line_segments = LineCollection(segs, linewidths=cfc.track_props['linewidth'], colors=curr_color,
-                                           linestyle='solid')
+            # line_segments = LineCollection(segs, linewidths=cfc.track_props['linewidth'], colors=curr_color,
+            #                                linestyle='solid')
+            line_segments = LineCollection(segs, linestyle='solid', **kwargs)
             ax.add_collection(line_segments)
 
         else:
             print("feature_style must be either 'points', 'lines', or 'radial'\n")
+
+
+def plot_interior_tracks(ref_placements):
+    for ind, refObj in ref_placements.items():
+        seg_coord_tup = (refObj.chrom, refObj.ref_start, refObj.ref_end)
+        for cfc in refObj.feature_tracks:
+            if cfc.index <= 0:
+                continue
+
+            if cfc.track_props['tracktype'] == 'standard':
+                plot_standard_IF_track(refObj.abs_start_pos, refObj.abs_end_pos, refObj.direction, seg_coord_tup, cfc,
+                                   refObj.chrom, total_length, refObj.seg_count, cfc.index)
+
+            if cfc.track_props['tracktype'] == 'rects':
+                plot_rects(refObj, cfc.index)
+
+
+def plot_track_legend(refObj, ofpre, outer_bar, bar_width):
+    #create a figure that is ? tall
+    legw = 1
+    fig_l = plt.figure(figsize=(2, 8/3.0))
+    ax_l = fig_l.add_subplot(111, aspect='equal')
+
+    # plot the reference
+    try:
+        refcolor = chromosome_colors[refObj.chrom]
+    except KeyError:
+        # print("Color not found for " + chrom + ". Using red.")
+        refcolor = "red"
+    ax_l.add_patch(mpatches.Rectangle((0, outer_bar - bar_width), legw, bar_width/2, facecolor=refcolor,
+                                      edgecolor=refcolor, lw=0.2))
+
+    # TODO: plot the interior segments (if they exist)
+
+    # plot the tracks (with ticks)
+    for f_ind, cfc in enumerate(refObj.feature_tracks):
+        # p_color = cfc.track_props['primary_color']
+        # s_color = cfc.track_props['secondary_color']
+        if cfc.track_props['tracktype'] == 'standard':
+            height_scale_factor = (cfc.top - cfc.base) / float(cfc.track_max - cfc.track_min)
+
+            # plot a background
+            # lcolor = 'lightgrey'
+            rh = cfc.top - cfc.base + intertrack_spacing
+            rb = cfc.base - intertrack_spacing/2
+            # if f_ind % 2 == 1:
+            #     if cfc.track_props['background_color'] == 'auto':
+            #         ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, facecolor='gainsboro', edgecolor='gainsboro',
+            #                                           lw=0, zorder=-1))
+            #         lcolor = 'white'
+            #
+            #     elif cfc.track_props['background_color']:
+            #         ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, facecolor=cfc.track_props['background_color'],
+            #                                           edgecolor=cfc.track_props['background_color'], lw=0, zorder=-1))
+            ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, zorder=-1, **cfc.track_props['background_kwargs']))
+
+            # plot the legends lines
+            lheights = list(np.linspace(cfc.base, cfc.top, cfc.track_props['num_hlines']))
+            legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, cfc.track_props['num_hlines']))
+            cfc.track_props['hline_kwargs']['linewidth'] *= 2
+            for lh, lt in zip(lheights, legend_ticks):
+                # sec_lt = (lt - cfc.minsec) * cfc.sec_rsf + cfc.sec_rss
+
+                if cfc.track_props['rescale_secondary_to_primary']:
+                    sec_lt = (lt - cfc.sec_rss) / cfc.sec_rsf + cfc.minsec  # inverse the previous transformation
+                    sec_lt_str = '%s' % float('%.3g' % sec_lt)
+                else:
+                    sec_lt_str = str(lt)
+
+                # ax_l.plot([0, legw], [lh, lh], zorder=1, color=lcolor, linewidth=0.5, zorder=1)
+                cfc.track_props['hline_kwargs']['color'] = cfc.track_props['hline_kwargs']['markerfacecolor']
+                ax_l.plot([0, legw], [lh, lh], zorder=1, **cfc.track_props['hline_kwargs'])
+                ax_l.text(-0.15, lh, str(lt), ha='right', va='center', fontsize=cfc.track_props['grid_legend_fontsize'],
+                          color='k')
+
+                if cfc.secondary_data:
+                    ax_l.text(legw + 0.15, lh, sec_lt_str, ha='left', va='center', color='k',
+                              fontsize=cfc.track_props['grid_legend_fontsize'])
+
+            # background to text label will be the data color, so the font will need to be colored appropriately.
+            p_color = 'k'
+            for n in ['facecolors', 'markerfacecolor', 'facecolor']:
+                if n in cfc.track_props['primary_kwargs']:
+                    p_color = cfc.track_props['primary_kwargs'][n]
+
+            s_color = 'k'
+            for n in ['facecolors', 'markerfacecolor', 'facecolor']:
+                if n in cfc.track_props['secondary_kwargs']:
+                    p_color = cfc.track_props['secondary_kwargs'][n]
+
+            r, g, b, a = matplotlib.colors.to_rgba(p_color, alpha=None)
+            if r == g == b < 0.5:
+                p_fc = 'white'
+            else:
+                p_fc = 'k'
+
+            ax_l.text(-1.4, rb + rh/2.0, "Primary data", rotation=90, ha='center', va='center', color=p_fc,
+                      fontsize=cfc.track_props['grid_legend_fontsize'] + 1, backgroundcolor=p_color)
+
+            if cfc.secondary_data:
+                r, g, b, a = matplotlib.colors.to_rgba(s_color, alpha=None)
+                if r == g == b < 0.5:
+                    s_fc = 'white'
+                else:
+                    s_fc = 'k'
+
+                ax_l.text(legw + 1.4, rb + rh/2.0, "Secondary data", rotation=270, ha='center', va='center',
+                          fontsize=cfc.track_props['grid_legend_fontsize'] + 1, color=s_fc, backgroundcolor=s_color)
+
+            ax_l.plot([0, legw], [cfc.top + intertrack_spacing/2]*2, color='k', linewidth=0.75, zorder=1)
+
+        # if it's links?
+        # else:
+
+    ax_l.axis('off')
+    fig_l.savefig(ofpre + '.png', dpi=600)
+    fig_l.savefig(ofpre + '.pdf', format='pdf')
 
 
 def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
@@ -358,8 +544,8 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
     #draw marker starts and ends
     gInstance.draw_marker_ends(tbot)
 
-# must return positions of transcribed regions of genes here
-def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, flanked, plot_gene_direction=True):
+
+def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, flanked, plot_gene_direction=True):
     overlap_genes.append({})
     for gObj in relGenes:
         # e_posns is a list of tuples of exon (start,end)
@@ -406,10 +592,8 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
         drop = gsign * bar_width / 4.0
         gbh = outer_bar - 5.0*bar_width/12 + drop
         gObj.gdrops.append(gbh)
-        patches.append(mpatches.Wedge((0, 0), gbh , start_angle, end_angle, width=bar_width / 6.0))
-        f_color_v.append('k')
-        e_color_v.append('k')
-        lw_v.append(0)
+        ax.add_patch(mpatches.Wedge((0, 0), gbh, start_angle, end_angle, facecolor='k', edgecolor='k', linewidth=0,
+                                      width=bar_width / 6.0))
 
         # TODO: REFACTOR TO OUTSIDE - put in the gParent
         if gname not in overlap_genes[len(overlap_genes)-2] or not overlap_genes[len(overlap_genes)-2].get(gname)[0] \
@@ -456,21 +640,30 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir, i
 
                 start_angle, end_angle = start_end_angle(normStart, normEnd, total_length)
 
-                patches.append(
+                ax.add_patch(
                     mpatches.Wedge((0, 0), outer_bar - bar_width / 4.0 + (drop), start_angle, end_angle,
-                                   width=bar_width / 2.0))
-                f_color_v.append(ecolor)
-                e_color_v.append(ecolor)
-                lw_v.append(lw)
+                                   facecolor=ecolor, edgecolor=ecolor, linewidth=lw, width=bar_width / 2.0))
 
 
-# plot the reference genome
-def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_segs, edge_ticks, onco_set=None):
+# Gene plotting
+def plot_genes(ref_placements, cycle, onco_set=None):
     if onco_set is None:
         onco_set = set()
 
+    for ind, refObj in ref_placements.items():
+        seg_coord_tup = (refObj.chrom, refObj.ref_start, refObj.ref_end)
+        relGenes = vu.rel_genes(gene_tree, seg_coord_tup, copy.copy(onco_set))
+        all_relGenes.extend(relGenes)
+        # plot the gene track
+        # print(ind, refObj.to_string(), len(relGenes))
+        flanked = refObj.next_is_adjacent or refObj.prev_is_adjacent
+        plot_gene_bars(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1], ind,
+                        flanked)
+
+
+# plot the reference genome
+def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_segs, edge_ticks):
     font0 = FontProperties()
-    p_end = 0
     # rot_sp = global_rot / 360. * total_length
     for ind, refObj in ref_placements.items():
         if refObj.custom_bh:
@@ -484,95 +677,87 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         start_angle, end_angle = start_end_angle(refObj.abs_end_pos, refObj.abs_start_pos, total_length)
 
         # makes the reference genome wedges
-        patches.append(mpatches.Wedge((0, 0), curr_bh, end_angle, start_angle, width=bar_width))
         if not refObj.custom_color:
-            try:
-                f_color_v.append(chromosome_colors[chrom])
-                e_color_v.append(chromosome_colors[chrom])
+            if args.structure_coloring == "auto":
+                if chrom not in chromosome_colors:
+                    print("Color not found for " + chrom + ". Using red.")
+                    chromosome_colors[chrom] = "red"
 
-            except KeyError:
-                print("Color not found for " + chrom + ". Using red.")
-                chromosome_colors[chrom] = "red"
-                f_color_v.append(chromosome_colors[chrom])
-                e_color_v.append(chromosome_colors[chrom])
+                f_color = chromosome_colors[chrom]
+                e_color = chromosome_colors[chrom]
+            else:
+                f_color, e_color = args.structure_coloring, args.structure_coloring
+                if e_color == f_color and (e_color == 'w' or e_color == 'white'):
+                    e_color = 'k'
 
+        # this happens with the interior track!
         else:
-            f_color_v.append(refObj.custom_color)
-            e_color_v.append('k')
+            f_color = refObj.custom_color
+            e_color = 'k'
 
-        lw_v.append(0.2)
+        # lw_v.append(0.2)
+        ax.add_patch(mpatches.Wedge((0, 0), curr_bh, end_angle, start_angle, facecolor=f_color, edgecolor=e_color,
+                                      linewidth=0.2, width=bar_width))
 
         # makes the ticks on the reference genome wedges
+        # TODO: Refactor outside
         if cycle[ind][1] == "+":
-            posns = list(zip(range(seg_coord_tup[1], seg_coord_tup[2] + 1),
-                             np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1)))
+            ts = (seg_coord_tup[1], refObj.abs_start_pos)
+            te = (seg_coord_tup[2] + 1, refObj.abs_end_pos+1)
+            s = 1
+            # posns = zip(range(seg_coord_tup[1], seg_coord_tup[2] + 1),
+            #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
         else:
-            posns = list(zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
-                             np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1)))
+            te = (seg_coord_tup[2], refObj.abs_start_pos)
+            ts = (seg_coord_tup[1] - 1, refObj.abs_end_pos + 1)
+            s = -1
+            # posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
+            #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
 
-        tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
         text_trunc = 1
         # put the positions on the ends of the joined segs
-        if edge_ticks:
+        posns = []
+        if edge_ticks == "ends":
             newposns = []
             tick_freq = 1
             if not refObj.prev_is_adjacent:
-                newposns.append(posns[0])
+                newposns.append(ts)
 
             if not refObj.next_is_adjacent:
-                newposns.append(posns[-1])
+                newposns.append(te)
 
             posns = newposns
 
-
-        # put the positions not on the ends
-        elif edge_ticks == False:
-            # if there are no labels present on the segment given the current frequency, AND this refobject is not adjacent
-            # to the previous, get positions in this segment divisible by 10kbp, set the middle one as the labelling site
-            # else just set it to 10000
-            text_trunc = 10000
-
-            if (not any(j[0] % tick_freq == 0 for j in posns)) and abs(refObj.abs_start_pos - p_end) > 1:
-                tens = [j[0] for j in posns if j[0] % 10000 == 0]
-                middleIndex = int((len(tens) - 1) / 2)
-                if tens:
-                    tick_freq = tens[middleIndex]
-                else:
-                    tick_freq = 10000
-
-        else:
+        elif edge_ticks == "none":
             tick_freq = float('inf')
 
-        p_end = refObj.abs_end_pos
-        print("tick freq", tick_freq)
+        else:
+            tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
+            print("tick freq", tick_freq)
+            step = int(tick_freq/10000)
+            a = int(np.floor(ts[0] / tick_freq)) + 1
+            b = int(np.floor(te[0] / tick_freq)) + 1
+            for j in np.arange(a*10000, b*10000, s*step):
+                if j % tick_freq == 0:
+                    rpos = vu.convert_gpos_to_ropos(j, refObj.abs_start_pos, refObj.abs_end_pos, seg_coord_tup[1], dir)
+                    posns.append((j, rpos))
+
         for j in posns:
-            if j[0] % tick_freq == 0:
-                text_angle = j[1] / total_length * 360
-                x, y = vu.pol2cart(curr_bh, (text_angle / 360 * 2 * np.pi))
-                x_t, y_t = vu.pol2cart(curr_bh + 0.2, (text_angle / 360 * 2 * np.pi))
-                ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1)
+            text_angle = j[1] / total_length * 360
+            x, y = vu.pol2cart(curr_bh, (text_angle / 360 * 2 * np.pi))
+            x_t, y_t = vu.pol2cart(curr_bh + 0.2, (text_angle / 360 * 2 * np.pi))
+            ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1)
 
-                text_angle, ha = vu.correct_text_angle(text_angle)
-                txt = " " + str(int(round((j[0]) / text_trunc))) if ha == "left" else str(int(round((j[0]) / text_trunc))) + " "
+            text_angle, ha = vu.correct_text_angle(text_angle)
+            txt = " " + str(int(round((j[0]) / text_trunc))) if ha == "left" else str(int(round((j[0]) / text_trunc))) + " "
 
-                ax.text(x_t, y_t, txt, color='grey', rotation=text_angle,
-                        ha=ha, va="center", fontsize=tick_fontsize, rotation_mode='anchor')
+            ax.text(x_t, y_t, txt, color='grey', rotation=text_angle,
+                    ha=ha, va="center", fontsize=tick_fontsize, rotation_mode='anchor')
 
-        # gene_tree = vu.parse_genes(seg_coord_tup[0], args.ref)
-        relGenes = vu.rel_genes(gene_tree, seg_coord_tup, copy.copy(onco_set))
-        all_relGenes.extend(relGenes)
-        # plot the gene track
-        # print(ind, refObj.to_string(), len(relGenes))
-        flanked = refObj.next_is_adjacent or refObj.prev_is_adjacent
-        plot_gene_track(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1], ind, flanked)
-        for index, cfc in enumerate(refObj.feature_tracks):
-            if cfc.track_props['tracktype'] == 'standard':
-                plot_feature_track(refObj.abs_start_pos, refObj.abs_end_pos, refObj.direction, seg_coord_tup, cfc,
-                                   refObj.chrom, total_length, refObj.seg_count, index)
+        # end ticking section
 
-            # elif cfc.track_props['tracktype'] == 'links':
-            #     print(cfc.primary_data)
-
+        # Segment labeling
+        # TODO: Refactor to outside
         # label the segments by number in cycle
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
         text_angle = mid_sp / total_length * 360.
@@ -585,7 +770,8 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         text_angle, ha = vu.correct_text_angle(text_angle)
 
         if label_segs:
-            ax.text(x, y, cycle[ind][0] + cycle[ind][1], color='grey', rotation=text_angle,
+
+            ax.text(x, y, str(cycle[ind][0]) + cycle[ind][1], color='grey', rotation=text_angle,
                     ha=ha, fontsize=5, fontproperties=font, rotation_mode='anchor')
 
 
@@ -629,10 +815,11 @@ def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_i
         bar_height = unadj_bar_height + segObj.track_height_shift
         print("cmap_plot", segObj.id)
         start_angle, end_angle = start_end_angle(segObj.abs_end_pos, segObj.abs_start_pos, total_length)
-        patches.append(mpatches.Wedge((0, 0), bar_height + bar_width, end_angle, start_angle, width=bar_width))
-        f_color_v.append(color)
-        e_color_v.append('k')
-        lw_v.append(0)
+        ax.add_patch(mpatches.Wedge((0, 0), bar_height + bar_width, end_angle, start_angle, facecolor=color,
+                                      edgecolor='k', linewidth=0, width=bar_width))
+        # f_color_v.append(color)
+        # e_color_v.append('k')
+        # lw_v.append(0)
 
         linewidth = min(0.25 * 2000000 / total_length, 0.25)
         for i in segObj.label_posns:
@@ -676,95 +863,6 @@ def plot_alignment(contig_locs, segment_locs, total_length):
         x_c, y_c = vu.pol2cart(contig_top, c_l_loc)
         x_s, y_s = vu.pol2cart(segs_base, s_l_loc)
         ax.plot([x_c, x_s], [y_c, y_s], color="grey", linewidth=linewidth)
-
-
-def plot_track_legend(refObj, ofpre, outer_bar, bar_width):
-    #create a figure that is ? tall
-    legw = 1
-    fig_l = plt.figure(figsize=(2, 8/3.0))
-    ax_l = fig_l.add_subplot(111, aspect='equal')
-
-    # plot the reference
-    try:
-        refcolor = chromosome_colors[refObj.chrom]
-    except KeyError:
-        # print("Color not found for " + chrom + ". Using red.")
-        refcolor = "red"
-    ax_l.add_patch(mpatches.Rectangle((0, outer_bar - bar_width), legw, bar_width/2, facecolor=refcolor,
-                                      edgecolor=refcolor, lw=0.2))
-
-    # TODO: plot the interior segments (if they exist)
-
-    # plot the tracks (with ticks)
-    for f_ind, cfc in enumerate(refObj.feature_tracks):
-        p_color = cfc.track_props['primary_color']
-        s_color = cfc.track_props['secondary_color']
-        if cfc.track_props['tracktype'] == 'standard':
-            height_scale_factor = (cfc.top - cfc.base) / float(cfc.track_max - cfc.track_min)
-
-            # plot a background
-            lcolor = 'lightgrey'
-            rh = cfc.top - cfc.base + intertrack_spacing
-            rb = cfc.base - intertrack_spacing/2
-            if f_ind % 2 == 1:
-                if cfc.track_props['background_color'] == 'auto':
-                    ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, facecolor='gainsboro', edgecolor='gainsboro',
-                                                      lw=0, zorder=-1))
-                    lcolor = 'white'
-
-                elif cfc.track_props['background_color']:
-                    ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, facecolor=cfc.track_props['background_color'],
-                                                      edgecolor=cfc.track_props['background_color'], lw=0, zorder=-1))
-
-            # plot the legends lines
-            lheights = list(np.linspace(cfc.base, cfc.top, cfc.track_props['num_ticks']))
-            legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, cfc.track_props['num_ticks']))
-            for lh, lt in zip(lheights, legend_ticks):
-                # sec_lt = (lt - cfc.minsec) * cfc.sec_rsf + cfc.sec_rss
-
-                if cfc.track_props['rescale_secondary_to_primary']:
-                    sec_lt = (lt - cfc.sec_rss) / cfc.sec_rsf + cfc.minsec # inverse the previous transformation
-                    sec_lt_str= '%s' % float('%.3g' % sec_lt)
-                else:
-                    sec_lt_str = str(lt)
-
-                ax_l.plot([0, legw], [lh, lh], color=lcolor, linewidth=0.5, zorder=1)
-                ax_l.text(-0.15, lh, str(lt), ha='right', va='center', fontsize=cfc.track_props['tick_legend_fontsize'],
-                          color='k')
-
-                if cfc.secondary_data:
-                    ax_l.text(legw + 0.15, lh, sec_lt_str, ha='left', va='center', color='k',
-                              fontsize=cfc.track_props['tick_legend_fontsize'])
-
-            # background to text label will be the data color, so the font will need to be colored appropriately.
-            r, g, b, a = matplotlib.colors.to_rgba(p_color, alpha=None)
-            if r == g == b < 0.5:
-                p_fc = 'white'
-            else:
-                p_fc = 'k'
-
-            ax_l.text(-1.4, rb + rh/2.0, "Primary data", rotation=90, ha='center', va='center', color=p_fc,
-                      fontsize=cfc.track_props['tick_legend_fontsize'] + 1, backgroundcolor=p_color)
-
-            if cfc.secondary_data:
-                r, g, b, a = matplotlib.colors.to_rgba(s_color, alpha=None)
-                if r == g == b < 0.5:
-                    s_fc = 'white'
-                else:
-                    s_fc = 'k'
-
-                ax_l.text(legw + 1.4, rb + rh/2.0, "Secondary data", rotation=270, ha='center', va='center',
-                          fontsize=cfc.track_props['tick_legend_fontsize'] + 1, color=s_fc, backgroundcolor=s_color)
-
-            ax_l.plot([0, legw], [cfc.top + intertrack_spacing/2]*2, color='k', linewidth=0.75, zorder=1)
-
-        # if it's links?
-        # else:
-
-    ax_l.axis('off')
-    fig_l.savefig(ofpre + '.png', dpi=600)
-    fig_l.savefig(ofpre + '.pdf', format='pdf')
-
 
 
 def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_index_is_adj, next_seg_index_is_adj,
@@ -822,12 +920,18 @@ parser.add_argument("--print_dup_genes", help="if a gene appears multiple times 
                     action='store_true', default=False)
 parser.add_argument("--gene_highlight_list", help="list of gene names to highlight", nargs="+", type=str, default=[])
 parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
-parser.add_argument("--segment_end_ticks", help="Only place ticks at ends of non-contiguous segments",
-                    action='store_true', default=False)
+parser.add_argument("--tick_type", help="Only place ticks at ends of non-contiguous segments",
+                    choices=["ends", "standard", "none"], default="standard")
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
                     "specifying additional data. Will be plotted from outside to inside given the order the filenames "
-                    "appear in", default = [])
+                    "appear in", default=[])
+parser.add_argument("--annotate_structure", help="What to plot on the outer structure indicator. Either give a bed file"
+                    " or use predefined 'genes' or 'cytoband' arguments", type=str, default="genes")
+parser.add_argument("--structure_coloring", help="Use 'auto' coloring, or specify a single color for everything",
+                    type=str, default='auto')
+parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of the chromosome colors",
+                    action='store_true', default=False)
 parser.add_argument("--center_hole", type=float, help="whitespace in center of plot", default=1.25)
 parser.add_argument("--figure_size_style", choices=["normal", "small"], default="normal")
 
@@ -847,8 +951,7 @@ if args.figure_size_style == "small":
 
 center_hole = args.center_hole
 
-print("Reading genes")
-gene_tree = vu.parse_genes(args.ref, args.gene_highlight_list)
+sourceDir = os.path.dirname(os.path.abspath(__file__))
 
 print("Unaligned fraction cutoff set to " + str(vu.unaligned_cutoff_frac))
 chromosome_colors = vu.get_chr_colors()
@@ -882,14 +985,15 @@ else:
     struct_data = vu.parse_bed(args.structure_bed, store_all_additional_fields=True)
     cycle, isCycle, segSeqD, seg_end_pos_d, bpg_dict = vu.handle_struct_bed_data(struct_data)
 
+# bookkeeping
 cycle_seg_counts = vu.get_seg_amplicon_count(cycle)
 prev_seg_index_is_adj, next_seg_index_is_adj = vu.adjacent_segs(cycle, segSeqD, isCycle)
 raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD)
 
+# determine which genes to show
 gene_set = set()
 if args.gene_subset_file.upper() == "BUSHMAN":
-    sourceDir = os.path.dirname(os.path.abspath(__file__))
-    args.gene_subset_file = sourceDir + "/Bushman_group_allOnco_May2018.tsv"
+    args.gene_subset_file = sourceDir + "resources/Bushman_group_allOnco_May2018.tsv"
 
 if args.gene_subset_file:
     gff = True if args.gene_subset_file.endswith(".gff") else False
@@ -901,6 +1005,7 @@ elif args.gene_subset_list:
 fbases, ftops, IS_bh = get_feature_heights(len(args.feature_yaml_list), intertrack_spacing, args.om_alignments,
                                     args.interior_segments_cycle)
 
+# standard case
 if not args.om_alignments:
     ref_placements, total_length = construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length,
                                                                   prev_seg_index_is_adj, next_seg_index_is_adj,
@@ -951,6 +1056,19 @@ else:
     plot_alignment(contig_placements, cycle_seg_placements, total_length)
     imputed_status = vu.imputed_status_from_aln(aln_vect, len(cycle))
 
+print("plotting structure")
+plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.tick_type)
+if args.annotate_structure == 'genes':
+    print("Reading genes")
+    gene_tree = vu.parse_genes(args.ref, args.gene_highlight_list)
+    print("plotting genes")
+    plot_genes(ref_placements, cycle, gene_set)
+
+# elif args.annotate_structure == "cytoband":
+#     args.annotate_structure = sourceDir + "resources/cytoBand_" + args.ref + "_colored.bed"
+#     print("using cytoband file: " + args.annotate_structure)
+
+
 # Interior segments
 if args.interior_segments_cycle:
     IS_cycles, IS_segSeqD, IS_circular_D = vu.parse_cycles_file(args.interior_segments_cycle)
@@ -958,46 +1076,55 @@ if args.interior_segments_cycle:
     IS_cycle, IS_isCircular = IS_cycles["1"], IS_circular_D["1"]
     IS_rObj_placements, new_IS_cycle, new_IS_links = vu.handle_IS_data(ref_placements, IS_cycle, IS_segSeqD,
                                                                        IS_isCircular, IS_bh)
-    plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, None,
-                    {"InteriorSegment"})
+    plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, None)
 
     plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links)
 
 # bedgraph
 if args.feature_yaml_list:
+    if args.annotate_structure != "genes":
+        cfc = vu.parse_feature_yaml(args.annotate_structure, 0, 1)
+        cfc.base, cfc.top = outer_bar, outer_bar+bar_width
+        vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
+        print("plotting rects")
+        for refObj in ref_placements.values():
+            plot_rects(refObj, 0)
+
     for ind, yaml_file in enumerate(args.feature_yaml_list):
         cfc = vu.parse_feature_yaml(yaml_file, ind + 1, len(args.feature_yaml_list))
         cfc.base, cfc.top = fbases[ind], ftops[ind]
         vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
         if cfc.track_props['tracktype'] == 'standard':
             vu.reset_track_min_max(ref_placements, ind, cfc)
+            plot_interior_tracks(ref_placements)
         else:
             plot_links(cfc)
 
-plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.segment_end_ticks, gene_set)
 
 if bpg_dict:
     plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)
 
 ax.set_xlim(-(outer_bar + 1.25), (outer_bar + 1.25))
 ax.set_ylim(-(outer_bar + 3.3), (outer_bar + 3.3))
-chrom_set = set()
-for i in cycle:
-    chrom_set.add(segSeqD[i[0]][0])
 
-sorted_chrom = sorted(chrom_set, key=lambda x: x.rsplit("chr")[-1])
-sorted_chrom_colors = [chromosome_colors[x] for x in sorted_chrom]
-legend_patches = []
-for chrom, color in zip(sorted_chrom, sorted_chrom_colors):
-    legend_patches.append(mpatches.Patch(facecolor=color, label=chrom))
+if not args.hide_chrom_color_legend and args.structure_coloring == 'auto':
+    chrom_set = set()
+    for i in cycle:
+        chrom_set.add(segSeqD[i[0]][0])
 
-plt.legend(handles=legend_patches, fontsize=8, loc=3, bbox_to_anchor=(-.3, .15),frameon=False)
+    sorted_chrom = sorted(chrom_set, key=lambda x: x.rsplit("chr")[-1])
+    sorted_chrom_colors = [chromosome_colors[x] for x in sorted_chrom]
+    legend_patches = []
+    for chrom, color in zip(sorted_chrom, sorted_chrom_colors):
+        legend_patches.append(mpatches.Patch(facecolor=color, label=chrom))
 
-p = PatchCollection(patches)
-p.set_facecolor(f_color_v)
-p.set_edgecolor(e_color_v)
-p.set_linewidth(lw_v)
-ax.add_collection(p)
+    plt.legend(handles=legend_patches, fontsize=8, loc=3, bbox_to_anchor=(-.3, .15), frameon=False)
+
+# p = PatchCollection(patches)
+# p.set_facecolor(f_color_v)
+# p.set_edgecolor(e_color_v)
+# p.set_linewidth(lw_v)
+# ax.add_collection(p)
 ax.set_aspect(1.0)
 plt.axis('off')
 
