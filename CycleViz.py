@@ -447,7 +447,7 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width):
                 ax_l.text(-0.15, lh, str(lt), ha='right', va='center', fontsize=cfc.track_props['grid_legend_fontsize'],
                           color='k')
 
-                if cfc.secondary_data:
+                if any([len(x) > 0 for x in cfc.secondary_data.values()]):
                     ax_l.text(legw + 0.15, lh, sec_lt_str, ha='left', va='center', color='k',
                               fontsize=cfc.track_props['grid_legend_fontsize'])
 
@@ -471,7 +471,7 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width):
             ax_l.text(-1.4, rb + rh/2.0, "Primary data", rotation=90, ha='center', va='center', color=p_fc,
                       fontsize=cfc.track_props['grid_legend_fontsize'] + 1, backgroundcolor=p_color)
 
-            if cfc.secondary_data:
+            if any([len(x) > 0 for x in cfc.secondary_data.values()]):
                 r, g, b, a = matplotlib.colors.to_rgba(s_color, alpha=None)
                 if r == g == b < 0.5:
                     s_fc = 'white'
@@ -933,7 +933,7 @@ parser.add_argument("--interior_segments_cycle",
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
-parser.add_argument("--sname", help="output prefix")
+parser.add_argument("--outname", "-o", help="output prefix")
 # parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
 parser.add_argument("--label_segs", help="label segs with segments number-direction or names", default='numbers',
                     choices=["numbers, names"])
@@ -975,7 +975,7 @@ if args.figure_size_style == "small":
 
 center_hole = args.center_hole
 
-sourceDir = os.path.dirname(os.path.abspath(__file__))
+sourceDir = os.path.dirname(os.path.abspath(__file__)) + "/"
 
 print("Unaligned fraction cutoff set to " + str(vu.unaligned_cutoff_frac))
 chromosome_colors = vu.get_chr_colors()
@@ -992,9 +992,9 @@ bpg_dict, seg_end_pos_d = {}, {}
 
 # use AA files to determine the structure
 if args.cycles_file:
-    if not args.sname:
-        args.sname = os.path.splitext(os.path.basename(args.cycles_file))[0] + "_"
-    fname = args.sname + "cycle_" + args.cycle
+    if not args.o:
+        args.o = os.path.splitext(os.path.basename(args.cycles_file))[0] + "_"
+    fname = args.o + "cycle_" + args.cycle
     cycles, segSeqD, circular_D = vu.parse_cycles_file(args.cycles_file)
     isCycle = circular_D[args.cycle]
     cycle = cycles[args.cycle]
@@ -1003,11 +1003,11 @@ if args.cycles_file:
 
 # use the structure_bed format to determine the structure
 else:
-    if not args.sname:
+    if not args.o:
         print("Must specify --sname with --structure-bed")
         sys.exit(1)
-        # args.sname = os.path.splitext(os.path.basename(args.structure_bed))[0] + "_"
-    fname = args.sname + "cycle_1"
+        # args.o = os.path.splitext(os.path.basename(args.structure_bed))[0] + "_"
+    fname = args.o + "cycle_1"
     if args.structure_bed in {"hg19", "GRCh37", "hg38", "GRCh38"}:
         args.structure_bed = sourceDir + "resources/" + args.structure_bed + "_structure.bed"
     struct_data = vu.parse_bed(args.structure_bed, store_all_additional_fields=True)

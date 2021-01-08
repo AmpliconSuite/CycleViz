@@ -70,7 +70,7 @@ The structure of the visualized regions can be specified with either an AA cycle
 | Argument      | Description |
 | :---        |    :----  | 
 | `--cycles_file [filename]`      | Specify structure with an AA-formatted cycles file (converted to graph segment annotation using instructions above).       |
-| `--structure_bed [filename]`   | Specify structure with a bed file listing the segments and their orientations |
+| `--structure_bed [filename]`   | Specify structure with a bed file listing the segments and their orientations. Some predefined reference genome structures are available by specifying `hg19`, `GRCh37`, `hg38`, `GRCh38`.|
 
 **If `--cycles_file` is used for the structure, the following two additional arguments should be specified**
 
@@ -93,7 +93,7 @@ The structure of the visualized regions can be specified with either an AA cycle
 | Argument      | Default | Description |
 | :---        |    :----:   | :--- |
 |`--figure_size_style ["normal", "small"]`| `"normal"` | Produce normally scaled figure or `small` figure rescaled for small image size. | 
-| `--label_segs` | | Print the segment ID & direction under structure segment.|
+| `--label_segs ["names", "numbers"]` | `"numbers"` | Print the segment ID & direction (`numbers`) or chromosome name (`names`) under structure segment.|
 | `--gene_fontsize [float]` | 7 | Gene name fontsize |
 | `--gene_highlight_list [string] [string] ...` | | List of RefGene gene names to give alternate color (default red) |
 | `--print_dup_names` | | Print gene name each time it is split across segments. Default, print gene name once if split across multiple segments.| 
@@ -181,3 +181,16 @@ The `--gene_subset_file` or `--gene_subset_list` arguments can be used to reduce
 
 Note that the structure bed or the cycles file/cycle number (or "path number", in the linear case) are the only required arguments. It is highly recommended to use the Bushman oncogene file for the gene_subset_file to make more readable plots
 
+### Creating your own structure.bed file
+If you would like to specify a collection of region of the genome to show please create a file formatted as follows
+
+`chrom  pos1    pos2    strand  [connected to previous sequence (True/False)]`
+
+e.g.
+
+```
+chr10  138300  850441  +   False
+chr4    450220  602811  +   False    
+```
+
+The structure of the plot will be ordered by the structure you specified! 

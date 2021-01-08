@@ -1207,8 +1207,10 @@ def parse_main_args_yaml(args):
             args.path_alignment = sample_data.get("i")
         if "ref" in sample_data:
             args.ref = sample_data.get("ref")
-        if "sname" in sample_data:
-            args.sname = sample_data.get("sname")
+        if "o" in sample_data:
+            args.o = sample_data.get("o")
+        if "outname" in sample_data:
+            args.o = sample_data.get("outname")
         if "rot" in sample_data:
             args.rot = sample_data.get("rot")
         if "label_segs" in sample_data:
