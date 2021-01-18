@@ -288,14 +288,15 @@ parser = argparse.ArgumentParser(description="Linear visualizations of AA & AR o
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
-parser.add_argument("-s", "--segs", help="segments cmap file")
+parser.add_argument("-s", "--om_segs", help="segments cmap file")
 parser.add_argument("-g", "--graph", help="breakpoint graph file")
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
 parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file", required=True)
 parser.add_argument("--path", help="path number to visualize", required=True)
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
-parser.add_argument("--sname", help="output prefix")
+parser.add_argument("--outname", help="output prefix")
+parser.add_argument("--outname", help="output prefix")
 parser.add_argument("--label_segs", help="label segs with graph IDs", choices=["id", "dir"], default="id")
 parser.add_argument("--reduce_path", help="Number of path elements to remove from left and right ends. Must supply both values, \
                     default 0 0", nargs=2, type=int, default=[0, 0])
@@ -315,14 +316,14 @@ args = parser.parse_args()
 if args.ref == "GRCh38":
     args.ref = "hg38"
 
-if not args.sname:
-    args.sname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
+if not args.outname:
+    args.outname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
 
-outdir = os.path.dirname(args.sname)
+outdir = os.path.dirname(args.outname)
 if outdir and not os.path.exists(outdir):
     os.makedirs(outdir)
 
-fname = args.sname + "_path_" + args.path + "_trim_" + str(args.reduce_path[0]) + "_" + str(args.reduce_path[1])
+fname = args.outname + "_path_" + args.path + "_trim_" + str(args.reduce_path[0]) + "_" + str(args.reduce_path[1])
 
 print(args.reduce_path)
 
@@ -400,9 +401,9 @@ if not args.om_alignments:
     ax.plot(0,seg_bar_height + contig_bar_height, color='white', markersize=10)
 
 else:
-    seg_cmaps = parse_cmap(args.segs, True)
+    seg_cmaps = parse_cmap(args.om_segs, True)
     seg_cmap_vects = vectorize_cmaps(seg_cmaps)
-    seg_cmap_lens = get_cmap_lens(args.segs)
+    seg_cmap_lens = get_cmap_lens(args.om_segs)
     aln_vect, meta_dict = vu.parse_alnfile(args.path_alignment)
     if args.reduce_path != [0, 0]:
         # reduce alignments
