@@ -719,7 +719,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         posns = []
         if edge_ticks == "ends":
             newposns = []
-            tick_freq = 1
+            # tick_freq = 1
             if not refObj.prev_is_adjacent:
                 newposns.append(ts)
 
@@ -729,18 +729,21 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             posns = newposns
 
         elif edge_ticks == "none":
-            tick_freq = float('inf')
+            # tick_freq = float('inf')
 
         else:
-            tick_freq = max(10000, 30000 * int(np.floor(total_length / 800000)))
+            text_trunc = 10000
+            tick_freq = max(10000, 30000 * int(np.floor(total_length / 1200000)))
             print("tick freq", tick_freq)
             step = int(tick_freq/10000)
-            a = int(np.floor(ts[0] / tick_freq)) + 1
-            b = int(np.floor(te[0] / tick_freq)) + 1
-            for j in np.arange(a*10000, b*10000, s*step):
-                if j % tick_freq == 0:
-                    rpos = vu.convert_gpos_to_ropos(j, refObj.abs_start_pos, refObj.abs_end_pos, seg_coord_tup[1], dir)
-                    posns.append((j, rpos))
+            a = int(np.floor(ts[0] / 10000)) + 1
+            b = int(np.floor(te[0] / 10000)) + 1
+            print(a, b, ts[0], te[0], step)
+            for j in np.arange(a, b, s):
+                if (j*10000) % tick_freq == 0:
+                    sj = j*10000
+                    rpos = vu.convert_gpos_to_ropos(sj, refObj.abs_start_pos, refObj.abs_end_pos, seg_coord_tup[1], dir)
+                    posns.append((sj, rpos))
 
         for j in posns:
             text_angle = j[1] / total_length * 360
