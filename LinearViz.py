@@ -361,7 +361,7 @@ gene_set = set()
 
 if args.gene_subset_file.upper() == "BUSHMAN":
     sourceDir = os.path.dirname(os.path.abspath(__file__))
-    args.gene_subset_file = sourceDir + "/Bushman_group_allOnco_May2018.tsv"
+    args.gene_subset_file = sourceDir + "/resources/Bushman_group_allOnco_May2018.tsv"
 
 if args.gene_subset_file:
     gff = True if args.gene_subset_file.endswith(".gff") else False
