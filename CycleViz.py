@@ -936,7 +936,7 @@ parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--outname", "-o", help="output prefix")
 # parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
 parser.add_argument("--label_segs", help="label segs with segments number-direction or names", default='numbers',
-                    choices=["numbers, names"])
+                    choices=["numbers", "names"])
 parser.add_argument("--gene_subset_file", help="file containing subset of genes to plot (e.g. oncogene genelist file)",
                     default="")
 parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
