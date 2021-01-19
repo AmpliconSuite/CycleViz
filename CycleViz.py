@@ -729,6 +729,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             posns = newposns
 
         elif edge_ticks == "none":
+            pass
             # tick_freq = float('inf')
 
         else:
