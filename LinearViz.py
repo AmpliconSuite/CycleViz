@@ -296,7 +296,6 @@ parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file", r
 parser.add_argument("--path", help="path number to visualize", required=True)
 parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
 parser.add_argument("--outname", help="output prefix")
-parser.add_argument("--outname", help="output prefix")
 parser.add_argument("--label_segs", help="label segs with graph IDs", choices=["id", "dir"], default="id")
 parser.add_argument("--reduce_path", help="Number of path elements to remove from left and right ends. Must supply both values, \
                     default 0 0", nargs=2, type=int, default=[0, 0])
