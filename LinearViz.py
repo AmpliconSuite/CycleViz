@@ -294,7 +294,7 @@ parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
 parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file", required=True)
 parser.add_argument("--path", help="path number to visualize", required=True)
-parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
+parser.add_argument("--AR_path_alignment", help="AR path alignment file")
 parser.add_argument("--outname", help="output prefix")
 parser.add_argument("--label_segs", help="label segs with graph IDs", choices=["id", "dir"], default="id")
 parser.add_argument("--reduce_path", help="Number of path elements to remove from left and right ends. Must supply both values, \
@@ -403,7 +403,7 @@ else:
     seg_cmaps = parse_cmap(args.om_segs, True)
     seg_cmap_vects = vectorize_cmaps(seg_cmaps)
     seg_cmap_lens = get_cmap_lens(args.om_segs)
-    aln_vect, meta_dict = vu.parse_alnfile(args.path_alignment)
+    aln_vect, meta_dict = vu.parse_alnfile(args.AR_path_alignment)
     if args.reduce_path != [0, 0]:
         # reduce alignments
         path, prev_seg_index_is_adj, aln_vect = vu.reduce_path(path, prev_seg_index_is_adj, args.reduce_path, aln_vect)

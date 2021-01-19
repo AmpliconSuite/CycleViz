@@ -932,7 +932,7 @@ parser.add_argument("--interior_segments_cycle",
                     type=str, default="")
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--om_segs", help="segments cmap file")
-parser.add_argument("-i", "--path_alignment", help="AR path alignment file")
+parser.add_argument("--AR_path_alignment", help="AR path alignment file")
 parser.add_argument("--outname", "-o", help="output prefix")
 # parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
 parser.add_argument("--label_segs", help="label segs with segments number-direction or names", default='numbers',
@@ -1047,7 +1047,7 @@ else:
     seg_cmaps = parse_cmap(args.om_segs, True)
     seg_cmap_vects = vectorize_cmaps(seg_cmaps)
     seg_cmap_lens = get_cmap_lens(args.om_segs)
-    aln_vect, meta_dict = vu.parse_alnfile(args.path_alignment)
+    aln_vect, meta_dict = vu.parse_alnfile(args.AR_path_alignment)
     is_segdup, split_ind = vu.check_segdup(aln_vect, cycle, isCycle)
     if is_segdup:
         print("alignment shows simple segdup")
@@ -1061,7 +1061,7 @@ else:
 
     ref_placements, total_length = construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length,
                                                                   prev_seg_index_is_adj, next_seg_index_is_adj, isCycle,
-                                                                  cycle_seg_counts, aln_vect)
+                                                                  cycle_seg_counts)
 
     cycle_seg_placements = vu.place_path_segs_and_labels(cycle, ref_placements, seg_cmap_vects)
     contig_cmaps = parse_cmap(args.contigs, True)
@@ -1069,6 +1069,7 @@ else:
     contig_cmap_lens = get_cmap_lens(args.contigs)
     contig_placements, contig_list = vu.place_contigs_and_labels(cycle_seg_placements, aln_vect, total_length,
                                                                  contig_cmap_vects, isCycle, True, segSeqD)
+
     vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length)
 
     # plot cmap segs
@@ -1085,6 +1086,7 @@ else:
     imputed_status = vu.imputed_status_from_aln(aln_vect, len(cycle))
 
 print("plotting structure")
+print(args.label_segs)
 plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.tick_type)
 if args.annotate_structure == 'genes':
     print("Reading genes")
