@@ -29,6 +29,7 @@ global_rot = 90.0
 center_hole = 1.25
 outer_bar = 10
 intertrack_spacing = .7
+gene_spacing = 1.7
 
 contig_bar_height = -14 / 3
 segment_bar_height = -8.0 / 3
@@ -598,7 +599,7 @@ def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, in
         # TODO: REFACTOR TO OUTSIDE - put in the gParent
         if gname not in overlap_genes[len(overlap_genes)-2] or not overlap_genes[len(overlap_genes)-2].get(gname)[0] \
                 or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
-            x_t, y_t = vu.pol2cart(outer_bar + bar_width + 1.7, (text_angle / 360 * 2 * np.pi))
+            x_t, y_t = vu.pol2cart(outer_bar + bar_width + gene_spacing, (text_angle / 360 * 2 * np.pi))
             text_angle, ha = vu.correct_text_angle(text_angle)
 
             if gObj.highlight_name:
@@ -708,8 +709,8 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             # posns = zip(range(seg_coord_tup[1], seg_coord_tup[2] + 1),
             #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
         else:
-            te = (seg_coord_tup[2], refObj.abs_start_pos)
-            ts = (seg_coord_tup[1] - 1, refObj.abs_end_pos + 1)
+            ts = (seg_coord_tup[2], refObj.abs_start_pos)
+            te = (seg_coord_tup[1] - 1 , refObj.abs_end_pos + 1)
             s = -1
             # posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
             #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
@@ -719,7 +720,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         posns = []
         if edge_ticks == "ends":
             newposns = []
-            # tick_freq = 1
+            tick_freq = 1
             if not refObj.prev_is_adjacent:
                 newposns.append(ts)
 
@@ -729,8 +730,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             posns = newposns
 
         elif edge_ticks == "none":
-            pass
-            # tick_freq = float('inf')
+            tick_freq = float('inf')
 
         else:
             text_trunc = 10000
@@ -948,6 +948,8 @@ parser.add_argument("--print_dup_genes", help="if a gene appears multiple times 
                     action='store_true', default=False)
 parser.add_argument("--gene_highlight_list", help="list of gene names to highlight", nargs="+", type=str, default=[])
 parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
+parser.add_argument("--gene_spacing", help="How far from reference to plot gene names. Default 1.7", type=float,
+                    default=1.7)
 parser.add_argument("--tick_type", help="Only place ticks at ends of non-contiguous segments",
                     choices=["ends", "standard", "none"], default="standard")
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
@@ -978,6 +980,7 @@ if args.figure_size_style == "small":
     args.tick_fontsize *= 1.5
 
 center_hole = args.center_hole
+gene_spacing = args.gene_spacing
 
 sourceDir = os.path.dirname(os.path.abspath(__file__)) + "/"
 
