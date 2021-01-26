@@ -962,9 +962,10 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
         if c_id not in contig_list: contig_list.append(c_id)
 
     contig_span_dict = {}
+    print(segSeqD.keys())
     for c_id, i_list in contig_aln_dict.items():
         # print "placing contigs computation step"
-        # print(c_id)
+        print(c_id, c_id[0])
         cc_vect = contig_cmap_vects[c_id]
         san_f = i_list[0]["seg_aln_number"]
         sal_f = i_list[0]["seg_label"]
@@ -975,9 +976,10 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
         contig_dir = i_list[0]["contig_dir"]
         # print(san_f,sal_f,cal_f)
         # print(san_l,sal_l,cal_l)
-        #                                    m_id, chrom, ref_start, ref_end, direction, s, t, seg_count, padj, nadj, cmap_vect=None
-        curr_contig_struct = CycleVizElemObj(c_id, segSeqD[c_id[0]][0], segSeqD[c_id[0]][1], segSeqD[c_id[0]][2],
-                                             contig_dir, None, None, 1, False, False, cc_vect)
+        #m_id, chrom, ref_start, ref_end, direction, s, t, seg_count, padj, nadj, cmap_vect=None
+
+        curr_contig_struct = CycleVizElemObj(c_id, c_id, 0, cc_vect[-1], contig_dir, None, None, 1, False, False,
+                                             cc_vect)
 
         # look up aln posns from path_seg_placements
         # look up position of first one
