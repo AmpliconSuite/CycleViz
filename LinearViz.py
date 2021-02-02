@@ -128,7 +128,9 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
 
 
 # plot the reference genome
-def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, label_segs, onco_set=set()):
+def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, label_segs, onco_set=None):
+    if onco_set is None:
+        onco_set = set()
     font0 = FontProperties()
     p_end = 0
     for ind, refObj in ref_placements.items():
@@ -167,7 +169,7 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
         # segment too small, nothing gets ticked
         if (not any(j[0] % tick_freq == 0 for j in posns)) and abs(refObj.abs_start_pos - p_end) > 1:
             tens = [j[0] for j in posns if j[0] % 10000 == 0]
-            middleIndex = (len(tens) - 1) / 2
+            middleIndex = (len(tens) - 1) // 2  # do integer division
             if tens:
                 tick_freq = tens[middleIndex]
             else:
@@ -262,15 +264,21 @@ def plot_alignment(contig_locs, segment_locs, total_length):
         ax.plot([slx, clx], [seg_bar_height + bar_width, contig_bottom], color="grey", linewidth=linewidth)
 
 
-def construct_path_ref_placements(path, segSeqD, raw_path_length, prev_seg_index_is_adj, aln_vect=[]):
+def construct_path_ref_placements(path, segSeqD, raw_path_length, prev_seg_index_is_adj, next_seg_index_is_adj,
+                                  cycle_seg_counts, aln_vect=None):
+    if aln_vect is None:
+        aln_vect = []
+
     spacing_bp = seg_spacing * raw_path_length
     path_ref_placements = {}
     curr_start = 0.0
     for ind, i in enumerate(path):
+        seg_id_count = cycle_seg_counts[i[0]]
         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
         seg_end = curr_start + seg_len
-        curr_obj = vu.CycleVizElemObj(i[0], segSeqD[i[0]][0], segSeqD[i[0]][1], segSeqD[i[0]][2],
-                                      i[1], curr_start, seg_end)
+        padj, nadj = prev_seg_index_is_adj[ind], next_seg_index_is_adj[ind]
+        curr_obj = vu.CycleVizElemObj(i[0], segSeqD[i[0]][0], segSeqD[i[0]][1], segSeqD[i[0]][2], i[1], curr_start,
+                                      seg_end, seg_id_count, padj, nadj)
 
         path_ref_placements[ind] = curr_obj
         next_start = seg_end
@@ -377,8 +385,10 @@ if not args.om_alignments:
         # reduce alignments
         path, prev_seg_index_is_adj, _ = vu.reduce_path(path, prev_seg_index_is_adj, args.reduce_path)
 
-    ref_placements, total_length = construct_path_ref_placements(path, segSeqD, raw_path_length,
-                                                                 prev_seg_index_is_adj)
+    prev_seg_index_is_adj, next_seg_index_is_adj = vu.adjacent_segs(path, segSeqD, isCycle)
+    cycle_seg_counts = vu.get_seg_amplicon_count(path)
+    ref_placements, total_length = construct_path_ref_placements(path, segSeqD, raw_path_length, prev_seg_index_is_adj,
+                                                                 next_seg_index_is_adj, cycle_seg_counts)
 
     imputed_status = [False] * len(path)
     # set heights
@@ -418,8 +428,10 @@ else:
         for a_ind in range(split_ind, len(aln_vect)):
             aln_vect[a_ind]["seg_aln_number"] = 1
 
-    ref_placements, total_length = construct_path_ref_placements(path, segSeqD, raw_path_length,
-                                                                 prev_seg_index_is_adj, aln_vect)
+    prev_seg_index_is_adj, next_seg_index_is_adj = vu.adjacent_segs(path, segSeqD, isCycle)
+    cycle_seg_counts = vu.get_seg_amplicon_count(path)
+    ref_placements, total_length = construct_path_ref_placements(path, segSeqD, raw_path_length, prev_seg_index_is_adj,
+                                                                 next_seg_index_is_adj, cycle_seg_counts)
 
     path_seg_placements = vu.place_path_segs_and_labels(path, ref_placements, seg_cmap_vects)
 
@@ -450,7 +462,7 @@ else:
     contig_cmap_lens = get_cmap_lens(args.contigs)
     # path_seg_placements,aln_vect,total_length,contig_cmap_vects
     contig_placements, contig_list = vu.place_contigs_and_labels(path_seg_placements, aln_vect, total_length,
-                                                                 contig_cmap_vects, isCycle, True)
+                                                                 contig_cmap_vects, isCycle, True, segSeqD)
     vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length)
 
     # plot segs cmap
