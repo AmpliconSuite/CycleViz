@@ -94,15 +94,18 @@ def make_new_cycle(graph_path, cycle_path):
                     continues = 1
                     end_loc = 0
                     length = 0
-                    line = line.split(';')
-                    the_file.write(line[0] + ';' + line[1] + ';')
-                    line = line[2]
-                    line = line.split('=')
-                    a = line[0] + '='
+                    fields = line.split(';')
+                    splitfields = [(x.rsplit('=')[0], x.rsplit('=')[1]) for x in fields]
+                    for x in splitfields:
+                        if x[0] != "Segments":
+                            the_file.write(x[0] + "=" + x[1] + ";")
+                        else:
+                            segseq = x
+
+                    a = segseq[0] + '='
                     circle = ';Circular=TRUE'
-                    # the_file.write(line[0]+'=')
-                    line = line[1].strip().split(',')
-                    for l in line:
+                    segseq = segseq[1].strip().split(',')
+                    for l in segseq:
                         number = l[:-1]
                         length = length + int(segment_dict[number]['length'])
                         sign = l[-1]
