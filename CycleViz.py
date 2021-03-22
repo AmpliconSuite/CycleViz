@@ -1095,7 +1095,7 @@ else:
 print("plotting structure")
 print(args.label_segs)
 plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.tick_type)
-if args.annotate_structure == 'genes':
+if args.annotate_structure == 'genes' or gene_set:
     print("Reading genes")
     gene_tree = vu.parse_genes(args.ref, args.gene_highlight_list)
     print("plotting genes")

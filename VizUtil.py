@@ -191,18 +191,18 @@ class gene_viz_instance(object):
         # self.gdrops = sorted(self.gdrops, key=lambda x: x[-1])
         if self.hasStart or self.hasEnd:
             s_ang, e_ang, sm, em, tm = self.get_angles()
-
+            me_color = 'red' if self.gParent.highlight_name else 'silver'
             if self.hasStart:
                 x_m, y_m = pol2cart(gbh, (s_ang / 360 * 2 * np.pi))
                 t = matplotlib.markers.MarkerStyle(marker=sm)
                 t._transform = t.get_transform().rotate_deg(s_ang - 89)
-                plt.scatter(x_m, y_m, marker=t, s=15, color='silver',zorder=3,alpha=0.8)
+                plt.scatter(x_m, y_m, marker=t, s=15, color=me_color, zorder=3, alpha=0.8)
 
             if self.hasEnd:
                 x_m, y_m = pol2cart(gbh, (e_ang / 360 * 2 * np.pi))
                 t = matplotlib.markers.MarkerStyle(marker=em)
                 t._transform = t.get_transform().rotate_deg(e_ang - 91)
-                plt.scatter(x_m, y_m, marker=t, s=5, color='silver',zorder=3,alpha=0.8)
+                plt.scatter(x_m, y_m, marker=t, s=5, color=me_color, zorder=3, alpha=0.8)
 
 
 # makes a gene object from parsed refGene data
