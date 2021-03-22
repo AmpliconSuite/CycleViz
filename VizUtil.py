@@ -1345,21 +1345,31 @@ def parse_feature_yaml(yaml_file, index, totfiles):
             else:
                 minsecondary, maxsecondary = 0, 0
 
-            if dd['secondary_upper_cap']:
-                # maxprimary = min(maxprimary, dd['upper_cap'])
-                maxsecondary = min(maxsecondary, dd['secondary_upper_cap'])
-
-            if dd['secondary_lower_cap']:
-                # minprimary = max(minprimary, dd['lower_cap'])
-                minsecondary= max(minsecondary, dd['secondary_lower_cap'])
-
             if dd['primary_upper_cap']:
-                maxprimary = min(maxprimary, dd['primary_upper_cap'])
-                # maxsecondary = min(maxsecondary, dd['upper_cap'])
+                #maxprimary = min(maxprimary, dd['primary_upper_cap'])
+                maxprimary = dd['primary_upper_cap']
 
             if dd['primary_lower_cap']:
-                minprimary = max(minprimary, dd['primary_lower_cap'])
-                # minsecondary= max(minsecondary, dd['lower_cap'])
+                #minprimary = max(minprimary, dd['primary_lower_cap'])
+                minprimary = dd['primary_lower_cap']
+
+            if dd['secondary_upper_cap']:
+                # maxsecondary = min(maxsecondary, dd['secondary_upper_cap'])
+                maxsecondary = dd['secondary_upper_cap']
+
+            if dd['secondary_lower_cap']:
+                # minsecondary= max(minsecondary, dd['secondary_lower_cap'])
+                minsecondary = dd['secondary_lower_cap']
+
+            # force data into upper and lower cap boundaries
+            for y in primary_data:
+                for ind, x in enumerate(primary_data[y]):
+                    primary_data[y][ind] = (x[0], x[1], min(max(x[2], minprimary), maxprimary))
+
+            if len(secondary_data) > 0:
+                for y in secondary_data:
+                    for ind, x in enumerate(secondary_data[y]):
+                        secondary_data[y][ind] = (x[0], x[1], min(max(x[2], minsecondary), maxsecondary))
 
             if dd['rescale_secondary_to_primary']:
                 sec_rsf = (maxprimary - minprimary) / (maxsecondary - minsecondary)
