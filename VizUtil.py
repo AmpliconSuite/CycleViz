@@ -46,8 +46,8 @@ def round_to_1_sig(x):
     return round(x, -int(np.floor(np.log10(abs(x)))))
 
 
-def convert_gpos_to_ropos(cgpos, ro_start, ro_end, g_start, dir):
-    if dir == "+":
+def convert_gpos_to_ropos(cgpos, ro_start, ro_end, g_start, cdir):
+    if cdir == "+":
         return (cgpos - g_start) + ro_start
     else:
         return ro_end - (cgpos - g_start)
@@ -823,11 +823,12 @@ def parse_alnfile(path_aln_file):
         aln_header = next(infile).rstrip()[1:].split()
         for line in infile:
             fields = line.rstrip().split()
-            fields_dict = dict(zip(aln_header, fields))
-            fields_dict["contig_label"] = int(fields_dict["contig_label"])
-            fields_dict["seg_label"] = int(fields_dict["seg_label"])
-            fields_dict["seg_aln_number"] = int(fields_dict["seg_aln_number"])
-            aln_vect.append(fields_dict)
+            if fields:
+                fields_dict = dict(zip(aln_header, fields))
+                fields_dict["contig_label"] = int(fields_dict["contig_label"])
+                fields_dict["seg_label"] = int(fields_dict["seg_label"])
+                fields_dict["seg_aln_number"] = int(fields_dict["seg_aln_number"])
+                aln_vect.append(fields_dict)
 
     return aln_vect, meta_dict
 

@@ -743,7 +743,8 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             for j in np.arange(a, b, s):
                 if (j*10000) % tick_freq == 0:
                     sj = j*10000
-                    rpos = vu.convert_gpos_to_ropos(sj, refObj.abs_start_pos, refObj.abs_end_pos, seg_coord_tup[1], dir)
+                    rpos = vu.convert_gpos_to_ropos(sj, refObj.abs_start_pos, refObj.abs_end_pos, seg_coord_tup[1],
+                                                    cycle[ind][1])
                     posns.append((sj, rpos))
 
         for j in posns:
