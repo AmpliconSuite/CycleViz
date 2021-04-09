@@ -773,12 +773,12 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
                 font.set_style('italic')
                 # font.set_weight('bold')
 
-            if label_segs == "numbers":
+            if label_segs[0] == "numbers":
                 t = str(cycle[ind][0]) + cycle[ind][1]
                 text_angle, ha = vu.correct_text_angle(centerpoint_angle)
                 va = 'baseline'
 
-            elif label_segs == "names":
+            elif label_segs[0] == "names":
                 t = refObj.chrom.lstrip("chr")
                 text_angle, temp = vu.correct_text_angle(centerpoint_angle + 90)
                 ha = 'center'
@@ -788,7 +788,11 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
                     va = 'top'
 
             else:
-                t = label_segs
+                try:
+                    t = label_segs[ind]
+                except IndexError:
+                    t = ""
+
                 text_angle, temp = vu.correct_text_angle(centerpoint_angle + 90)
                 ha = 'center'
                 if temp == 'right':
@@ -798,7 +802,6 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
 
             ax.text(x, y, t, color='grey', rotation=text_angle, ha=ha, va=va, fontsize=5, fontproperties=font,
                     rotation_mode='anchor')
-
 
 
 # set the heights of the bed track features
@@ -940,8 +943,8 @@ parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("--AR_path_alignment", help="AR path alignment file")
 parser.add_argument("--outname", "-o", help="output prefix")
 # parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
-parser.add_argument("--label_segs", help="label segs with segments number-direction or names", default='numbers',
-                    choices=["numbers", "names"])
+parser.add_argument("--label_segs", help="label segs with segments number-direction ('numbers') or segment names "
+                                         "('names') or a custom list", default="", type=str, nargs='+')
 parser.add_argument("--gene_subset_file", help="file containing subset of genes to plot (e.g. oncogene genelist file)",
                     default="")
 parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
