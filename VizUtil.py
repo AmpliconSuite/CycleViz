@@ -776,7 +776,7 @@ def handle_IS_data(ref_placements, IS_cycle, IS_segSeqD, IS_isCircular, IS_bh, c
 
 
 def check_segdup(aln_vect, cycle, circular):
-    print("Checking if segdup")
+    # print("Checking if segdup")
     # iterate over and delete the second half it's bad
     num_contigs = len(set([x["contig_id"] for x in aln_vect]))
     if num_contigs != 1:
@@ -846,7 +846,7 @@ def adjacent_segs(cycle, segSeqD, isCycle):
         i = cycle[ind]
         curr_chrom = segSeqD[i[0]][0]
         curr_start = segSeqD[i[0]][2] if i[1] == "-" else segSeqD[i[0]][1]
-        if curr_chrom == p_chrom and abs(curr_start - p_end) == 1 and p_dir == i[1]:
+        if curr_chrom == p_chrom and -1 < abs(curr_start - p_end) < 2 and p_dir == i[1]:
                 prev_seg_index_is_adj[ind] = True
                 next_seg_index_is_adj[ind-1] = True
 
@@ -963,10 +963,10 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
         if c_id not in contig_list: contig_list.append(c_id)
 
     contig_span_dict = {}
-    print(segSeqD.keys())
+    # print(segSeqD.keys())
     for c_id, i_list in contig_aln_dict.items():
         # print "placing contigs computation step"
-        print(c_id, c_id[0])
+        # print(c_id, c_id[0])
         cc_vect = contig_cmap_vects[c_id]
         san_f = i_list[0]["seg_aln_number"]
         sal_f = i_list[0]["seg_label"]
@@ -985,6 +985,7 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
         # look up aln posns from path_seg_placements
         # look up position of first one
         segObj_start = path_seg_placements[san_f]
+        # print(c_id, san_f, segObj_start.label_posns, len(segObj_start.label_posns), sal_f-1)
         seg_start_l_pos = segObj_start.label_posns[sal_f - 1]
 
         # look up position of last one

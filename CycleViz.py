@@ -843,12 +843,14 @@ def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_i
     for ind, segObj in seg_placements.items():
         bar_height = unadj_bar_height + segObj.track_height_shift
         print("cmap_plot", segObj.id)
-        start_angle, end_angle = start_end_angle(segObj.abs_end_pos, segObj.abs_start_pos, total_length)
+        if segObj.abs_end_pos - segObj.abs_start_pos > total_length:
+            start_angle, end_angle = 360, 0
+            print("cmap went full circle")
+
+        else:
+            start_angle, end_angle = start_end_angle(segObj.abs_end_pos, segObj.abs_start_pos, total_length)
         ax.add_patch(mpatches.Wedge((0, 0), bar_height + bar_width, end_angle, start_angle, facecolor=color,
                                       edgecolor='k', linewidth=0, width=bar_width))
-        # f_color_v.append(color)
-        # e_color_v.append('k')
-        # lw_v.append(0)
 
         linewidth = min(0.25 * 2000000 / total_length, 0.25)
         for i in segObj.label_posns:
@@ -956,7 +958,7 @@ parser.add_argument("--gene_spacing", help="How far from reference to plot gene 
                     default=1.7)
 parser.add_argument("--tick_type", help="Only place ticks at ends of non-contiguous segments",
                     choices=["ends", "standard", "none"], default="standard")
-parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float, default=7)
+parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float)
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
                     "specifying additional data. Will be plotted from outside to inside given the order the filenames "
                     "appear in", default=[])
@@ -977,6 +979,12 @@ if args.ref == "GRCh38":
     args.ref = "hg38"
 
 print(args.ref)
+
+if not args.tick_fontsize:
+    if not args.tick_type == 'ends':
+        args.tick_fontsize = 7
+    else:
+        args.tick_fontsize = 4
 
 if args.figure_size_style == "small":
     bar_width *= 1.5
