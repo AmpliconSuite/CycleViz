@@ -24,14 +24,14 @@ rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
 
 seg_spacing = 0.009
-bar_width = 2.5 / 3
+bar_width = 2.1 / 3
 global_rot = 90.0
 center_hole = 1.25
 outer_bar = 10
 intertrack_spacing = .7
 gene_spacing = 1.7
 
-contig_bar_height = -14 / 3
+contig_bar_height = -13.5 / 3
 segment_bar_height = -8.0 / 3
 gene_to_locations = defaultdict(list)
 overlap_genes = []
@@ -548,7 +548,8 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
 
 def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, flanked, plot_gene_direction=True):
     overlap_genes.append({})
-    for gObj in relGenes:
+    nhits = len(relGenes) + 1
+    for gObj_ind, gObj in enumerate(sorted(relGenes, key=lambda x: x.gstart)):
         # e_posns is a list of tuples of exon (start,end)
         # these can be plotted similarly to how the coding region is marked
         gname, gstart, gend, e_posns = gObj.gname, gObj.gstart, gObj.gend, gObj.eposns
@@ -584,7 +585,8 @@ def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, in
 
         start_angle = normStart / total_length * 360
         end_angle = normEnd / total_length * 360
-        text_angle = (start_angle + end_angle) / 2.0
+        # text_angle = (gObj_ind+1)*(start_angle + end_angle) / float(n)
+        text_angle = start_angle + (gObj_ind+1)*(end_angle-start_angle)/float(nhits)
         gene_to_locations[gname].append((start_angle / 360., end_angle / 360.))
         if end_angle < 0 and start_angle > 0:
             end_angle += 360
@@ -767,7 +769,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         if label_segs:
             mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2.0
             centerpoint_angle = mid_sp / total_length * 360.
-            x, y = vu.pol2cart((curr_bh - 2 * bar_width), (centerpoint_angle / 360. * 2. * np.pi))
+            x, y = vu.pol2cart((curr_bh - 2.2 * bar_width), (centerpoint_angle / 360. * 2. * np.pi))
             font = font0.copy()
             if imputed_status[ind]:
                 font.set_style('italic')
@@ -866,7 +868,7 @@ def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_i
         if seg_id_labels:
             mid_sp = (segObj.abs_end_pos + segObj.abs_start_pos) / 2
             text_angle = mid_sp / total_length * 360.
-            x, y = vu.pol2cart(bar_height - 1.2, (text_angle / 360. * 2. * np.pi))
+            x, y = vu.pol2cart(bar_height - 1.5, (text_angle / 360. * 2. * np.pi))
             text_angle, ha = vu.correct_text_angle(text_angle)
             text = segObj.id + segObj.direction
             ax.text(x, y, text, color='grey', rotation=text_angle,
