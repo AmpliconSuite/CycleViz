@@ -741,7 +741,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             step = int(tick_freq/10000)
             a = int(np.floor(ts[0] / 10000)) + 1
             b = int(np.floor(te[0] / 10000)) + 1
-            print(a, b, ts[0], te[0], step)
+            # print(a, b, ts[0], te[0], step)
             for j in np.arange(a, b, s):
                 if (j*10000) % tick_freq == 0:
                     sj = j*10000
@@ -1015,7 +1015,7 @@ bpg_dict, seg_end_pos_d = {}, {}
 if args.cycles_file:
     if not args.outname:
         args.outname = os.path.splitext(os.path.basename(args.cycles_file))[0] + "_"
-    fname = args.outname + "cycle_" + args.cycle
+    fname = args.outname + "_cycle_" + args.cycle
     cycles, segSeqD, circular_D = vu.parse_cycles_file(args.cycles_file)
     isCycle = circular_D[args.cycle]
     cycle = cycles[args.cycle]
@@ -1028,7 +1028,7 @@ else:
         print("Must specify --sname with --structure-bed")
         sys.exit(1)
         # args.outname = os.path.splitext(os.path.basename(args.structure_bed))[0] + "_"
-    fname = args.outname + "cycle_1"
+    fname = args.outname + "_cycle_1"
     if args.structure_bed in {"hg19", "GRCh37", "hg38", "GRCh38"}:
         args.structure_bed = sourceDir + "resources/" + args.structure_bed + "_structure.bed"
     struct_data = vu.parse_bed(args.structure_bed, store_all_additional_fields=True)

@@ -1009,8 +1009,8 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
             print(c_id, "comp_scaling")
             scaled_seg_dist = abs(seg_end_l_pos - seg_start_l_pos) * (1 - contig_spacing)
             scaling_factor = scaled_seg_dist / (abs(cc_vect[cal_f - 1] - cc_vect[cal_l - 1]))
-            print(seg_start_l_pos, seg_end_l_pos, 1 - contig_spacing, scaled_seg_dist, total_length)
-            print(scaled_seg_dist, scaling_factor)
+            # print(seg_start_l_pos, seg_end_l_pos, 1 - contig_spacing, scaled_seg_dist, total_length)
+            # print(scaled_seg_dist, scaling_factor)
             # SET CONTIG SCALING FACTOR
 
         curr_contig_struct.scaling_factor = scaling_factor
@@ -1027,8 +1027,8 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
             print("now", abs_start_pos, abs_end_pos)
 
         print("SEG PLACEMENT ", c_id)
-        print(abs_start_pos, abs_end_pos)
-        print(seg_start_l_pos, seg_end_l_pos, scaling_factor)
+        # print(abs_start_pos, abs_end_pos)
+        # print(seg_start_l_pos, seg_end_l_pos, scaling_factor)
 
         curr_contig_struct.abs_start_pos = abs_start_pos
         curr_contig_struct.abs_end_pos = abs_end_pos
