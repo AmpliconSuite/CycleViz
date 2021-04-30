@@ -390,7 +390,7 @@ def plot_interior_tracks(ref_placements):
                 plot_rects(refObj, cfc.index)
 
 
-def plot_track_legend(refObj, ofpre, outer_bar, bar_width):
+def plot_track_legend(refObj, ofpre, outer_bar, bar_width, noPDF):
     #create a figure that is ? tall
     legw = 1
     fig_l = plt.figure(figsize=(2, 8/3.0))
@@ -418,15 +418,6 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width):
             # lcolor = 'lightgrey'
             rh = cfc.top - cfc.base + intertrack_spacing
             rb = cfc.base - intertrack_spacing/2
-            # if f_ind % 2 == 1:
-            #     if cfc.track_props['background_color'] == 'auto':
-            #         ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, facecolor='gainsboro', edgecolor='gainsboro',
-            #                                           lw=0, zorder=-1))
-            #         lcolor = 'white'
-            #
-            #     elif cfc.track_props['background_color']:
-            #         ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, facecolor=cfc.track_props['background_color'],
-            #                                           edgecolor=cfc.track_props['background_color'], lw=0, zorder=-1))
             ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, zorder=-1, **cfc.track_props['background_kwargs']))
 
             # plot the legends lines
@@ -489,7 +480,8 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width):
 
     ax_l.axis('off')
     fig_l.savefig(ofpre + '.png', dpi=600)
-    fig_l.savefig(ofpre + '.pdf', format='pdf')
+    if not noPDF:
+        fig_l.savefig(ofpre + '.pdf', format='pdf')
 
 
 def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
@@ -972,6 +964,7 @@ parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of t
                     action='store_true', default=False)
 parser.add_argument("--center_hole", type=float, help="whitespace in center of plot", default=1.25)
 parser.add_argument("--figure_size_style", choices=["normal", "small"], default="normal")
+parser.add_argument("--noPDF", help="Do not generate PDF file of visualization", action='store_true', default='False')
 
 args = parser.parse_args()
 if args.input_yaml_file:
@@ -984,7 +977,7 @@ print(args.ref)
 
 if not args.tick_fontsize:
     if not args.tick_type == 'ends':
-        args.tick_fontsize = 7
+        args.tick_fontsize = 5
     else:
         args.tick_fontsize = 4
 
@@ -1167,23 +1160,19 @@ if not args.hide_chrom_color_legend and args.structure_color == 'auto':
 
     plt.legend(handles=legend_patches, fontsize=8, loc=3, bbox_to_anchor=(-.3, .15), frameon=False)
 
-# p = PatchCollection(patches)
-# p.set_facecolor(f_color_v)
-# p.set_edgecolor(e_color_v)
-# p.set_linewidth(lw_v)
-# ax.add_collection(p)
 ax.set_aspect(1.0)
 plt.axis('off')
 
 print("saving PNG")
 plt.savefig(fname + '.png', dpi=600)
-print("saving PDF")
-plt.savefig(fname + '.pdf', format='pdf')
-plt.close()
+if not args.noPDF:
+    print("saving PDF")
+    plt.savefig(fname + '.pdf', format='pdf')
+    plt.close()
 
 # make plots of the yaml tracks
 print("saving legend")
 if args.feature_yaml_list:
-    plot_track_legend(ref_placements[0], fname + "_legend", outer_bar, bar_width)
+    plot_track_legend(ref_placements[0], fname + "_legend", outer_bar, bar_width, args.noPDF)
 
 print("finished")
