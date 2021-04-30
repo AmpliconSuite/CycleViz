@@ -973,11 +973,11 @@ if args.input_yaml_file:
 if args.ref == "GRCh38":
     args.ref = "hg38"
 
-print(args.ref)
+print("Plots will use reference " + args.ref)
 
 if not args.tick_fontsize:
     if not args.tick_type == 'ends':
-        args.tick_fontsize = 5
+        args.tick_fontsize = 3
     else:
         args.tick_fontsize = 4
 
@@ -1177,4 +1177,4 @@ if args.feature_yaml_list:
     print("saving legend")
     plot_track_legend(ref_placements[0], fname + "_legend", outer_bar, bar_width, args.noPDF)
 
-print("finished")
+print("finished\n")
