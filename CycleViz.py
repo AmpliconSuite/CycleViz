@@ -1171,8 +1171,8 @@ if not args.noPDF:
     plt.close()
 
 # make plots of the yaml tracks
-print("saving legend")
 if args.feature_yaml_list:
+    print("saving legend")
     plot_track_legend(ref_placements[0], fname + "_legend", outer_bar, bar_width, args.noPDF)
 
 print("finished")
