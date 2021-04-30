@@ -135,7 +135,7 @@ class CycleVizElemObj(object):
 
     # update label positions after trimming contigs
     def update_label_posns(self, s_diff):
-        print("diff", s_diff)
+        print("Trimmed by", s_diff)
         for ind in range(len(self.label_posns)):
             self.label_posns[ind] -= s_diff
 
@@ -392,7 +392,7 @@ def handle_struct_bed_data(struct_data):
             bidirectional_edge_dict[ae].add(bs)
             bidirectional_edge_dict[bs].add(ae)
 
-    print(bidirectional_edge_dict)
+    # print(bidirectional_edge_dict)
     return cycle, isCycle, segSeqD, seg_end_pos_d, bidirectional_edge_dict
 
 
@@ -1006,7 +1006,7 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
         # compute scaling
         scaling_factor = 1
         if circularViz:
-            print(c_id, "comp_scaling")
+            print("Scaling contig " + str(c_id))
             scaled_seg_dist = abs(seg_end_l_pos - seg_start_l_pos) * (1 - contig_spacing)
             scaling_factor = scaled_seg_dist / (abs(cc_vect[cal_f - 1] - cc_vect[cal_l - 1]))
             # print(seg_start_l_pos, seg_end_l_pos, 1 - contig_spacing, scaled_seg_dist, total_length)
@@ -1024,9 +1024,9 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
             print("applying scaling to ends")
             abs_start_pos = seg_start_l_pos - (cc_vect[cal_l - 1]) * scaling_factor
             abs_end_pos = abs_start_pos + (cc_vect[-1]) * scaling_factor
-            print("now", abs_start_pos, abs_end_pos)
+            # print("now", abs_start_pos, abs_end_pos)
 
-        print("SEG PLACEMENT ", c_id)
+        # print("SEG PLACEMENT ", c_id)
         # print(abs_start_pos, abs_end_pos)
         # print(seg_start_l_pos, seg_end_l_pos, scaling_factor)
 
@@ -1038,8 +1038,8 @@ def place_contigs_and_labels(path_seg_placements, aln_vect, total_length, contig
 
         csl = min(i_list[-1]["contig_label"], i_list[0]["contig_label"])
         cel = max(i_list[-1]["contig_label"], i_list[0]["contig_label"])
-        print("CSL/CEL", csl, cel)
-        print("")
+        # print("CSL/CEL", csl, cel)
+        # print("")
         # SET FIRST AND LAST LABEL ALIGNED IN THE CONTIG
         curr_contig_struct.aln_lab_ends = (csl, cel)
         curr_contig_struct.compute_label_posns()

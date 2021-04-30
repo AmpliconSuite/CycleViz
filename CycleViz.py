@@ -729,7 +729,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         else:
             text_trunc = 10000
             tick_freq = max(10000, 30000 * int(np.floor(total_length / 1200000)))
-            print("tick freq", tick_freq)
+            # print("tick freq", tick_freq)
             step = int(tick_freq/10000)
             a = int(np.floor(ts[0] / 10000)) + 1
             b = int(np.floor(te[0] / 10000)) + 1
@@ -836,7 +836,7 @@ def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_i
     cycle_label_locs = defaultdict(list)
     for ind, segObj in seg_placements.items():
         bar_height = unadj_bar_height + segObj.track_height_shift
-        print("cmap_plot", segObj.id)
+        # print("cmap_plot", segObj.id)
         if segObj.abs_end_pos - segObj.abs_start_pos > total_length:
             start_angle, end_angle = 360, 0
             print("cmap went full circle")
@@ -1087,11 +1087,13 @@ else:
     vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length)
 
     # plot cmap segs
+    print("Plotting graph segment CMAPs")
     plot_cmap_track(cycle_seg_placements, total_length, outer_bar + segment_bar_height, "darkorange")
 
     # check overlaps of contigs and adjust heights accordingly
     contig_height_shifts = vu.set_contig_height_shifts(contig_placements, contig_list)
     # plot contigs
+    print("Plotting contig CMAPs")
     plot_cmap_track(contig_placements, total_length, outer_bar + contig_bar_height, "cornflowerblue",
                     seg_id_labels=True)
 
