@@ -480,7 +480,7 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width, noPDF):
 
     ax_l.axis('off')
     fig_l.savefig(ofpre + '.png', dpi=600)
-    if not noPDF:
+    if noPDF is False:
         fig_l.savefig(ofpre + '.pdf', format='pdf')
 
 
@@ -728,7 +728,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
 
         else:
             text_trunc = 10000
-            tick_freq = max(10000, 30000 * int(np.floor(total_length / 1200000)))
+            tick_freq = max(10000, 20000 * int(np.floor(total_length / 1000000)))
             # print("tick freq", tick_freq)
             step = int(tick_freq/10000)
             a = int(np.floor(ts[0] / 10000)) + 1
@@ -794,7 +794,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
                 else:
                     va = 'top'
 
-            ax.text(x, y, t, color='grey', rotation=text_angle, ha=ha, va=va, fontsize=5, fontproperties=font,
+            ax.text(x, y, t, color='grey', rotation=text_angle, ha=ha, va=va, fontsize=4, fontproperties=font,
                     rotation_mode='anchor')
 
 
@@ -950,7 +950,7 @@ parser.add_argument("--gene_highlight_list", help="list of gene names to highlig
 parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
 parser.add_argument("--gene_spacing", help="How far from reference to plot gene names. Default 1.7", type=float,
                     default=1.7)
-parser.add_argument("--tick_type", help="Only place ticks at ends of non-contiguous segments",
+parser.add_argument("--tick_type", help="Represent ticks only at segment ends, or throughout ('standard' is default)",
                     choices=["ends", "standard", "none"], default="standard")
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float)
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
@@ -964,7 +964,7 @@ parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of t
                     action='store_true', default=False)
 parser.add_argument("--center_hole", type=float, help="whitespace in center of plot", default=1.25)
 parser.add_argument("--figure_size_style", choices=["normal", "small"], default="normal")
-parser.add_argument("--noPDF", help="Do not generate PDF file of visualization", action='store_true', default='False')
+parser.add_argument("--noPDF", help="Do not generate PDF file of visualization", action='store_true', default=False)
 
 args = parser.parse_args()
 if args.input_yaml_file:
@@ -1007,7 +1007,7 @@ bpg_dict, seg_end_pos_d = {}, {}
 # use AA files to determine the structure
 if args.cycles_file:
     if not args.outname:
-        args.outname = os.path.splitext(os.path.basename(args.cycles_file))[0] + "_"
+        args.outname = os.path.splitext(os.path.basename(args.cycles_file))[0]
     fname = args.outname + "_cycle_" + args.cycle
     cycles, segSeqD, circular_D = vu.parse_cycles_file(args.cycles_file)
     isCycle = circular_D[args.cycle]
@@ -1018,7 +1018,7 @@ if args.cycles_file:
 # use the structure_bed format to determine the structure
 else:
     if not args.outname:
-        print("Must specify --sname with --structure-bed")
+        print("Must specify --output with --structure-bed")
         sys.exit(1)
         # args.outname = os.path.splitext(os.path.basename(args.structure_bed))[0] + "_"
     fname = args.outname + "_cycle_1"
@@ -1167,7 +1167,7 @@ plt.axis('off')
 
 print("saving PNG")
 plt.savefig(fname + '.png', dpi=600)
-if not args.noPDF:
+if args.noPDF is False:
     print("saving PDF")
     plt.savefig(fname + '.pdf', format='pdf')
     plt.close()
