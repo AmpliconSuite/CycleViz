@@ -964,7 +964,11 @@ parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of t
                     action='store_true', default=False)
 parser.add_argument("--center_hole", type=float, help="whitespace in center of plot", default=1.25)
 parser.add_argument("--figure_size_style", choices=["normal", "small"], default="normal")
-parser.add_argument("--noPDF", help="Do not generate PDF file of visualization", action='store_true', default=False)
+parser.add_argument("--noPDF", help="Do not generate PDF file of visualization (default unset)", action='store_true',
+                    default=False)
+parser.add_argument("--noTrim", help="Do not trim unaligned contig regions from visualization (defauly unset)",
+                    action='store_true', default=False)
+
 
 args = parser.parse_args()
 if args.input_yaml_file:
@@ -1084,7 +1088,8 @@ else:
     contig_placements, contig_list = vu.place_contigs_and_labels(cycle_seg_placements, aln_vect, total_length,
                                                                  contig_cmap_vects, isCycle, True, segSeqD)
 
-    vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length)
+    if args.noTrim is False:
+        vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length, )
 
     # plot cmap segs
     print("Plotting graph segment CMAPs")
