@@ -262,7 +262,6 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
     # plot the legends lines
     legend_points = np.linspace(currStart / total_length * 2 * np.pi, (currEnd + 1) / total_length * 2 * np.pi, 10000)
     lheights = list(np.linspace(cfc.base, cfc.top, cfc.track_props['num_hlines']))
-    # legend_ticks = list(np.linspace(cfc.track_min, cfc.track_max, cfc.track_props['num_hlines']))
 
     # print("TRACK LEGEND HEIGHTS", legend_ticks)
     for lh in lheights:
@@ -745,7 +744,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             text_angle = j[1] / total_length * 360
             x, y = vu.pol2cart(curr_bh, (text_angle / 360 * 2 * np.pi))
             x_t, y_t = vu.pol2cart(curr_bh + 0.2, (text_angle / 360 * 2 * np.pi))
-            ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1)
+            ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1, zorder=-10)
 
             text_angle, ha = vu.correct_text_angle(text_angle)
             txt = " " + str(int(round((j[0]) / text_trunc))) if ha == "left" else str(int(round((j[0]) / text_trunc))) + " "
