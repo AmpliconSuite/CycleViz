@@ -880,7 +880,7 @@ def plot_alignment(contig_locs, segment_locs, total_length):
         seg_label_vect = segment_locs[a_d["seg_aln_number"]].label_posns
         c_l_pos = contig_label_vect[a_d["contig_label"] - 1]
         c_l_loc = c_l_pos / total_length * 2. * np.pi
-        # s_l_pos = seg_label_vect[s_num_dir*a_d["seg_label"]-(s_num_dir+1)/2]
+        # print(a_d["contig_id"],a_d["seg_id"],a_d["contig_label"],a_d["seg_label"])
         s_l_pos = seg_label_vect[a_d["seg_label"] - 1]
         s_l_loc = s_l_pos / total_length * 2. * np.pi
         contig_top = outer_bar + contig_bar_height + contig_locs[c_id].track_height_shift + bar_width
@@ -965,8 +965,8 @@ parser.add_argument("--center_hole", type=float, help="whitespace in center of p
 parser.add_argument("--figure_size_style", choices=["normal", "small"], default="normal")
 parser.add_argument("--noPDF", help="Do not generate PDF file of visualization (default unset)", action='store_true',
                     default=False)
-parser.add_argument("--noTrim", help="Do not trim unaligned contig regions from visualization (defauly unset)",
-                    action='store_true', default=False)
+parser.add_argument("--trim_contigs", help="Trim unaligned OM contig regions from visualization (defauly unset)",
+                    default='both', choices=['start', 'end', 'both', 'none'])
 
 
 args = parser.parse_args()
@@ -985,9 +985,12 @@ if not args.tick_fontsize:
         args.tick_fontsize = 4
 
 if args.figure_size_style == "small":
+    print("Using figure_size_style=small")
     bar_width *= 1.5
     args.gene_fontsize *= 2
     args.tick_fontsize *= 1.5
+    print("Gene fontsize scaled up 2x to " + str(args.gene_fontsize))
+    print("Tick fontsize scaled up 1.5x to: " + str(args.tick_fontsize))
 
 center_hole = args.center_hole
 gene_spacing = args.gene_spacing
@@ -1087,8 +1090,14 @@ else:
     contig_placements, contig_list = vu.place_contigs_and_labels(cycle_seg_placements, aln_vect, total_length,
                                                                  contig_cmap_vects, isCycle, True, segSeqD)
 
-    if args.noTrim is False:
-        vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length, )
+    if args.trim_contigs != 'none':
+        trim_s, trim_e = False, False
+        if args.trim_contigs == "both" or args.noTrim == "start":
+            trim_s = True
+        if args.trim_contigs == "both" or args.noTrim == "end":
+            trim_e = True
+
+        vu.decide_trim_contigs(contig_cmap_vects, contig_placements, total_length, trim_s, trim_e)
 
     # plot cmap segs
     print("Plotting graph segment CMAPs")
