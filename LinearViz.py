@@ -4,15 +4,18 @@ import argparse
 from collections import defaultdict
 import copy
 import os
+import sys
 
+from ast import literal_eval as make_tuple
 import matplotlib
-matplotlib.use('Agg') #this import must happen immediately after importing matplotlib
-
+matplotlib.use('Agg')  # this import must happen immediately after importing matplotlib
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
+from matplotlib.collections import LineCollection
 from matplotlib.collections import PatchCollection
 from matplotlib.font_manager import FontProperties
 import matplotlib.patches as mpatches
+from matplotlib.path import Path
 import numpy as np
 
 from bionanoUtil import *
@@ -20,6 +23,9 @@ import VizUtil as vu
 
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
+
+CV_RESOURCES = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
+print("Using resources in " + CV_RESOURCES)
 
 seg_spacing = 0.009
 bar_width_scaling = 0.02
@@ -32,6 +38,7 @@ ref_bar_height = 0
 bar_width = 1
 gene_to_locations = defaultdict(list)
 overlap_genes = []
+all_relGenes = []
 prev_start = 0
 alternate = True
 alternated = False

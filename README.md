@@ -130,7 +130,7 @@ The arguments that can be specified inside a YAML file for each data track.
 | Argument      | Default | Choices | Description |
 | :---        |    :----:  | :----:  | :--- |
 | `tracktype` | `standard` | `['standard', 'links', 'rects']`  | Thetrack will show numeric data (`standard`), links between points (`links`), or colored rectangles (`rects`).|
-| `primary_feature_bedgraph` | | path to a file formatted as bed, with position value in column 4 | Required argument. This is the data that will be shown. |
+| `primary_feature_bedgraph` | | path to a file formatted as bed, with data in column 4 | Required argument. This is the data that will be shown. |
 | `secondary_feature_bedgraph` | | path to a file formatted as bed, with position value in column 4 | Put a second source of data on the same track. | 
 | `primary_style` | `points` | `['points', 'lines', 'radial']` | Plot primary data track as `points`, connected `lines`, or `radial` lines from the bottom of the track. |
 | `secondary_style` | `points` | `['points', 'lines', 'radial']` | Plot secondary data track as `points`, connected `lines`, or `radial` lines from the bottom of the track. |

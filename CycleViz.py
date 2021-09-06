@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+from collections import defaultdict
 import copy
 import os
 import sys
@@ -23,13 +24,15 @@ import VizUtil as vu
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
 
+CV_RESOURCES = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
+print("Using resources in " + CV_RESOURCES)
+
 seg_spacing = 0.009
 bar_width = 2.1 / 3
 global_rot = 90.0
 center_hole = 1.25
 outer_bar = 10
-intertrack_spacing = .7
-gene_spacing = 1.7
+gene_spacing = 1.
 
 contig_bar_height = -13.5 / 3
 segment_bar_height = -8.0 / 3
@@ -202,22 +205,13 @@ def plot_rects(refObj, index):
     pTup = (refObj.chrom, refObj.ref_start, refObj.ref_end)
     for k, klist in cfc.primary_data.items():
         for x in klist:
-            # pTup = (k, x[0], x[1])
             istart, iend = x[0], x[1]
             seg_len = pTup[2] - pTup[1]
-            hasStart = False
-            hasEnd = False
             if refObj.direction == "+":
-                ts = max(0, istart - pTup[1])
-                te = min(seg_len, iend - pTup[1])
-
                 normStart = currStart + max(0, istart - pTup[1])
                 normEnd = currStart + min(seg_len, iend - pTup[1])
 
             else:
-                te = min(seg_len, pTup[2] - istart)
-                ts = max(0, pTup[2] - iend)
-
                 normEnd = currStart + min(seg_len, pTup[2] - istart)
                 normStart = currStart + max(0, pTup[2] - iend)
 
@@ -227,10 +221,13 @@ def plot_rects(refObj, index):
             if end_angle < 0 and start_angle > 0:
                 end_angle += 360
 
-            width = cfc.top - cfc.base
-            ctup = make_tuple("".join(x[2][2].split()))
-            ax.add_patch(mpatches.Wedge((0, 0), cfc.base, start_angle, end_angle, facecolor=ctup, linewidth=0,
-                                        width=width))
+            width = cfc.top - cfc.base  # height of the rectangle
+            # print(width, cfc.top, cfc.base)
+            ctup = make_tuple("".join(x[2][2].split()))   #index | other_value | color_tuple
+            if any([x > 1 for x in ctup]):
+                ctup = tuple([x/255.0 for x in ctup])
+            ax.add_patch(mpatches.Wedge((0, 0), cfc.base, start_angle, end_angle, facecolor=ctup, edgecolor=ctup,
+                                        width=width, **cfc.track_props['primary_kwargs']))
 
 
 def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total_length, seg_copies, f_ind):
@@ -243,6 +240,7 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
     height_scale_factor = (cfc.top - cfc.base)/float(cfc.track_max - cfc.track_min)
 
     # plot a background
+    print(cfc.track_props['background_kwargs'])
     if cfc.track_props['background_kwargs']['facecolor'] == 'auto':
         if f_ind % 2 == 1:
             cfc.track_props['background_kwargs']['facecolor'] = 'gainsboro'
@@ -386,7 +384,7 @@ def plot_interior_tracks(ref_placements):
                                    refObj.chrom, total_length, refObj.seg_count, cfc.index)
 
             if cfc.track_props['tracktype'] == 'rects':
-                plot_rects(refObj, cfc.index)
+                plot_rects(refObj, cfc.index) # iterates over all and finds and plots
 
 
 def plot_track_legend(refObj, ofpre, outer_bar, bar_width, noPDF):
@@ -651,12 +649,12 @@ def plot_genes(ref_placements, cycle, onco_set=None):
         # plot the gene track
         # print(ind, refObj.to_string(), len(relGenes))
         flanked = refObj.next_is_adjacent or refObj.prev_is_adjacent
-        plot_gene_bars(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1], ind,
-                        flanked)
+        plot_gene_bars(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1],
+                       ind, flanked)
 
 
 # plot the reference genome
-def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_segs, edge_ticks):
+def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_segs, edge_ticks, bw=bar_width):
     font0 = FontProperties()
     # rot_sp = global_rot / 360. * total_length
     for ind, refObj in ref_placements.items():
@@ -691,7 +689,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
 
         # lw_v.append(0.2)
         ax.add_patch(mpatches.Wedge((0, 0), curr_bh, end_angle, start_angle, facecolor=f_color, edgecolor=e_color,
-                                      linewidth=0.2, width=bar_width))
+                                    linewidth=0.2, width=bw))
 
         # makes the ticks on the reference genome wedges
         # TODO: Refactor outside
@@ -703,7 +701,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
         else:
             ts = (seg_coord_tup[2], refObj.abs_start_pos)
-            te = (seg_coord_tup[1] - 1 , refObj.abs_end_pos + 1)
+            te = (seg_coord_tup[1] - 1, refObj.abs_end_pos + 1)
             s = -1
             # posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
             #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
@@ -760,7 +758,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         if label_segs:
             mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2.0
             centerpoint_angle = mid_sp / total_length * 360.
-            x, y = vu.pol2cart((curr_bh - 2.2 * bar_width), (centerpoint_angle / 360. * 2. * np.pi))
+            x, y = vu.pol2cart((curr_bh - ref_label_height_factor), (centerpoint_angle / 360. * 2. * np.pi))
             font = font0.copy()
             if imputed_status[ind]:
                 font.set_style('italic')
@@ -793,30 +791,30 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
                 else:
                     va = 'top'
 
-            ax.text(x, y, t, color='grey', rotation=text_angle, ha=ha, va=va, fontsize=4, fontproperties=font,
-                    rotation_mode='anchor')
+            ax.text(x, y, t, color='grey', rotation=text_angle, ha=ha, va=va, fontsize=seg_label_fontsize,
+                    fontproperties=font, rotation_mode='anchor')
 
 
 # set the heights of the bed track features
 def get_feature_heights(ntracks, intertrack_spacing, has_OM, has_IS):
     IS_height = segment_bar_height/2
-    if ntracks > 0:
-        maxtop = outer_bar-(intertrack_spacing + 0.5)
+    if ntracks > 0 or has_IS:
+        maxtop = outer_bar-(intertrack_spacing + feature_ref_offset)
         if has_OM:
             maxtop += contig_bar_height
         if has_IS:
             maxtop += IS_height
 
-        if maxtop < center_hole:
+        if maxtop <= center_hole:
             print("ERROR: om and segment height exceeds allowed height in track")
             sys.exit(1)
 
         divs = np.linspace(center_hole, maxtop, ntracks+1)
-        bases = [divs[0], ]
+        bases = [divs[0] + intertrack_spacing, ]
         tops = []
         for p in divs[1:-1]:
-            tops.append(p - intertrack_spacing/2.0)
-            bases.append(p + intertrack_spacing/2.0)
+            tops.append(p)
+            bases.append(p + intertrack_spacing)
 
         tops.append(divs[-1])
         # establish the top of the segment bar
@@ -924,7 +922,7 @@ group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
 group.add_argument("--structure_bed", help="bed file specifying the structure of the regions to be plotted. To use a "
                                            "standard reference genome as the structure, specify 'hg19, GRCh37, hg38 or "
                                            "GRCh38")
-parser.add_argument("--cycle", help="cycle number to visualize [required with --cycles_file]")
+parser.add_argument("--cycle", help="cycle number to visualize [required with --cycles_file]", type=int)
 parser.add_argument("-g", "--graph", help="breakpoint graph file [required with --cycles_file]")
 parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
 parser.add_argument("--om_alignments",
@@ -940,6 +938,8 @@ parser.add_argument("--outname", "-o", help="output prefix")
 # parser.add_argument("--rot", help="number of segments to rotate counterclockwise", type=int, default=0)
 parser.add_argument("--label_segs", help="label segs with segments number-direction ('numbers') or segment names "
                                          "('names') or a custom list", default="", type=str, nargs='+')
+parser.add_argument("--seg_label_fontsize", help="reference segment label fontsize (default 4)", type=float, default=4)
+parser.add_argument("--seg_label_height", help="Backbone segment label height (default 2.2)", type=float, default=2.2)
 parser.add_argument("--gene_subset_file", help="file containing subset of genes to plot (e.g. oncogene genelist file)",
                     default="")
 parser.add_argument("--gene_subset_list", help="list of genes to plot (e.g. MYC PVT1)", nargs="+", type=str)
@@ -961,12 +961,15 @@ parser.add_argument("--structure_color", help="Use 'auto' coloring, or specify a
                     type=str, default='auto')
 parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of the chromosome colors",
                     action='store_true', default=False)
-parser.add_argument("--center_hole", type=float, help="whitespace in center of plot", default=1.25)
+parser.add_argument("--center_hole", type=float, help="whitespace in center of plot (Default 1.25)", default=1.25)
+parser.add_argument("--feature_ref_offset", type=float, help="Offset spacing between ref and feature tracks (Default 0.5)",
+                    default=0.5)
 parser.add_argument("--figure_size_style", choices=["normal", "small"], default="normal")
 parser.add_argument("--noPDF", help="Do not generate PDF file of visualization (default unset)", action='store_true',
                     default=False)
 parser.add_argument("--trim_contigs", help="Trim unaligned OM contig regions from visualization (defauly unset)",
                     default='both', choices=['start', 'end', 'both', 'none'])
+parser.add_argument("--intertrack_spacing", help="spacing between feature tracks (default 0.7)", type=float, default=0.7)
 
 
 args = parser.parse_args()
@@ -992,12 +995,16 @@ if args.figure_size_style == "small":
     print("Gene fontsize scaled up 2x to " + str(args.gene_fontsize))
     print("Tick fontsize scaled up 1.5x to: " + str(args.tick_fontsize))
 
+ref_label_height_factor = args.seg_label_height * bar_width
 center_hole = args.center_hole
 gene_spacing = args.gene_spacing
+feature_ref_offset = args.feature_ref_offset
+intertrack_spacing = args.intertrack_spacing
+seg_label_fontsize = args.seg_label_fontsize
 
 sourceDir = os.path.dirname(os.path.abspath(__file__)) + "/"
 
-print("Unaligned fraction cutoff set to " + str(vu.unaligned_cutoff_frac))
+# print("Unaligned fraction cutoff set to " + str(vu.unaligned_cutoff_frac))
 chromosome_colors = vu.get_chr_colors()
 plt.clf()
 fig, ax = plt.subplots()
@@ -1014,7 +1021,7 @@ bpg_dict, seg_end_pos_d = {}, {}
 if args.cycles_file:
     if not args.outname:
         args.outname = os.path.splitext(os.path.basename(args.cycles_file))[0]
-    fname = args.outname + "_cycle_" + args.cycle
+    fname = args.outname + "_cycle_" + str(args.cycle)
     cycles, segSeqD, circular_D = vu.parse_cycles_file(args.cycles_file)
     isCycle = circular_D[args.cycle]
     cycle = cycles[args.cycle]
@@ -1024,12 +1031,12 @@ if args.cycles_file:
 # use the structure_bed format to determine the structure
 else:
     if not args.outname:
-        print("Must specify --output with --structure-bed")
+        print("Must specify --outname with --structure-bed")
         sys.exit(1)
         # args.outname = os.path.splitext(os.path.basename(args.structure_bed))[0] + "_"
     fname = args.outname + "_cycle_1"
     if args.structure_bed in {"hg19", "GRCh37", "hg38", "GRCh38"}:
-        args.structure_bed = sourceDir + "resources/" + args.structure_bed + "_structure.bed"
+        args.structure_bed = CV_RESOURCES + args.structure_bed + "_structure.bed"
     struct_data = vu.parse_bed(args.structure_bed, store_all_additional_fields=True)
     cycle, isCycle, segSeqD, seg_end_pos_d, bpg_dict = vu.handle_struct_bed_data(struct_data)
 
@@ -1041,7 +1048,7 @@ raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD)
 # determine which genes to show
 gene_set = set()
 if args.gene_subset_file.upper() == "BUSHMAN":
-    args.gene_subset_file = sourceDir + "resources/Bushman_group_allOnco_May2018.tsv"
+    args.gene_subset_file = CV_RESOURCES + "Bushman_group_allOnco_May2018.tsv"
 
 if args.gene_subset_file:
     gff = True if args.gene_subset_file.endswith(".gff") else False
@@ -1115,7 +1122,6 @@ else:
     imputed_status = vu.imputed_status_from_aln(aln_vect, len(cycle))
 
 print("plotting structure")
-print(args.label_segs)
 plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.tick_type)
 if args.annotate_structure == 'genes' or gene_set:
     print("Reading genes")
@@ -1127,34 +1133,38 @@ if args.annotate_structure == 'genes' or gene_set:
 # Interior segments
 if args.interior_segments_cycle:
     IS_cycles, IS_segSeqD, IS_circular_D = vu.parse_cycles_file(args.interior_segments_cycle)
-    print("Interior segment cycles handles first cycle only. Multi-cycle support coming soon")
-    IS_cycle, IS_isCircular = IS_cycles["1"], IS_circular_D["1"]
-    IS_rObj_placements, new_IS_cycle, new_IS_links = vu.handle_IS_data(ref_placements, IS_cycle, IS_segSeqD,
-                                                                       IS_isCircular, IS_bh)
-    plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, None)
+    print("Interior segment cycles must be non-overlapping for proper visualization.")
 
-    plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links)
+    for IS_cnum in sorted(IS_cycles.keys()):
+        IS_cycle, IS_isCircular = IS_cycles[IS_cnum], IS_circular_D[IS_cnum]
+        IS_rObj_placements, new_IS_cycle, new_IS_links = vu.handle_IS_data(ref_placements, IS_cycle, IS_segSeqD,
+                                                                           IS_isCircular, IS_bh)
+        plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, 'none', 1.1)
 
-# bedgraph
+        plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links)
+
+# cytobanding
+if args.annotate_structure != "genes":
+    annot_struct_yaml = args.annotate_structure
+    if args.annotate_structure == 'cytoband':
+        annot_struct_yaml = CV_RESOURCES + "cytoBand_" + args.ref + ".yaml"
+
+    cfc = vu.parse_feature_yaml(annot_struct_yaml, 0, 1, CV_RESOURCES)
+    cfc.base, cfc.top = outer_bar, outer_bar+bar_width
+    vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
+    for refObj in ref_placements.values():
+        plot_rects(refObj, 0)
+
 if args.feature_yaml_list:
-    if args.annotate_structure != "genes":
-        cfc = vu.parse_feature_yaml(args.annotate_structure, 0, 1)
-        cfc.base, cfc.top = outer_bar, outer_bar+bar_width
-        vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
-        print("plotting rects")
-        for refObj in ref_placements.values():
-            plot_rects(refObj, 0)
-
     for ind, yaml_file in enumerate(args.feature_yaml_list):
         cfc = vu.parse_feature_yaml(yaml_file, ind + 1, len(args.feature_yaml_list))
         cfc.base, cfc.top = fbases[ind], ftops[ind]
         vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])
-        if cfc.track_props['tracktype'] == 'standard':
+        if cfc.track_props['tracktype'] == 'standard' or cfc.track_props['tracktype'] == 'rects':
             vu.reset_track_min_max(ref_placements, ind, cfc)
             plot_interior_tracks(ref_placements)
         else:
             plot_links(cfc)
-
 
 if bpg_dict:
     plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)

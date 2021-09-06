@@ -250,7 +250,7 @@ class feature_track(object):
             self.posB_hits = []
 
 
-# SET COLORS
+# Set colors for chromosomes
 def get_chr_colors():
     to_add = plt.cm.get_cmap(None, 4).colors[1:]
     # color_vect = ["#ffe8ed","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
@@ -333,6 +333,7 @@ def parse_cycles_file(cycles_file):
                 curr_cycle = []
                 fields = line.rstrip().rsplit(";")
                 lineD = {x.rsplit("=")[0]: x.rsplit("=")[1] for x in fields}
+                lineD["Cycle"] = int(lineD["Cycle"])
                 segs = lineD["Segments"].rsplit(",")
                 for i in segs:
                     seg = i[:-1]
@@ -362,7 +363,7 @@ def handle_struct_bed_data(struct_data):
     isCycle = True
     uind = 0
     for ind, i in enumerate(flatvals):
-        print(i)
+        # print(i)
         # 0 is chrom, 1 is index, 2 is start, 3 is end, 4 is tuple of datastuff
         # datastuff is strand, connected
         pt = (i[0], i[1], i[2])
@@ -383,9 +384,9 @@ def handle_struct_bed_data(struct_data):
         isCycle = False
 
     # make the bpg dict
-    print(cycle)
+    # print(cycle)
     for a, b, conn in zip(cycle, cycle[1:] + [cycle[0]], connections):
-        print(a,b,conn)
+        # print(a,b,conn)
         if conn:
             ae = seg_end_pos_d[a[0]][1] if a[1] == '+' else seg_end_pos_d[a[0]][0]
             bs = seg_end_pos_d[b[0]][0] if b[1] == '+' else seg_end_pos_d[b[0]][1]
@@ -497,9 +498,9 @@ def parse_bed(bedfile, store_all_additional_fields=False):
 
         else:
             for entry_index, line in enumerate(infile):
-                line = line.rstrip("\t")
-                if not line.startswith("#") and line:
-                    fields = line.rsplit()
+                line = line.rstrip("\n")
+                if not line.startswith("#") and len(line) > 0:
+                    fields = line.rsplit('\t')
                     chrom = fields[0]
                     begin, end = float(fields[1]), float(fields[2])
                     if not store_all_additional_fields:
@@ -579,17 +580,17 @@ def rescale_by_secondary(primary_dset, secondary_dset, chrom, mode):
 # append the coordinate restricted feature (restricted_cfc) to a list of features kept by the reference object (obj)
 def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0):
     if cfc.track_props['tracktype'] == 'standard' or cfc.track_props['tracktype'] == 'rects':
-        print("extracting features, ET", primary_end_trim)
+        # print("extracting features, ET", primary_end_trim)
         for obj in ref_placements.values():
             primeTrim = primary_end_trim
             if obj.ref_end - obj.ref_start <= primary_end_trim*2:
                 primeTrim = max(0,(obj.ref_end - obj.ref_start)/2 - 2)
-                print("reset ET ", primeTrim)
+                # print("reset ET ", primeTrim)
 
             secTrim = secondary_end_trim
             if obj.ref_end - obj.ref_start <= primary_end_trim * 2:
                 secTrim = max(0, (obj.ref_end - obj.ref_start) / 2 - 2)
-                print("reset ET ", secTrim)
+                # print("reset ET ", secTrim)
 
             local_primary_data = defaultdict(list)
             local_secondary_data = defaultdict(list)
@@ -766,13 +767,13 @@ def handle_IS_data(ref_placements, IS_cycle, IS_segSeqD, IS_isCircular, IS_bh, c
     else:
         new_IS_links.append(False)
 
-    print(new_IS_links)
-    print(new_IS_cycle)
+    # print(new_IS_links)
+    # print(new_IS_cycle)
     return IS_rObj_placements, new_IS_cycle, new_IS_links
 
 
-# BIONANO PLOTTING FUNCTIONS
 # -----------------------------------------
+# Plotting functions for Bionano
 
 
 def check_segdup(aln_vect, cycle, circular):
@@ -833,6 +834,8 @@ def parse_alnfile(path_aln_file):
     return aln_vect, meta_dict
 
 # -----------------------------------------
+# compute track properties and data placements in plot
+
 
 # determine segments linearly adjacent in ref genome
 def adjacent_segs(cycle, segSeqD, isCycle):
@@ -1147,7 +1150,7 @@ def create_kwargs(kwtype="Collection", facecolors=None, edgecolors=None, marker=
     if kwtype == "Scatter":
         curr_kwargs = {
             'edgecolors': edgecolors,
-            'facecolors': facecolors,
+            'facecolor': facecolors,
             'marker': marker,
             's': markersize,
             'linewidth': linewidth
@@ -1172,9 +1175,9 @@ def create_kwargs(kwtype="Collection", facecolors=None, edgecolors=None, marker=
         if edgecolors is None:
             edgecolors = 'none'
         curr_kwargs = {
-            "edgecolor": edgecolors,
+            "linewidth": 0.1,
             "facecolor": facecolors,
-            "linewidth": linewidth
+            "edgecolor": edgecolors
         }
 
     elif kwtype == "Text":
@@ -1208,18 +1211,20 @@ def parse_main_args_yaml(args):
             args.om_segs = sample_data.get("om_segs")
         if "graph" in sample_data:
             args.graph = sample_data.get("graph")
-        if "i" in sample_data:
-            args.path_alignment = sample_data.get("i")
+        if "AR_path_alignment" in sample_data:
+            args.AR_path_alignment = sample_data.get("i")
         if "ref" in sample_data:
             args.ref = sample_data.get("ref")
         if "o" in sample_data:
-            args.o = sample_data.get("o")
+            args.outname = sample_data.get("o")
         if "outname" in sample_data:
-            args.o = sample_data.get("outname")
-        if "rot" in sample_data:
-            args.rot = sample_data.get("rot")
+            args.outname = sample_data.get("outname")
+        # if "rot" in sample_data:
+        #     args.rot = sample_data.get("rot")
         if "label_segs" in sample_data:
             args.label_segs = sample_data.get("label_segs")
+        if "seg_label_fontsize" in sample_data:
+            args.seg_label_fontsize = sample_data.get("seg_label_fontsize")
         if "gene_subset_file" in sample_data:
             args.gene_subset_files = sample_data.get("gene_subset_file")
         if "gene_subset_list" in sample_data:
@@ -1237,23 +1242,34 @@ def parse_main_args_yaml(args):
             args.tick_type = sample_data.get("tick_type")
         if "center_hole" in sample_data:
             args.center_hole = sample_data.get("center_hole")
+        if "feature_ref_offset" in sample_data:
+            args.feature_ref_offset = sample_data.get("feature_ref_offset")
+        if "figure_size_style" in sample_data:
+            args.figure_size_style = sample_data.get("figure_size_style")
+        if "noPDF" in sample_data:
+            args.figure_noPDF = sample_data.get("noPDF")
+        if "trim_contigs" in sample_data:
+            args.trim_contigs = sample_data.get("trim_contigs")
         if "interior_segments_cycle" in sample_data:
             args.interior_segments_cycle = sample_data.get("interior_segments_cycle")
         if "hide_chrom_color_legend" in sample_data:
-            args.hide_chrom_color_legend = sample_data["hide_chrom_color_legend"]
+            args.hide_chrom_color_legend = sample_data.get("hide_chrom_color_legend")
         if "structure_color" in sample_data:
-            args.structure_color = sample_data["structure_color"]
+            args.structure_color = sample_data.get("structure_color")
         if "annotate_structure" in sample_data:
-            args.annotate_structure = sample_data["annotate_structure"]
+            args.annotate_structure = sample_data.get("annotate_structure")
+        if "intertrack_spacing" in sample_data:
+            args.intertrack_spacing = sample_data.get("intertrack_spacing")
 
 
-def parse_feature_yaml(yaml_file, index, totfiles):
+def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
     with open(yaml_file) as yf:
         # specifies the default track properties
         dd = {
             'tracktype': "standard",
             'primary_feature_bedgraph': "",
             'secondary_feature_bedgraph': "",
+            'cycles_file': "",
             'primary_style': 'points',
             'rescale_by_secondary': False,
             'rescale_secondary_to_primary': False,
@@ -1286,16 +1302,22 @@ def parse_feature_yaml(yaml_file, index, totfiles):
         }
 
         indd = yaml.safe_load(yf)
-        print(indd)
         dd.update(indd)
 
         lkeys = ['tracktype', 'primary_style', 'secondary_style', 'linkpoint']
         for lkey in lkeys:
             dd[lkey] = dd[lkey].lower()
 
+        if dd["primary_feature_bedgraph"]:
+            dd['primary_feature_bedgraph'] = path_prefix + dd['primary_feature_bedgraph']
+        if dd["secondary_feature_bedgraph"]:
+            dd['secondary_feature_bedgraph'] = path_prefix + dd['secondary_feature_bedgraph']
+
         # set kwargs
         # primary
-        if dd['primary_style'] == "points":
+        if dd['tracktype'] == "rects":
+            ktype = "Patch"
+        elif dd['primary_style'] == "points":
             ktype = 'Scatter'
         else:
             ktype = 'Line2D'
