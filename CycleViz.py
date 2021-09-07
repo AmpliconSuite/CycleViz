@@ -310,7 +310,7 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
         val_data = []
         for p in datalist:
             if p[1] - p[0] > granularity:
-                plocs = np.linspace(p[0], p[1], (p[1] - p[0])//granularity)
+                plocs = np.linspace(p[0], p[1], int((p[1] - p[0])/granularity))
                 for newp in plocs:
                     point_data.append(newp)
                     val_data.append(p[2])
