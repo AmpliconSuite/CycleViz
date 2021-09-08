@@ -535,7 +535,8 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
     gInstance.draw_marker_ends(tbot)
 
 
-def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, flanked, plot_gene_direction=True):
+def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, flanked, cycle, isCycle,
+                   plot_gene_direction=True):
     overlap_genes.append({})
     nhits = len(relGenes) + 1
     for gObj_ind, gObj in enumerate(sorted(relGenes, key=lambda x: x.gstart)):
@@ -590,15 +591,17 @@ def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, in
         # TODO: REFACTOR TO OUTSIDE - put in the gParent
         if gname not in overlap_genes[len(overlap_genes)-2] or not overlap_genes[len(overlap_genes)-2].get(gname)[0] \
                 or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
-            x_t, y_t = vu.pol2cart(outer_bar + bar_width + gene_spacing, (text_angle / 360 * 2 * np.pi))
-            text_angle, ha = vu.correct_text_angle(text_angle)
+            #handle wraparound
+            if not (isCycle and ind == len(cycle)-1 and gname in overlap_genes[0]):
+                x_t, y_t = vu.pol2cart(outer_bar + bar_width + gene_spacing, (text_angle / 360 * 2 * np.pi))
+                text_angle, ha = vu.correct_text_angle(text_angle)
 
-            if gObj.highlight_name:
-                ax.text(x_t, y_t, gname, style='italic', color='r', rotation=text_angle, ha=ha, va="center",
-                        fontsize=gene_fontsize, rotation_mode='anchor')
-            else:
-                ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center",
-                        fontsize=gene_fontsize, rotation_mode='anchor')
+                if gObj.highlight_name:
+                    ax.text(x_t, y_t, gname, style='italic', color='r', rotation=text_angle, ha=ha, va="center",
+                            fontsize=gene_fontsize, rotation_mode='anchor')
+                else:
+                    ax.text(x_t, y_t, gname, style='italic', color='k', rotation=text_angle, ha=ha, va="center",
+                            fontsize=gene_fontsize, rotation_mode='anchor')
 
         # draw something to show direction and truncation status
         if plot_gene_direction:
@@ -638,7 +641,7 @@ def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, in
 
 
 # Gene plotting
-def plot_genes(ref_placements, cycle, onco_set=None):
+def plot_genes(ref_placements, cycle, isCycle, onco_set=None):
     if onco_set is None:
         onco_set = set()
 
@@ -650,7 +653,7 @@ def plot_genes(ref_placements, cycle, onco_set=None):
         # print(ind, refObj.to_string(), len(relGenes))
         flanked = refObj.next_is_adjacent or refObj.prev_is_adjacent
         plot_gene_bars(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1],
-                       ind, flanked)
+                       ind, flanked, cycle, isCycle)
 
 
 # plot the reference genome
@@ -1127,7 +1130,7 @@ if args.annotate_structure == 'genes' or gene_set:
     print("Reading genes")
     gene_tree = vu.parse_genes(args.ref, args.gene_highlight_list)
     print("plotting genes")
-    plot_genes(ref_placements, cycle, gene_set)
+    plot_genes(ref_placements, cycle, isCycle, gene_set)
 
 
 # Interior segments
