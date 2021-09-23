@@ -697,14 +697,14 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         # makes the ticks on the reference genome wedges
         # TODO: Refactor outside
         if cycle[ind][1] == "+":
-            ts = (seg_coord_tup[1], refObj.abs_start_pos)
-            te = (seg_coord_tup[2] + 1, refObj.abs_end_pos+1)
+            ts = (seg_coord_tup[1], refObj.abs_start_pos, 0)
+            te = (seg_coord_tup[2] + 1, refObj.abs_end_pos+1, 1)
             s = 1
             # posns = zip(range(seg_coord_tup[1], seg_coord_tup[2] + 1),
             #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
         else:
-            ts = (seg_coord_tup[2], refObj.abs_start_pos)
-            te = (seg_coord_tup[1] - 1, refObj.abs_end_pos + 1)
+            ts = (seg_coord_tup[2], refObj.abs_start_pos, 0)
+            te = (seg_coord_tup[1] - 1, refObj.abs_end_pos + 1, -1)
             s = -1
             # posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
             #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
@@ -748,7 +748,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1, zorder=-10)
 
             text_angle, ha = vu.correct_text_angle(text_angle)
-            txt = " " + str(int(round((j[0]) / text_trunc))) if ha == "left" else str(int(round((j[0]) / text_trunc))) + " "
+            txt = " " + str(int(round((j[0]-j[2]) / text_trunc))) if ha == "left" else str(int(round((j[0]-j[2]) / text_trunc))) + " "
 
             ax.text(x_t, y_t, txt, color='grey', rotation=text_angle,
                     ha=ha, va="center", fontsize=tick_fontsize, rotation_mode='anchor')
