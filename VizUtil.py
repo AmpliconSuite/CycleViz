@@ -107,9 +107,8 @@ class CycleVizElemObj(object):
             self.label_posns = self.label_posns[::-1]
 
     def to_string(self):
-        return "{}{} | Start: {} | End: {} | scaling {}".format(self.id, self.direction, self.chrom,
-                                                                str(self.abs_start_pos),
-                                                                str(self.abs_end_pos), str(self.scaling_factor))
+        return "{}{} | Chrom: {} | Start: {} | End: {} | scaling {}".format(self.id, self.direction, self.chrom,
+                                            str(self.abs_start_pos), str(self.abs_end_pos), str(self.scaling_factor))
 
     # trim visualized contig if it's long and unaligned
     def trim_obj_ends(self, total_length):
@@ -273,7 +272,7 @@ def get_chr_colors():
 
 # rotate text to be legible on both sides of circle
 def correct_text_angle(text_angle):
-    if abs(text_angle > 90 and abs(text_angle) < 270):
+    if 90 < abs(text_angle) < 270:
         text_angle -= 180
         ha = "right"
     else:
@@ -1219,8 +1218,6 @@ def parse_main_args_yaml(args):
             args.outname = sample_data.get("o")
         if "outname" in sample_data:
             args.outname = sample_data.get("outname")
-        # if "rot" in sample_data:
-        #     args.rot = sample_data.get("rot")
         if "label_segs" in sample_data:
             args.label_segs = sample_data.get("label_segs")
         if "seg_label_fontsize" in sample_data:
@@ -1260,6 +1257,8 @@ def parse_main_args_yaml(args):
             args.annotate_structure = sample_data.get("annotate_structure")
         if "intertrack_spacing" in sample_data:
             args.intertrack_spacing = sample_data.get("intertrack_spacing")
+        if "rotate_to_min" in sample_data:
+            args.rotate_to_min = sample_data.get("rotate_to_min")
 
 
 def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):

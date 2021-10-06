@@ -103,6 +103,7 @@ The structure of the visualized regions can be specified with either an AA cycle
 | `--segment_end_ticks` | | Label exact coordinate endpoints of segments and do not show tick marks along segment. Default is off, and will print ticks of approx location (scaled by 10 kbp) along the segment. |
 | `--tick_fontsize` | 7 | Fontsize for coordinate ticks or endpoint coordinates. |
 | `--hide_chrom_color_legend [True/False]` | `False` | Do not print a map of color to chromosome name on the left side. Perhaps set to `True` if showing more than ~10 chroms. |
+| `--rotate_to_min` | | Rotate the plot such that the smallest genomic coordinate resides at the 0 degree position in the first quadrant (3 o'clock). |
 
 #### Specifying properties related to interior data track features
 | Argument      | Default | Description |

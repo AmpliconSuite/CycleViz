@@ -240,7 +240,7 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
     height_scale_factor = (cfc.top - cfc.base)/float(cfc.track_max - cfc.track_min)
 
     # plot a background
-    print(cfc.track_props['background_kwargs'])
+    # print(cfc.track_props['background_kwargs'])
     if cfc.track_props['background_kwargs']['facecolor'] == 'auto':
         if f_ind % 2 == 1:
             cfc.track_props['background_kwargs']['facecolor'] = 'gainsboro'
@@ -593,9 +593,10 @@ def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, in
                 or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
             #handle wraparound
             if not (isCycle and ind == len(cycle)-1 and gname in overlap_genes[0]):
+                print(gname, text_angle)
                 x_t, y_t = vu.pol2cart(outer_bar + bar_width + gene_spacing, (text_angle / 360 * 2 * np.pi))
                 text_angle, ha = vu.correct_text_angle(text_angle)
-
+                print(gname, text_angle)
                 if gObj.highlight_name:
                     ax.text(x_t, y_t, gname, style='italic', color='r', rotation=text_angle, ha=ha, va="center",
                             fontsize=gene_fontsize, rotation_mode='anchor')
@@ -667,6 +668,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             curr_bh = outer_bar
 
         # seg_coord_tup = segSeqD[cycle[ind][0]]
+        # print(ind, refObj.to_string())
         chrom = refObj.chrom
         seg_coord_tup = (refObj.chrom, refObj.ref_start, refObj.ref_end)
         start_angle, end_angle = start_end_angle(refObj.abs_end_pos, refObj.abs_start_pos, total_length)
@@ -748,7 +750,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1, zorder=-10)
 
             text_angle, ha = vu.correct_text_angle(text_angle)
-            txt = " " + str(int(round((j[0]-j[2]) / text_trunc))) if ha == "left" else str(int(round((j[0]-j[2]) / text_trunc))) + " "
+            txt = " " + str(int(round((j[0]-j[1]) / text_trunc))) if ha == "left" else str(int(round((j[0]-j[1]) / text_trunc))) + " "
 
             ax.text(x_t, y_t, txt, color='grey', rotation=text_angle,
                     ha=ha, va="center", fontsize=tick_fontsize, rotation_mode='anchor')
@@ -890,19 +892,58 @@ def plot_alignment(contig_locs, segment_locs, total_length):
         ax.plot([x_c, x_s], [y_c, y_s], color="grey", linewidth=linewidth)
 
 
-def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_index_is_adj, next_seg_index_is_adj,
-                                   isCycle, cycle_seg_counts, aln_vect=None):
-    if aln_vect is None:
-        aln_vect = []
+# identify the offset of the segment with minimum location
+def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, isCycle):
+    minChrom = "Z"
+    minLoc = np.float('inf')
+    curr_start = 0.0 if isCycle else spacing_bp
+    next_start = 0
+    minSegCStart = curr_start
+    for ind, i in enumerate(cycle):
+        cc, ca, cb = segSeqD[i[0]]
+        cc = cc.lstrip("chr")
+        try:
+            cc = int(cc)
+        except ValueError:
+            pass
 
+        dir = i[1]
+        if dir == "-":
+            cs = cb
+        else:
+            cs = ca
+
+        seg_len = cb - ca
+        seg_end = curr_start + seg_len
+
+        if cc <= minChrom and cs < minLoc:
+            minChrom, minLoc, minSegCStart = cc, cs, curr_start
+
+        next_start = seg_end
+        mod_ind = (ind + 1) % (len(prev_seg_index_is_adj))
+        if not prev_seg_index_is_adj[mod_ind]:
+            next_start += spacing_bp
+
+        curr_start = next_start
+
+    total_length = next_start
+    return minSegCStart, total_length
+
+
+def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_index_is_adj, next_seg_index_is_adj,
+                                   isCycle, cycle_seg_counts, rotate_to_min):
     spacing_bp = seg_spacing * raw_cycle_length
     cycle_ref_placements = {}
     curr_start = 0.0 if isCycle else spacing_bp
+    cso, total_length = compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, isCycle)
+    if rotate_to_min:
+        curr_start-=cso
+
     next_start = 0
     for ind, i in enumerate(cycle):
         seg_id_count = cycle_seg_counts[i[0]]
         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
-        seg_end = curr_start + seg_len
+        seg_end = (curr_start + seg_len) % total_length
         padj, nadj = prev_seg_index_is_adj[ind], next_seg_index_is_adj[ind]
         curr_obj = vu.CycleVizElemObj(i[0], segSeqD[i[0]][0], segSeqD[i[0]][1], segSeqD[i[0]][2], i[1], curr_start,
                                       seg_end, seg_id_count, padj, nadj)
@@ -912,9 +953,8 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
         if not prev_seg_index_is_adj[mod_ind]:
             next_start += spacing_bp
 
-        curr_start = next_start
+        curr_start = next_start % total_length
 
-    total_length = next_start
     return cycle_ref_placements, total_length
 
 
@@ -962,18 +1002,19 @@ parser.add_argument("--annotate_structure", help="What to plot on the outer stru
                     " or use predefined 'genes' or 'cytoband' arguments", type=str, default="genes")
 parser.add_argument("--structure_color", help="Use 'auto' coloring, or specify a single color for everything",
                     type=str, default='auto')
-parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of the chromosome colors",
-                    action='store_true', default=False)
+parser.add_argument("--rotate_to_min", help="Rotate structure so the lowest genomic coordinate appears at 0-degrees in "
+                    "along first quadrant (3 o'clock position)", action='store_true', default=False)
 parser.add_argument("--center_hole", type=float, help="whitespace in center of plot (Default 1.25)", default=1.25)
+parser.add_argument("--intertrack_spacing", help="spacing between feature tracks (default 0.7)", type=float, default=0.7)
 parser.add_argument("--feature_ref_offset", type=float, help="Offset spacing between ref and feature tracks (Default 0.5)",
                     default=0.5)
 parser.add_argument("--figure_size_style", choices=["normal", "small"], default="normal")
 parser.add_argument("--noPDF", help="Do not generate PDF file of visualization (default unset)", action='store_true',
                     default=False)
+parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of the chromosome colors",
+                    action='store_true', default=False)
 parser.add_argument("--trim_contigs", help="Trim unaligned OM contig regions from visualization (defauly unset)",
                     default='both', choices=['start', 'end', 'both', 'none'])
-parser.add_argument("--intertrack_spacing", help="spacing between feature tracks (default 0.7)", type=float, default=0.7)
-
 
 args = parser.parse_args()
 if args.input_yaml_file:
@@ -1067,7 +1108,7 @@ fbases, ftops, IS_bh = get_feature_heights(len(args.feature_yaml_list), intertra
 if not args.om_alignments:
     ref_placements, total_length = construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length,
                                                                   prev_seg_index_is_adj, next_seg_index_is_adj,
-                                                                  isCycle, cycle_seg_counts)
+                                                                  isCycle, cycle_seg_counts, args.rotate_to_min)
     imputed_status = [False] * len(cycle)
 
 # only if bionano data present
@@ -1091,7 +1132,7 @@ else:
 
     ref_placements, total_length = construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length,
                                                                   prev_seg_index_is_adj, next_seg_index_is_adj, isCycle,
-                                                                  cycle_seg_counts)
+                                                                  cycle_seg_counts, args.rotate_to_min)
 
     cycle_seg_placements = vu.place_path_segs_and_labels(cycle, ref_placements, seg_cmap_vects)
     contig_cmaps = parse_cmap(args.contigs, True)
