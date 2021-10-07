@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+__author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
+__version__ = "0.1.0"
+
 import argparse
 from collections import defaultdict
 import copy
@@ -593,10 +596,8 @@ def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, in
                 or seg_dir != overlap_genes[len(overlap_genes)-2].get(gname)[1]:
             #handle wraparound
             if not (isCycle and ind == len(cycle)-1 and gname in overlap_genes[0]):
-                print(gname, text_angle)
                 x_t, y_t = vu.pol2cart(outer_bar + bar_width + gene_spacing, (text_angle / 360 * 2 * np.pi))
                 text_angle, ha = vu.correct_text_angle(text_angle)
-                print(gname, text_angle)
                 if gObj.highlight_name:
                     ax.text(x_t, y_t, gname, style='italic', color='r', rotation=text_angle, ha=ha, va="center",
                             fontsize=gene_fontsize, rotation_mode='anchor')
@@ -916,7 +917,7 @@ def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, is
         seg_len = cb - ca
         seg_end = curr_start + seg_len
 
-        if cc <= minChrom and cs < minLoc:
+        if cc < minChrom or (cc == minChrom and cs < minLoc):
             minChrom, minLoc, minSegCStart = cc, cs, curr_start
 
         next_start = seg_end
@@ -926,6 +927,7 @@ def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, is
 
         curr_start = next_start
 
+    print(minChrom, minLoc, minSegCStart)
     total_length = next_start
     return minSegCStart, total_length
 
