@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+__author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
+
 import argparse
 import os
 import subprocess
