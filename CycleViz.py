@@ -742,7 +742,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
                     sj = j*10000
                     rpos = vu.convert_gpos_to_ropos(sj, refObj.abs_start_pos, refObj.abs_end_pos, seg_coord_tup[1],
                                                     cycle[ind][1])
-                    posns.append((sj, rpos))
+                    posns.append((sj, rpos, 0))
 
         for j in posns:
             text_angle = j[1] / total_length * 360
@@ -751,7 +751,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1, zorder=-10)
 
             text_angle, ha = vu.correct_text_angle(text_angle)
-            txt = " " + str(int(round((j[0]-j[1]) / text_trunc))) if ha == "left" else str(int(round((j[0]-j[1]) / text_trunc))) + " "
+            txt = " " + str(int(round((j[0]-j[2]) / text_trunc))) if ha == "left" else str(int(round((j[0]-j[2]) / text_trunc))) + " "
 
             ax.text(x_t, y_t, txt, color='grey', rotation=text_angle,
                     ha=ha, va="center", fontsize=tick_fontsize, rotation_mode='anchor')
@@ -927,7 +927,6 @@ def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, is
 
         curr_start = next_start
 
-    print(minChrom, minLoc, minSegCStart)
     total_length = next_start
     return minSegCStart, total_length
 
