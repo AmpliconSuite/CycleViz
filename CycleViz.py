@@ -762,8 +762,9 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         # TODO: Refactor to outside
         # label the segments by number in cycle
         if label_segs:
-            mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2.0
-            centerpoint_angle = mid_sp / total_length * 360.
+            # mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2.0
+            # centerpoint_angle = mid_sp / total_length * 360.
+            centerpoint_angle = (start_angle + end_angle) / 2
             x, y = vu.pol2cart((curr_bh - ref_label_height_factor), (centerpoint_angle / 360. * 2. * np.pi))
             font = font0.copy()
             if imputed_status[ind]:
@@ -840,9 +841,10 @@ def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_i
     for ind, segObj in seg_placements.items():
         bar_height = unadj_bar_height + segObj.track_height_shift
         # print("cmap_plot", segObj.id)
-        if segObj.abs_end_pos - segObj.abs_start_pos > total_length:
+        if segObj.abs_end_pos - segObj.abs_start_pos > total_length and segObj.ref_end - segObj.ref_start > total_length:
             start_angle, end_angle = 360, 0
             print("cmap went full circle")
+            # print(segObj.to_string())
 
         else:
             start_angle, end_angle = start_end_angle(segObj.abs_end_pos, segObj.abs_start_pos, total_length)
@@ -861,8 +863,8 @@ def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_i
             ax.plot([x, x_t], [y, y_t], color='k', alpha=0.9, linewidth=linewidth)
 
         if seg_id_labels:
-            mid_sp = (segObj.abs_end_pos + segObj.abs_start_pos) / 2
-            text_angle = mid_sp / total_length * 360.
+            text_angle = (start_angle + end_angle) / 2
+            print(segObj.to_string(), text_angle)
             x, y = vu.pol2cart(bar_height - 1.5, (text_angle / 360. * 2. * np.pi))
             text_angle, ha = vu.correct_text_angle(text_angle)
             text = segObj.id + segObj.direction
@@ -944,6 +946,7 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
     for ind, i in enumerate(cycle):
         seg_id_count = cycle_seg_counts[i[0]]
         seg_len = segSeqD[i[0]][2] - segSeqD[i[0]][1]
+        # print(i, seg_len)
         seg_end = (curr_start + seg_len) % total_length
         padj, nadj = prev_seg_index_is_adj[ind], next_seg_index_is_adj[ind]
         curr_obj = vu.CycleVizElemObj(i[0], segSeqD[i[0]][0], segSeqD[i[0]][1], segSeqD[i[0]][2], i[1], curr_start,
