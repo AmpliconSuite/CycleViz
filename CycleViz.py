@@ -49,7 +49,8 @@ def start_end_angle(normStart, normEnd, total_length):
     start_angle = normStart / total_length * 360
     end_angle = normEnd / total_length * 360
     # does it cross the start boundary?
-    if end_angle < 0 and start_angle > 0:
+    if end_angle < 0 and start_angle > 0 and (start_angle - end_angle) > 360:
+        # print(start_angle, end_angle, "X")
         end_angle += 360
 
     # handle circular contig
@@ -863,6 +864,7 @@ def plot_cmap_track(seg_placements, total_length, unadj_bar_height, color, seg_i
             ax.plot([x, x_t], [y, y_t], color='k', alpha=0.9, linewidth=linewidth)
 
         if seg_id_labels:
+            print(segObj.id, start_angle, end_angle, segObj.abs_end_pos, segObj.abs_start_pos)
             text_angle = (start_angle + end_angle) / 2
             print(segObj.to_string(), text_angle)
             x, y = vu.pol2cart(bar_height - 1.5, (text_angle / 360. * 2. * np.pi))
