@@ -64,11 +64,11 @@ def plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj=None
                         manual_links=None):
     if prev_seg_index_is_adj and bpg_dict and seg_end_pos_d:
         connect_width = bar_width / 2.
-        ch = bar_width/4
+        ch = bar_width/4.
 
     else:
         connect_width = bar_width/15.0
-        ch = bar_width/2
+        ch = bar_width/2.
         prev_seg_index_is_adj = defaultdict(bool)
 
     for ind, refObj in ref_placements.items():
@@ -497,7 +497,7 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
     fullspace_a = np.arange(0, total_length, marker_freq)
     fullspace_b = np.arange(marker_freq/slant, total_length + marker_freq/slant, marker_freq)
 
-    trim = 1 * drop / 4
+    trim = drop / 4.0
     if drop < 0:
         # posns_a, posns_b = posns_b, posns_a
         fullspace_a, fullspace_b = fullspace_b, fullspace_a
@@ -663,6 +663,7 @@ def plot_genes(ref_placements, cycle, isCycle, onco_set=None):
 def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_segs, edge_ticks, bw=bar_width):
     font0 = FontProperties()
     # rot_sp = global_rot / 360. * total_length
+    prev_was_skinny = False
     for ind, refObj in ref_placements.items():
         if refObj.custom_bh:
             curr_bh = refObj.custom_bh
@@ -704,14 +705,11 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             ts = (seg_coord_tup[1], refObj.abs_start_pos, 0)
             te = (seg_coord_tup[2] + 1, refObj.abs_end_pos+1, 1)
             s = 1
-            # posns = zip(range(seg_coord_tup[1], seg_coord_tup[2] + 1),
-            #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
+
         else:
             ts = (seg_coord_tup[2], refObj.abs_start_pos, 0)
             te = (seg_coord_tup[1] - 1, refObj.abs_end_pos + 1, -1)
             s = -1
-            # posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
-            #                  np.arange(refObj.abs_start_pos, refObj.abs_end_pos+1))
 
         text_trunc = 1
         # put the positions on the ends of the joined segs
@@ -719,18 +717,33 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         if edge_ticks == "ends":
             newposns = []
             tick_freq = 1
-            if not refObj.prev_is_adjacent:
-                newposns.append(ts)
+            # if too narrow, just make one label in the middle
+            # print(ts[0],te[0], (te[1] - ts[1])/total_length * 360)
+            skinny = (te[1] - ts[1]) / total_length * 360 < 0.5
+            if skinny and not refObj.prev_is_adjacent and not refObj.next_is_adjacent:
+                skinny = False
+                tm = (str(ts[0]) + "-" + str(te[0]), np.mean((ts[1],te[1])), 0)
+                newposns.append(tm)
 
-            if not refObj.next_is_adjacent:
-                newposns.append(te)
+            else:
+                if not refObj.prev_is_adjacent:
+                    newposns.append(ts)
+
+                if not refObj.next_is_adjacent:
+                    skinny = False
+                    newposns.append(te)
+
+                if refObj.prev_is_adjacent and refObj.next_is_adjacent:
+                    skinny = False
 
             posns = newposns
 
         elif edge_ticks == "none":
+            skinny = False
             tick_freq = float('inf')
 
         else:
+            skinny = False
             text_trunc = 10000
             tick_freq = max(10000, 20000 * int(np.floor(total_length / 1000000)))
             # print("tick freq", tick_freq)
@@ -752,11 +765,21 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             ax.plot([x, x_t], [y, y_t], color='grey', linewidth=1, zorder=-10)
 
             text_angle, ha = vu.correct_text_angle(text_angle)
-            txt = " " + str(int(round((j[0]-j[2]) / text_trunc))) if ha == "left" else str(int(round((j[0]-j[2]) / text_trunc))) + " "
+            txtpad = " "
+            if prev_was_skinny and len(posns) == 1:
+                txtpad += " "*(2*len(str(j[0])))
+                txtpad = txtpad + "-" if ha == "left" else "-" + txtpad
+
+            try:
+                txt = txtpad + str(int(round((j[0]-j[2]) / text_trunc))) if ha == "left" else str(int(round(
+                    (j[0]-j[2]) / text_trunc))) + txtpad
+            except TypeError:
+                txt = txtpad + str(j[0]) if ha == "left" else str(j[0]) + txtpad
 
             ax.text(x_t, y_t, txt, color='grey', rotation=text_angle,
                     ha=ha, va="center", fontsize=tick_fontsize, rotation_mode='anchor')
 
+        prev_was_skinny = skinny
         # end ticking section
 
         # Segment labeling
@@ -899,7 +922,8 @@ def plot_alignment(contig_locs, segment_locs, total_length):
 
 # identify the offset of the segment with minimum location
 def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, isCycle):
-    minChrom = "Z"
+    minChrom = sys.maxsize
+    chromLook = {"X": 23, "Y": 24, "M": 25}
     minLoc = np.float('inf')
     curr_start = 0.0 if isCycle else spacing_bp
     next_start = 0
@@ -909,8 +933,13 @@ def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, is
         cc = cc.lstrip("chr")
         try:
             cc = int(cc)
+            tc = cc
+
         except ValueError:
-            pass
+            if cc in chromLook:
+                tc = chromLook[cc]
+            else:
+                tc = 0
 
         dir = i[1]
         if dir == "-":
@@ -921,7 +950,7 @@ def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, is
         seg_len = cb - ca
         seg_end = curr_start + seg_len
 
-        if cc < minChrom or (cc == minChrom and cs < minLoc):
+        if tc < minChrom or (cc == minChrom and cs < minLoc):
             minChrom, minLoc, minSegCStart = cc, cs, curr_start
 
         next_start = seg_end
@@ -1042,6 +1071,7 @@ if args.figure_size_style == "small":
     bar_width *= 1.5
     args.gene_fontsize *= 2
     args.tick_fontsize *= 1.5
+    print("Bar width scaled up 1.5x to " + str(bar_width))
     print("Gene fontsize scaled up 2x to " + str(args.gene_fontsize))
     print("Tick fontsize scaled up 1.5x to: " + str(args.tick_fontsize))
 
@@ -1172,7 +1202,7 @@ else:
     imputed_status = vu.imputed_status_from_aln(aln_vect, len(cycle))
 
 print("plotting structure")
-plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.tick_type)
+plot_ref_genome(ref_placements, cycle, total_length, imputed_status, args.label_segs, args.tick_type, bar_width)
 if args.annotate_structure == 'genes' or gene_set:
     print("Reading genes")
     gene_tree = vu.parse_genes(args.ref, args.gene_highlight_list)
