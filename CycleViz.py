@@ -235,6 +235,7 @@ def plot_rects(refObj, index):
 
 
 def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total_length, seg_copies, f_ind):
+    print(currStart, currEnd)
     gc, gs, ge = pTup
     granularity = cfc.track_props['granularity']
     if granularity == 0:
@@ -248,35 +249,46 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
     if cfc.track_props['background_kwargs']['facecolor'] == 'auto':
         if f_ind % 2 == 1:
             cfc.track_props['background_kwargs']['facecolor'] = 'gainsboro'
-            if cfc.track_props['hline_kwargs']['markerfacecolor'] == 'auto':
-                cfc.track_props['hline_kwargs']['markerfacecolor'] = 'white'
+            if cfc.track_props['hline_kwargs']['facecolor'] == 'auto':
+                cfc.track_props['hline_kwargs']['facecolor'] = 'white'
 
         else:
             cfc.track_props['background_kwargs']['facecolor'] = 'none'
 
-    if cfc.track_props['hline_kwargs']['markerfacecolor'] == 'auto':
-        cfc.track_props['hline_kwargs']['markerfacecolor'] = 'lightgrey'
+    if cfc.track_props['hline_kwargs']['facecolor'] == 'auto':
+        cfc.track_props['hline_kwargs']['facecolor'] = 'lightgrey'
 
-    ax.add_patch(mpatches.Wedge((0, 0), cfc.top + intertrack_spacing / 2.0, 360, 0,
+    ax.add_patch(mpatches.Wedge((0, 0), cfc.top + intertrack_spacing / 2.0, 360, 0, zorder=-1,
                                 width=cfc.top - cfc.base + intertrack_spacing,
                                 **cfc.track_props['background_kwargs']))
 
     # plot the legends lines
-    legend_points = np.linspace(currStart / total_length * 2 * np.pi, (currEnd + 1) / total_length * 2 * np.pi, 10000)
+    # legend_points = np.linspace(currStart / total_length * 2 * np.pi, (currEnd + 1) / total_length * 2 * np.pi, 10000)
     lheights = list(np.linspace(cfc.base, cfc.top, cfc.track_props['num_hlines']))
+    legend_start_angle = currStart / total_length * 360
+    legend_end_angle = currEnd / total_length * 360
+    # if legend_end_angle < 0 and legend_start_angle > 0:
+    #     legend_end_angle += 360
+    # legend_start_angle, legend_end_angle = start_end_angle(currStart, currEnd, total_length)
 
     # print("TRACK LEGEND HEIGHTS", legend_ticks)
     for lh in lheights:
-        x_v, y_v = vu.polar_series_to_cartesians(legend_points, lh)
-        # print(cfc.track_props['hline_kwargs'])
-        plt.plot(x_v, y_v, zorder=1, **cfc.track_props['hline_kwargs'])
-        #plt.plot(x_v, y_v, color=lcolor, linewidth=0.25, zorder=1)
+        ax.add_patch(mpatches.Wedge((0, 0), lh, legend_start_angle, legend_end_angle, zorder=1, width=0.07,
+                                    **cfc.track_props['hline_kwargs']))
+
+                                    #facecolor='k', edgecolor='k', linewidth=0,
+                                    # width=bar_width / 6.0))
+
+        # x_v, y_v = vu.polar_series_to_cartesians(legend_points, lh)
+        # plt.plot(x_v, y_v, zorder=1, **cfc.track_props['hline_kwargs'])
 
     if cfc.track_props['indicate_zero']:
-        x_v, y_v = vu.polar_series_to_cartesians(legend_points,
-                                                 (cfc.track_props['sec_resc_zero'] - cfc.track_min)/(cfc.track_max -
-                                                                    cfc.track_min) * (cfc.top - cfc.base) + cfc.base)
-        plt.plot(x_v, y_v, color=cfc.track_props['indicate_zero'], linewidth=0.5, zorder=1)
+        zh = (cfc.track_props['sec_resc_zero'] - cfc.track_min)/(cfc.track_max - cfc.track_min) * (cfc.top - cfc.base) \
+             + cfc.base
+        ax.add_patch(mpatches.Wedge((0, 0), zh, legend_start_angle, legend_end_angle, zorder=1, width=0.12,
+                                    **cfc.track_props['indicate_zero']))
+
+        # plt.plot(x_v, y_v, color=cfc.track_props['indicate_zero'], linewidth=0.5, zorder=1)
 
     tertiary_data = []
     tertiary_style = 'lines'
@@ -329,7 +341,7 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
         if smoothing > 0 and val_data and style == 'points':
             smvd = []
             for ind, h in enumerate(val_data):
-                cr = val_data[max(0,ind-smoothing):min(len(val_data)-1, ind + smoothing + 1)]
+                cr = val_data[max(0, ind-smoothing):min(len(val_data)-1, ind + smoothing + 1)]
                 smvd.append(np.mean(cr))
 
             val_data = smvd
@@ -347,6 +359,9 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
         if style == "points":
             # trying a kwargs-based method
             # print(kwargs)
+            if len(x_v) > 0:
+                print("Placing " + str(len(x_v)) + " points")
+
             plt.scatter(x_v, y_v, zorder=zorder, **kwargs)
 
             #plt.scatter(x_v, y_v, s=cfc.track_props['pointsize'], edgecolors='none', color=curr_color, marker='.',
@@ -354,6 +369,9 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
             # plt.plot(x_v, y_v, linewidth=cfc.track_props['pointsize'], color=curr_color, zorder=zorder)
 
         elif style == "lines":
+            if len(x_v) > 0:
+                print("Placing " + str(len(x_v)) + " points")
+
             plt.plot(x_v, y_v, zorder=zorder, **kwargs)
             # plt.plot(x_v, y_v, linewidth=cfc.track_props['linewidth'], color=curr_color, zorder=zorder)
             # if seg_dir == "+":
@@ -435,8 +453,10 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width, noPDF):
                     sec_lt_str = str(lt)
 
                 # ax_l.plot([0, legw], [lh, lh], zorder=1, color=lcolor, linewidth=0.5, zorder=1)
-                cfc.track_props['hline_kwargs']['color'] = cfc.track_props['hline_kwargs']['markerfacecolor']
-                ax_l.plot([0, legw], [lh, lh], zorder=1, **cfc.track_props['hline_kwargs'])
+                # cfc.track_props['hline_kwargs']['color'] = cfc.track_props['hline_kwargs']['facecolor']
+                # ax_l.plot([0, legw], [lh, lh], zorder=1, **cfc.track_props['hline_kwargs'])
+                # print("legkw", cfc.track_props['hline_kwargs'])
+                ax_l.add_patch(mpatches.Rectangle((0, lh), legw, 0.05, zorder=1, **cfc.track_props['hline_kwargs']))
                 ax_l.text(-0.15, lh, str(lt), ha='right', va='center', fontsize=cfc.track_props['grid_legend_fontsize'],
                           color='k')
 

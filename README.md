@@ -159,7 +159,7 @@ The arguments that can be specified inside a YAML file for each data track.
 | `primary_kwargs` | `{}` | [Line2D](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) or [Scatter](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.pyplot.scatter.html) **kwargs dict | **kwargs for the primary data. Will override CycleViz defaults. Requires user to know which **kwargs parent they are working with. `trackstyle: points` is Scatter, others are Line2D. |
 | `secondary_kwargs` | `{}` | [Line2D](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) or [Scatter](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.pyplot.scatter.html) **kwargs dict | **kwargs for the secondary data. Will override CycleViz defaults. Requires user to know which **kwargs parent they are working with. |
 | `link_kwargs` | `{}` | [Patch](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.patches.Patch.html#matplotlib.patches.Patch) **kwargs dict| **kwargs for link data. Will override CycleViz defaults. Requires user to know which **kwargs parent they are working with. |
-| `hline_kwargs` | `{}` | [Line2D](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) **kwargs dict| **kwargs for horizontal gridlines. Will override CycleViz defaults. |
+| `hline_kwargs` | `{}` | [Patch](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.patches.Patch.html#matplotlib.patches.Patch) **kwargs dict| **kwargs for horizontal gridlines. Will override CycleViz defaults. |
 | `background_kwargs` | `{}` | [Patch](https://matplotlib.org/3.3.3/api/_as_gen/matplotlib.lines.Line2D.html) **kwargs dict| **kwargs for background of the track. Will override CycleViz defaults. |
 
 

@@ -629,7 +629,7 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
                 restricted_cfc.secondary_data = normed_secondary
 
             elif cfc.track_props['rescale_by_count']:
-                print(obj.to_string(), "recaling by count")
+                print(obj.to_string(), "rescaling by count")
                 normed_primary = defaultdict(list)
                 for point in local_primary_data[obj.chrom]:
                     normed_primary[obj.chrom].append([point[0], point[1], point[2] / float(obj.seg_count)])
@@ -1336,9 +1336,10 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
         linkw.update(dd["link_kwargs"])
         dd['link_kwargs'] = linkw
         # legend lines
-        llkw = create_kwargs(kwtype="Line2D", facecolors="auto", linewidth=0.25) #auto - should be lightgrey
+        llkw = create_kwargs(kwtype="Patch", facecolors="auto") # auto will be lightgrey in cycleviz
         llkw.update(dd['hline_kwargs'])
         dd['hline_kwargs'] = llkw
+        dd['hline_kwargs']['linewidth'] = 0.0
         # background color for track
         bgkw = create_kwargs(kwtype="Patch", facecolors="auto", linewidth=0)
         bgkw.update(dd['background_kwargs'])
