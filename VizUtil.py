@@ -458,6 +458,8 @@ def parse_genes(ref, gene_highlight_list):
     __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
     if ref == "GRCh37" or ref == "hg19":
         refGene_name = "refGene_hg19.txt"
+    elif ref == "GRCm38" or ref == "mm10":
+        refGene_name = "refGene_mm10.txt"
     else:
         refGene_name = "refGene_" + ref + ".txt"
 
@@ -466,7 +468,7 @@ def parse_genes(ref, gene_highlight_list):
         for line in infile:
             fields = line.rsplit("\t")
             currChrom = fields[2]
-            if ref == "GRCh37" and not currChrom.startswith("hpv"):
+            if (ref == "GRCh37" or ref == "GRCm38") and not currChrom.startswith("hpv"):
                 currChrom = currChrom[3:]
 
             tstart = int(fields[4])

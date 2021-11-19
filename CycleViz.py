@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import argparse
 from collections import defaultdict
@@ -1018,11 +1018,12 @@ group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--input_yaml_file", help="Specifiy all desired arguments in this file, OR use the options below\n")
 group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
 group.add_argument("--structure_bed", help="bed file specifying the structure of the regions to be plotted. To use a "
-                                           "standard reference genome as the structure, specify 'hg19, GRCh37, hg38 or "
-                                           "GRCh38")
+                                           "standard reference genome as the structure, specify 'hg19, GRCh37, hg38, "
+                                           "GRCh38, mm10, or GRCm38")
 parser.add_argument("--cycle", help="cycle number to visualize [required with --cycles_file]", type=int)
 parser.add_argument("-g", "--graph", help="breakpoint graph file [required with --cycles_file]")
-parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
+parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCm38"],
+                    required=True)
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
@@ -1053,8 +1054,8 @@ parser.add_argument("--tick_fontsize", help="font size for genomic position tick
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
                     "specifying additional data. Will be plotted from outside to inside given the order the filenames "
                     "appear in", default=[])
-parser.add_argument("--annotate_structure", help="What to plot on the outer structure indicator. Either give a bed file"
-                    " or use predefined 'genes' or 'cytoband' arguments", type=str, default="genes")
+parser.add_argument("--annotate_structure", help="What to plot on the outer structure indicator. Give a bed file or use"
+                    " predefined 'genes' argument", type=str, default="genes")
 parser.add_argument("--structure_color", help="Use 'auto' coloring, or specify a single color for everything",
                     type=str, default='auto')
 parser.add_argument("--rotate_to_min", help="Rotate structure so the lowest genomic coordinate appears at 0-degrees in "
@@ -1070,6 +1071,8 @@ parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of t
                     action='store_true', default=False)
 parser.add_argument("--trim_contigs", help="Trim unaligned OM contig regions from visualization (defauly unset)",
                     default='both', choices=['start', 'end', 'both', 'none'])
+parser.add_argument("-v", "--version", action='version', version='CycleViz {version} \n Author: Jens Luebeck '
+                    '(jluebeck [at] ucsd.edu)'.format(version=__version__))
 
 args = parser.parse_args()
 if args.input_yaml_file:
@@ -1135,7 +1138,7 @@ else:
         sys.exit(1)
         # args.outname = os.path.splitext(os.path.basename(args.structure_bed))[0] + "_"
     fname = args.outname + "_cycle_1"
-    if args.structure_bed in {"hg19", "GRCh37", "hg38", "GRCh38"}:
+    if args.structure_bed in {"hg19", "GRCh37", "hg38", "GRCh38", "mm10", "GRCm38"}:
         args.structure_bed = CV_RESOURCES + args.structure_bed + "_structure.bed"
     struct_data = vu.parse_bed(args.structure_bed, store_all_additional_fields=True)
     cycle, isCycle, segSeqD, seg_end_pos_d, bpg_dict = vu.handle_struct_bed_data(struct_data)
@@ -1147,7 +1150,7 @@ raw_cycle_length = vu.get_raw_path_length(cycle, segSeqD)
 
 # determine which genes to show
 gene_set = set()
-if args.gene_subset_file.upper() == "BUSHMAN":
+if args.gene_subset_file.upper() == "BUSHMAN" and args.ref in {"hg19", "GRCh37", "hg38", "GRCh38"}:
     args.gene_subset_file = CV_RESOURCES + "Bushman_group_allOnco_May2018.tsv"
 
 if args.gene_subset_file:
@@ -1246,8 +1249,8 @@ if args.interior_segments_cycle:
 # cytobanding
 if args.annotate_structure != "genes":
     annot_struct_yaml = args.annotate_structure
-    if args.annotate_structure == 'cytoband':
-        annot_struct_yaml = CV_RESOURCES + "cytoBand_" + args.ref + ".yaml"
+    # if args.annotate_structure == 'cytoband':
+    #     annot_struct_yaml = CV_RESOURCES + "cytoBand_" + args.ref + ".yaml"
 
     cfc = vu.parse_feature_yaml(annot_struct_yaml, 0, 1, CV_RESOURCES)
     cfc.base, cfc.top = outer_bar, outer_bar+bar_width
