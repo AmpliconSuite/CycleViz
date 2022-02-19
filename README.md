@@ -39,7 +39,7 @@ pip install intervaltree
 
 [optional] To get the Microsoft fonts on Ubuntu (CycleViz defaults to Arial font)
 ```
-sudo apt-get install ttf-mscorefonts-installer
+sudo apt-get install ttf-mscorefonts-installer fontconfig
 sudo fc-cache -f  # rebuilds the font cache
 ```
 
