@@ -22,7 +22,7 @@ Requires is matplotlib version 2.0.0 or higher and intervaltree python module, b
 non-standard in Conda.
 
 To check your matplotlib version in python, type
-```
+```python
 import matplotlib
 print matplotlib.__version__
 ```
@@ -38,7 +38,7 @@ pip install intervaltree
 ```
 
 [optional] To get the Microsoft fonts on Ubuntu (CycleViz defaults to Arial font)
-```
+```bash
 sudo apt-get install ttf-mscorefonts-installer fontconfig
 sudo fc-cache -f  # rebuilds the font cache
 ```

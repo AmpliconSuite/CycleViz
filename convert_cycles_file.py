@@ -150,7 +150,7 @@ def make_new_cycle(graph_path, cycle_path):
                                     end_loc = int(segment_dict[number]['segment_end'])
                                     chrom = segment_dict[number]['segment_chr']
                     
-                    the_file.write('Length=' + str(int(length / 1000)) + 'Kbp;')
+                    the_file.write('Length=' + str(int(length)) + 'bp;')
                     the_file.write(a[:-1])
                     the_file.write(circle)
                     if continues > 2:
