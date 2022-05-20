@@ -11,6 +11,7 @@ import matplotlib
 matplotlib.use('Agg')  # this import must happen immediately after importing matplotlib
 from matplotlib import pyplot as plt
 from matplotlib import rcParams
+import matplotlib.cm as cm
 from matplotlib.collections import LineCollection
 from matplotlib.collections import PatchCollection
 from matplotlib.font_manager import FontProperties
@@ -135,7 +136,7 @@ def plot_gene_track(currStart, currEnd, relGenes, pTup, total_length, seg_dir):
 
 
 # plot the reference genome
-def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, label_segs, onco_set=None):
+def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, label_segs, color_map,  onco_set=None):
     if onco_set is None:
         onco_set = set()
     font0 = FontProperties()
@@ -152,14 +153,19 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
         # patches.append(mpatches.Wedge((0,0), seg_bar_height, end_angle, start_angle, width=bar_width))
         patches.append(mpatches.Rectangle((refObj.abs_start_pos, ref_bar_height), box_len, bar_width))
         chrom = segSeqD[path[ind][0]][0]
-        try:
-            f_color_v.append(chromosome_colors[chrom])
-        except KeyError:
-            print("Color not found for " + chrom + ". Using red.")
-            chromosome_colors[chrom] = "red"
-            f_color_v.append("red")
+        if color_map == "standard":
+            try:
+                c_col = chromosome_colors[chrom]
+            except KeyError:
+                print("Color not found for " + chrom + ". Using red.")
+                chromosome_colors[chrom] = "red"
+                c_col = chromosome_colors[chrom]
 
-        e_color_v.append('grey')
+        else:
+            c_col = color_map(float(refObj.id)/len(segSeqD))
+
+        f_color_v.append(c_col)
+        e_color_v.append(c_col)
         lw_v.append(0.2)
 
         # makes the ticks on the reference genome wedges
@@ -308,15 +314,15 @@ parser.add_argument("-g", "--graph", help="breakpoint graph file")
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
 parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file", required=True)
-parser.add_argument("--path", help="path number to visualize", required=True)
+parser.add_argument("--path", help="path number to visualize", type=int, required=True)
 parser.add_argument("--AR_path_alignment", help="AR path alignment file")
 parser.add_argument("--outname", help="output prefix")
-parser.add_argument("--label_segs", help="label segs with graph IDs", choices=["id", "dir"], default="id")
+parser.add_argument("--label_segs", help="label segs with graph IDs", choices=["id", "dir"], default=None)
 parser.add_argument("--reduce_path", help="Number of path elements to remove from left and right ends. Must supply both values, \
                     default 0 0", nargs=2, type=int, default=[0, 0])
 parser.add_argument("--print_dup_genes", help="If a gene appears multiple times print name every time.",
-                    action='store_true',
-                    default=False)
+                    action='store_true', default=False)
+parser.add_argument("--color_map", help="Set a matplotlib named color pallete (e.g. Blues, Purples), default is a custom chromosomal map", default="standard")
 group2 = parser.add_mutually_exclusive_group(required=False)
 group2.add_argument("--gene_subset_file", help="File containing subset of genes to plot (e.g. oncogene genelist file)",
                     default="")
@@ -331,15 +337,15 @@ if args.ref == "GRCh38":
     args.ref = "hg38"
 
 if not args.outname:
-    args.outname = os.path.split(args.cycles_file)[1].split(".")[0] + "_"
+    args.outname = os.path.split(args.cycles_file)[1].split(".")[0]
 
 outdir = os.path.dirname(args.outname)
 if outdir and not os.path.exists(outdir):
     os.makedirs(outdir)
 
-fname = args.outname + "_path_" + args.path + "_trim_" + str(args.reduce_path[0]) + "_" + str(args.reduce_path[1])
+fname = args.outname + "_path_" + str(args.path) + "_trim_" + str(args.reduce_path[0]) + "_" + str(args.reduce_path[1])
 
-print(args.reduce_path)
+print(args.reduce_path, "path reduction (L, R)")
 
 print("Reading genes")
 gene_tree = vu.parse_genes(args.ref, [])
@@ -364,7 +370,6 @@ else:
     isCycle = circular_D[path_num]
 
 prev_seg_index_is_adj = vu.adjacent_segs(path, segSeqD, isCycle)
-print(path)
 print("PSIIA", prev_seg_index_is_adj)
 raw_path_length = vu.get_raw_path_length(path, segSeqD)
 
@@ -384,6 +389,9 @@ if args.gene_subset_file:
 
 elif args.gene_subset_list:
     gene_set = set(args.gene_subset_list)
+
+if not args.color_map == "standard":
+    args.color_map = cm.get_cmap(args.color_map)
 
 # ----------------------
 
@@ -489,7 +497,7 @@ else:
     imputed_status = vu.imputed_status_from_aln(aln_vect, len(path))
 
 print("RH", ref_bar_height, "BW", bar_width)
-plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, args.label_segs, gene_set)
+plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status, args.label_segs, args.color_map, gene_set)
 
 if args.graph:
     plot_bpg_connection(ref_placements, prev_seg_index_is_adj, bpg_dict, seg_end_pos_d)
