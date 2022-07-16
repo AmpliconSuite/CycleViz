@@ -56,6 +56,8 @@ After cloning the CycleViz repo consider running the following to add a line to 
 ### Running CycleViz with an AA-generated cycles file
 If using an AA-generated cycles file instead of AR, whose segments are merged across adjacent breakpoint graph segments, you will first need to unmerge the segments in the cycles file. We provide a script, `convert_cycles_file.py` which can be run on an AA cycles file and AA breakpoint graph. This script must be run to generate a BPG-converted cycles file, prior to running CycleViz. Many thanks to Siavash R. Dehkordi for providing this script.
 
+`$CV_SRC/convert_cycles_file.py -c /path/to/sample_name_cycles.txt -g /path/to/sample_name_graph.txt`
+
 ### Command line arguments
 
 There are two modes of visualization, circular and linear. Currently there are separate scripts to run each mode, but we intend to merge these in the future.
