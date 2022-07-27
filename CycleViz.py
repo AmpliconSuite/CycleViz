@@ -684,6 +684,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
     font0 = FontProperties()
     # rot_sp = global_rot / 360. * total_length
     prev_was_skinny = False
+    length_since_last_bp = 0
     for ind, refObj in ref_placements.items():
         if refObj.custom_bh:
             curr_bh = refObj.custom_bh
@@ -731,6 +732,11 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             te = (seg_coord_tup[1] - 1, refObj.abs_end_pos + 1, -1)
             s = -1
 
+        if not refObj.prev_is_adjacent:
+            length_since_last_bp = te[1] - ts[1]
+        else:
+            length_since_last_bp+=(te[1] - ts[1])
+
         text_trunc = 1
         # put the positions on the ends of the joined segs
         posns = []
@@ -739,7 +745,8 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             tick_freq = 1
             # if too narrow, just make one label in the middle
             # print(ts[0],te[0], (te[1] - ts[1])/total_length * 360)
-            skinny = (te[1] - ts[1]) / total_length * 360 < 0.5
+            skinny = length_since_last_bp / total_length * 360 < 1.2
+            # if it's really small, just put one marker in the center
             if skinny and not refObj.prev_is_adjacent and not refObj.next_is_adjacent:
                 skinny = False
                 tm = (str(ts[0]) + "-" + str(te[0]), np.mean((ts[1],te[1])), 0)
@@ -786,7 +793,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
 
             text_angle, ha = vu.correct_text_angle(text_angle)
             txtpad = " "
-            if prev_was_skinny and len(posns) == 1:
+            if prev_was_skinny and len(posns) == 1 and skinny:
                 txtpad += " "*(2*len(str(j[0])))
                 txtpad = txtpad + "-" if ha == "left" else "-" + txtpad
 
