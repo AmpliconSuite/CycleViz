@@ -507,12 +507,15 @@ def parse_bed(bedfile, store_all_additional_fields=False):
                     if not store_all_additional_fields:
                         if len(fields) > 3:
                             data = float(fields[-1])
+                            # if np.isinf(data):
+                            #     data = None
                         else:
                             data = None
                     else:
                         data = tuple([entry_index] + fields[3:])
 
-                    data_dict[chrom].append((begin, end, data))
+                    if data:
+                        data_dict[chrom].append((begin, end, data))
 
     return data_dict
 
@@ -620,7 +623,6 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
 
                     elif point[0] < obj.ref_start+currTrim and point[1] > obj.ref_end-currTrim:
                         dstore[obj.chrom].append(point)
-
 
             restricted_cfc = copy.copy(cfc)
             if cfc.track_props['rescale_by_secondary']:
@@ -1163,12 +1165,31 @@ def create_kwargs(kwtype="Collection", facecolors=None, edgecolors=None, marker=
         if edgecolors is None:
             edgecolors = 'none'
         curr_kwargs = {
+            # 'edgecolor': edgecolors,
+            # 'facecolor': facecolors,
             'markeredgecolor': edgecolors,
             'markerfacecolor': facecolors,
             'marker': marker,
             'markersize': markersize,
             'linewidth': linewidth
         }
+
+    elif kwtype == "LineCollection":
+        if facecolors is None:
+            facecolors = 'none'
+        if edgecolors is None:
+            edgecolors = 'none'
+        curr_kwargs = {
+            'edgecolor': edgecolors,
+            'facecolor': facecolors,
+            # 'markeredgecolor': edgecolors,
+            # 'markerfacecolor': facecolors,
+            # 'marker': marker,
+            # 'markersize': markersize,
+            # 's': markersize,
+            'linewidth': linewidth
+        }
+
 
     elif kwtype == "Patch":
         if facecolors is None:
@@ -1200,7 +1221,7 @@ def parse_main_args_yaml(args):
         if "cycles_file" in sample_data:
             args.cycles_file = sample_data.get("cycles_file")
             print(args.cycles_file)
-            args.cycle = str(sample_data.get("cycle"))
+            args.cycle = int(sample_data.get("cycle"))
         else:
             args.structure_bed = sample_data.get("structure_bed")
 
@@ -1320,6 +1341,8 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
             ktype = "Patch"
         elif dd['primary_style'] == "points":
             ktype = 'Scatter'
+        elif dd['primary_style'] == "radial":
+            ktype = 'LineCollection'
         else:
             ktype = 'Line2D'
         pkw = create_kwargs(kwtype=ktype, facecolors='k', markersize=1.0 / (2*totfiles), linewidth=2.0 / (totfiles))
@@ -1328,6 +1351,10 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
         # secondary
         if dd['secondary_style'] == "points":
             ktype = 'Scatter'
+        elif dd['secondary_style'] == "points":
+            ktype = 'Scatter'
+        elif dd['secondary_style'] == "radial":
+            ktype = 'LineCollection'
         else:
             ktype = 'Line2D'
         skw = create_kwargs(kwtype=ktype, facecolors='lightgreen', markersize=1.0 / (2*totfiles), linewidth=2.0 / (totfiles))
@@ -1399,7 +1426,7 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
 
             if dd['rescale_secondary_to_primary']:
                 sec_rsf = (maxprimary - minprimary) / (maxsecondary - minsecondary)
-                print("RESCALNG secondary TO primary")
+                print("RESCALNG secondary TO primary", sec_rsf)
                 # print((maxsecondary - minsecondary),(maxprimary - minprimary))
 
                 rs_sec = defaultdict(list)

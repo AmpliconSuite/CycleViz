@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import argparse
 from collections import defaultdict
@@ -283,10 +283,11 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
         # plt.plot(x_v, y_v, zorder=1, **cfc.track_props['hline_kwargs'])
 
     if cfc.track_props['indicate_zero']:
-        zh = (cfc.track_props['sec_resc_zero'] - cfc.track_min)/(cfc.track_max - cfc.track_min) * (cfc.top - cfc.base) \
+        zh = (-cfc.track_min)/(cfc.track_max - cfc.track_min) * (cfc.top - cfc.base) \
              + cfc.base
+        zeroline_kwargs = vu.create_kwargs(kwtype="Patch", facecolors="k")
         ax.add_patch(mpatches.Wedge((0, 0), zh, legend_start_angle, legend_end_angle, zorder=1, width=0.12,
-                                    **cfc.track_props['indicate_zero']))
+                                    **zeroline_kwargs))
 
         # plt.plot(x_v, y_v, color=cfc.track_props['indicate_zero'], linewidth=0.5, zorder=1)
 
@@ -317,7 +318,7 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
             continue
 
         zorder = 3 if elem_ind == 1 else 2
-        datalist = [(max(x[0],gs), min(x[1], ge), height_scale_factor*x[2] + cfc.base) for x in data_it] #restrict to the coordinates of the region
+        datalist = [(max(x[0], gs), min(x[1], ge), height_scale_factor*x[2] + cfc.base) for x in data_it]  # restrict to the coordinates of the region
 
         # convert the data into granular form
         sortrevdir = False if seg_dir == "+" else True
@@ -460,20 +461,20 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width, noPDF):
                 ax_l.text(-0.15, lh, str(lt), ha='right', va='center', fontsize=cfc.track_props['grid_legend_fontsize'],
                           color='k')
 
-                if any([len(x) > 0 for x in cfc.secondary_data.values()]):
+                if cfc.track_props['secondary_feature_bedgraph']:
                     ax_l.text(legw + 0.15, lh, sec_lt_str, ha='left', va='center', color='k',
                               fontsize=cfc.track_props['grid_legend_fontsize'])
 
             # background to text label will be the data color, so the font will need to be colored appropriately.
             p_color = 'k'
-            for n in ['facecolors', 'markerfacecolor', 'facecolor']:
+            for n in ['facecolors', 'markerfacecolor', 'facecolor', 'c']:
                 if n in cfc.track_props['primary_kwargs']:
                     p_color = cfc.track_props['primary_kwargs'][n]
 
             s_color = 'k'
-            for n in ['facecolors', 'markerfacecolor', 'facecolor']:
+            for n in ['facecolors', 'markerfacecolor', 'facecolor', 'c']:
                 if n in cfc.track_props['secondary_kwargs']:
-                    p_color = cfc.track_props['secondary_kwargs'][n]
+                    s_color = cfc.track_props['secondary_kwargs'][n]
 
             r, g, b, a = matplotlib.colors.to_rgba(p_color, alpha=None)
             if r == g == b < 0.5:
@@ -484,7 +485,10 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width, noPDF):
             ax_l.text(-1.4, rb + rh/2.0, "Primary data", rotation=90, ha='center', va='center', color=p_fc,
                       fontsize=cfc.track_props['grid_legend_fontsize'] + 1, backgroundcolor=p_color)
 
-            if any([len(x) > 0 for x in cfc.secondary_data.values()]):
+            # print(cfc.secondary_data)
+            # print("sec_check", [len(x) for x in cfc.primary_data.values()])
+            # print("sec_check", [len(x) for x in cfc.secondary_data.values()])
+            if cfc.track_props['secondary_feature_bedgraph']:
                 r, g, b, a = matplotlib.colors.to_rgba(s_color, alpha=None)
                 if r == g == b < 0.5:
                     s_fc = 'white'
@@ -957,7 +961,7 @@ def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, is
     minSegCStart = curr_start
     for ind, i in enumerate(cycle):
         cc, ca, cb = segSeqD[i[0]]
-        cc = cc.lstrip("chr")
+        cc = cc.split("chr", 1)[-1]
         try:
             cc = int(cc)
             tc = cc
@@ -978,7 +982,7 @@ def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, is
         seg_end = curr_start + seg_len
 
         if tc < minChrom or (cc == minChrom and cs < minLoc):
-            minChrom, minLoc, minSegCStart = cc, cs, curr_start
+            minChrom, minLoc, minSegCStart = tc, cs, curr_start
 
         next_start = seg_end
         mod_ind = (ind + 1) % (len(prev_seg_index_is_adj))
