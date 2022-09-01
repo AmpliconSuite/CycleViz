@@ -1135,13 +1135,13 @@ def track_min_max(primary_data, secondary_data, nice_hlines, hide_secondary = Fa
     if not nice_hlines and max_dv > 10:
         spread = max_dv - min_dv
         pad = spread*pad_prop
-        return max(0,min_dv - pad), max_dv + pad
+        return max(0, min_dv - pad), max_dv + pad
 
     else:
         min_dv = 0
         om = np.floor(np.log10(max_dv))
         cap = 10.0**om
-        newmax =  np.ceil(max_dv/cap)*cap
+        newmax = np.ceil(max_dv/cap)*cap
         if newmax - max_dv > cap/2:
             newmax-=cap/2
 
@@ -1415,6 +1415,7 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
                 minsecondary = dd['secondary_lower_cap']
 
             # force data into upper and lower cap boundaries
+            print("MAX PRIM, MINPRIM", maxprimary, minprimary)
             for y in primary_data:
                 for ind, x in enumerate(primary_data[y]):
                     primary_data[y][ind] = (x[0], x[1], min(max(x[2], minprimary), maxprimary))
@@ -1447,7 +1448,7 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
                 # print((-1.0*minsecondary) / (maxsecondary - minsecondary), dd['sec_resc_zero'],'sec_resc_zero')
 
             dv_min, dv_max = track_min_max(primary_data, secondary_data, dd['nice_hlines'],
-                                           hide_secondary=dd['hide_secondary'], pad_prop=0.025)
+                                           hide_secondary=dd['hide_secondary'], pad_prop=0.02)
 
         elif dd['tracktype'] == 'links' or dd['tracktype'] == 'link':
             dd['tracktype'] = 'links'

@@ -248,7 +248,7 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
     # print(cfc.track_props['background_kwargs'])
     if cfc.track_props['background_kwargs']['facecolor'] == 'auto':
         if f_ind % 2 == 1:
-            cfc.track_props['background_kwargs']['facecolor'] = 'gainsboro'
+            cfc.track_props['background_kwargs']['facecolor'] = (0.9, 0.9, 0.9)
             if cfc.track_props['hline_kwargs']['facecolor'] == 'auto':
                 cfc.track_props['hline_kwargs']['facecolor'] = 'white'
 
@@ -509,7 +509,7 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width, noPDF):
         fig_l.savefig(ofpre + '.pdf', format='pdf')
 
 
-def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
+def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance, shift):
     slant = 3.0
     if args.figure_size_style == "small":
         marker_freq = 0.015 * total_length
@@ -518,8 +518,10 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
         marker_freq = 0.007 * total_length
         clw = 0.4
 
-    fullspace_a = np.arange(0, total_length, marker_freq)
-    fullspace_b = np.arange(marker_freq/slant, total_length + marker_freq/slant, marker_freq)
+    fullspace_a = np.arange(shift, shift + 2*total_length, marker_freq)
+    fullspace_b = np.arange(shift + marker_freq/slant, shift + 2*total_length + marker_freq/slant, marker_freq)
+    print(s, e, shift, len(fullspace_a), len(fullspace_b), drop)
+
 
     trim = drop / 4.0
     if drop < 0:
@@ -531,6 +533,7 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
     in_range_indices = np.where(boolean_array)[0]
     # put one down if it's too skinny
     if len(in_range_indices) == 0 and not flanked:
+        print("HIT")
         posns_a = [(e + s)/2.0]
         posns_b = [(e + s)/2.0 + marker_freq/slant]
         if drop < 0:
@@ -563,7 +566,7 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance):
     gInstance.draw_marker_ends(tbot)
 
 
-def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, flanked, cycle, isCycle,
+def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, ind, flanked, cycle, isCycle, shift,
                    plot_gene_direction=True):
     overlap_genes.append({})
     nhits = len(relGenes) + 1
@@ -638,7 +641,7 @@ def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, in
                                              hasStart, hasEnd, ind, pTup)
 
             gObj.gdrops.append(gInstance)
-            plot_gene_direction_indicator(normStart, normEnd, total_length, drop, flanked, gInstance)
+            plot_gene_direction_indicator(normStart, normEnd, total_length, drop, flanked, gInstance, shift)
             # gObj.gdrops = [(normStart, normEnd, total_length, seg_dir, currStart, currEnd, pTup), ]
 
         if not (pTup[2] >= gend and pTup[1] <= gstart):
@@ -672,6 +675,7 @@ def plot_genes(ref_placements, cycle, isCycle, onco_set=None):
     if onco_set is None:
         onco_set = set()
 
+    shift = min([x.abs_start_pos for x in ref_placements.values()])
     for ind, refObj in ref_placements.items():
         seg_coord_tup = (refObj.chrom, refObj.ref_start, refObj.ref_end)
         relGenes = vu.rel_genes(gene_tree, seg_coord_tup, copy.copy(onco_set))
@@ -680,7 +684,7 @@ def plot_genes(ref_placements, cycle, isCycle, onco_set=None):
         # print(ind, refObj.to_string(), len(relGenes))
         flanked = refObj.next_is_adjacent or refObj.prev_is_adjacent
         plot_gene_bars(refObj.abs_start_pos, refObj.abs_end_pos, relGenes, seg_coord_tup, total_length, cycle[ind][1],
-                       ind, flanked, cycle, isCycle)
+                       ind, flanked, cycle, isCycle, shift)
 
 
 # plot the reference genome
@@ -750,7 +754,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             # if too narrow, just make one label in the middle
             # print(ts[0],te[0], (te[1] - ts[1])/total_length * 360)
             skinny = length_since_last_bp / total_length * 360 < 1.2
-            # if it's really small, just put one marker in the center
+            # if it's very small, just put one marker in the center
             if skinny and not refObj.prev_is_adjacent and not refObj.next_is_adjacent:
                 skinny = False
                 tm = (str(ts[0]) + "-" + str(te[0]), np.mean((ts[1],te[1])), 0)
@@ -1063,7 +1067,7 @@ parser.add_argument("--tick_type", help="Represent ticks only at segment ends, o
                     choices=["ends", "standard", "none"], default="standard")
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float)
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
-                    "specifying additional data. Will be plotted from outside to inside given the order the filenames "
+                    "specifying additional data. Will be plotted from inside to outside given the order the filenames "
                     "appear in", default=[])
 parser.add_argument("--annotate_structure", help="What to plot on the outer structure indicator. Give a bed file or use"
                     " predefined 'genes' argument", type=str, default="genes")
