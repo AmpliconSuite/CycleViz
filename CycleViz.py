@@ -388,7 +388,8 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
 
             # line_segments = LineCollection(segs, linewidths=cfc.track_props['linewidth'], colors=curr_color,
             #                                linestyle='solid')
-            line_segments = LineCollection(segs, linestyle='solid', **kwargs)
+            # line_segments = LineCollection(segs, linestyle='solid', zorder=zorder, **kwargs)
+            line_segments = LineCollection(segs, linestyle="solid", zorder=zorder, colors='k', **kwargs)
             ax.add_collection(line_segments)
 
         else:

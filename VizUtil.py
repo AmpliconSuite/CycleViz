@@ -1176,11 +1176,11 @@ def create_kwargs(kwtype="Collection", facecolors=None, edgecolors=None, marker=
 
     elif kwtype == "LineCollection":
         if facecolors is None:
-            facecolors = 'none'
+            facecolors = 'k'
         if edgecolors is None:
             edgecolors = 'none'
         curr_kwargs = {
-            'edgecolor': edgecolors,
+            # 'edgecolor': edgecolors,
             'facecolor': facecolors,
             # 'markeredgecolor': edgecolors,
             # 'markerfacecolor': facecolors,
@@ -1337,6 +1337,7 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
 
         # set kwargs
         # primary
+        primary_lw = 2.0 / (totfiles)
         if dd['tracktype'] == "rects":
             ktype = "Patch"
         elif dd['primary_style'] == "points":
@@ -1345,10 +1346,13 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
             ktype = 'LineCollection'
         else:
             ktype = 'Line2D'
-        pkw = create_kwargs(kwtype=ktype, facecolors='k', markersize=1.0 / (2*totfiles), linewidth=2.0 / (totfiles))
+
+        pkw = create_kwargs(kwtype=ktype, facecolors='k', markersize=1.0 / (2*totfiles), linewidth=primary_lw)
         pkw.update(dd["primary_kwargs"])
         dd['primary_kwargs'] = pkw
+
         # secondary
+        secondary_lw = 2.0 / (totfiles)
         if dd['secondary_style'] == "points":
             ktype = 'Scatter'
         elif dd['secondary_style'] == "points":
@@ -1357,7 +1361,7 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
             ktype = 'LineCollection'
         else:
             ktype = 'Line2D'
-        skw = create_kwargs(kwtype=ktype, facecolors='lightgreen', markersize=1.0 / (2*totfiles), linewidth=2.0 / (totfiles))
+        skw = create_kwargs(kwtype=ktype, facecolors='lightgreen', markersize=1.0 / (2*totfiles), linewidth=secondary_lw)
         skw.update(dd["secondary_kwargs"])
         dd['secondary_kwargs'] = skw
         # feature 'links'
