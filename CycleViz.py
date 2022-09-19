@@ -219,19 +219,30 @@ def plot_rects(refObj, index):
                 normEnd = currStart + min(seg_len, pTup[2] - istart)
                 normStart = currStart + max(0, pTup[2] - iend)
 
-            start_angle = normStart / total_length * 360
-            end_angle = normEnd / total_length * 360
+            start_angle, end_angle = start_end_angle(normStart, normEnd, total_length)
             text_angle = (start_angle + end_angle) / 2.0
-            if end_angle < 0 and start_angle > 0:
-                end_angle += 360
 
             width = cfc.top - cfc.base  # height of the rectangle
-            # print(width, cfc.top, cfc.base)
-            ctup = make_tuple("".join(x[2][2].split()))   #index | other_value | color_tuple
-            if any([x > 1 for x in ctup]):
-                ctup = tuple([x/255.0 for x in ctup])
-            ax.add_patch(mpatches.Wedge((0, 0), cfc.base, start_angle, end_angle, facecolor=ctup, edgecolor=ctup,
+            print(width, cfc.top, cfc.base)
+            try:
+                ctup = make_tuple("".join(x[2][2].split()))   #index | other_value | color_tuple
+                if any([x > 1 for x in ctup]):
+                    ctup = tuple([x / 255.0 for x in ctup])
+
+            except ValueError:
+                print("Warning - last column of bed file for rectangle is not a valid color tuple")
+                ctup = None
+
+            if ctup:
+                cfc.track_props['primary_kwargs'].pop("facecolor", None)
+                cfc.track_props['primary_kwargs'].pop("edgecolor", None)
+                print(cfc.base, start_angle, end_angle)
+                ax.add_patch(mpatches.Wedge((0, 0), cfc.base, start_angle, end_angle, facecolor=ctup, edgecolor=ctup,
                                         width=width, **cfc.track_props['primary_kwargs']))
+
+            else:
+                ax.add_patch(mpatches.Wedge((0, 0), cfc.base, start_angle, end_angle, width=width,
+                                            **cfc.track_props['primary_kwargs']))
 
 
 def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, total_length, seg_copies, f_ind):
@@ -1032,10 +1043,10 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
 parser = argparse.ArgumentParser(description="Circular visualizations of genome structures")
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--input_yaml_file", help="Specifiy all desired arguments in this file, OR use the options below\n")
-group.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
 group.add_argument("--structure_bed", help="bed file specifying the structure of the regions to be plotted. To use a "
                                            "standard reference genome as the structure, specify 'hg19, GRCh37, hg38, "
                                            "GRCh38, mm10, or GRCm38")
+parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
 parser.add_argument("--cycle", help="cycle number to visualize [required with --cycles_file]", type=int)
 parser.add_argument("-g", "--graph", help="breakpoint graph file [required with --cycles_file]")
 parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCm38"],
@@ -1093,6 +1104,11 @@ parser.add_argument("-v", "--version", action='version', version='CycleViz {vers
 args = parser.parse_args()
 if args.input_yaml_file:
     vu.parse_main_args_yaml(args)
+    if not args.cycles_file and not args.structure_bed:
+        print("--input_yaml_file must provide a cycles_file or structure_bed key!")
+
+if not args.cycles_file and not args.input_yaml_file and not args.structure_bed:
+    print("One of --input_yaml_file, --cycles_file, --structure_bed required!")
 
 if args.ref == "GRCh38":
     args.ref = "hg38"
