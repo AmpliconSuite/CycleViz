@@ -92,19 +92,20 @@ The structure of the visualized regions can be specified with either an AA cycle
 
 
 #### Specifying optional properties related to plot appearance
-| Argument      | Default | Description |
-| :---        |    :----:   | :--- |
+| Argument      | Default | Description                                                                                                                                                                                               |
+| :---        |    :----:   |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `--annotate_structure ['genes' /path/to/chromosome/coloring/]` | `'genes'` | Will either show locations of genes or user can give a filename of colors to assign to specific regions. There are cytoband coloring files in the `resources/` directory that can be set as the argument. |
-| `--structure_color ['auto', matplotlib color]` | `'auto'` | Either use default coloring of chromosomes (`auto`), or specify a single matplotlib color to use on every chromosome. This will be plotted behind `annotate_structure`. | 
-|`--figure_size_style ["normal", "small"]`| `"normal"` | Produce normally scaled figure or `small` figure rescaled for small image size. | 
-| `--label_segs ["names", "numbers"]` | | Print the segment ID & direction (`numbers`) or chromosome name (`names`) or a custom list of labels (specified as multiple space separated arguments) under structure segment.|
-| `--gene_fontsize [float]` | 7 | Gene name fontsize |
-| `--gene_highlight_list [string] [string] ...` | | List of RefGene gene names to give alternate color (default red) |
-| `--print_dup_names` | | Print gene name each time it is split across segments. Default, print gene name once if split across multiple segments.| 
-| `--segment_end_ticks` | | Label exact coordinate endpoints of segments and do not show tick marks along segment. Default is off, and will print ticks of approx location (scaled by 10 kbp) along the segment. |
-| `--tick_fontsize` | 7 | Fontsize for coordinate ticks or endpoint coordinates. |
-| `--hide_chrom_color_legend [True/False]` | `False` | Do not print a map of color to chromosome name on the left side. Perhaps set to `True` if showing more than ~10 chroms. |
-| `--rotate_to_min` | | Rotate the plot such that the smallest genomic coordinate resides at the 0 degree position in the first quadrant (3 o'clock). |
+| `--structure_color ['auto', matplotlib color]` | `'auto'` | Either use default coloring of chromosomes (`auto`), or specify a single matplotlib color to use on every chromosome. This will be plotted behind `annotate_structure`.                                   | 
+|`--figure_size_style ["normal", "small"]`| `"normal"` | Produce normally scaled figure or `small` figure rescaled for small image size.                                                                                                                           | 
+| `--label_segs ["names", "numbers"]` | | Print the segment ID & direction (`numbers`) or chromosome name (`names`) or a custom list of labels (specified as multiple space separated arguments) under structure segment.                           |
+| `--gene_fontsize [float]` | 7 | Gene name fontsize                                                                                                                                                                                        |
+| `--gene_highlight_list [string] [string] ...` | | List of RefGene gene names to give alternate color (default red)                                                                                                                                          |
+| `--print_dup_names` | | Print gene name each time it is split across segments. Default, print gene name once if split across multiple segments.                                                                                   | 
+| `--segment_end_ticks` | | Label exact coordinate endpoints of segments and do not show tick marks along segment. Default is off, and will print ticks of approx location (scaled by 10 kbp) along the segment.                      |
+| `--tick_fontsize` | 7 | Fontsize for coordinate ticks or endpoint coordinates.                                                                                                                                                    |
+| `--hide_chrom_color_legend [True/False]` | `False` | Do not print a map of color to chromosome name on the left side. Perhaps set to `True` if showing more than ~10 chroms.                                                                                   |
+| `--rotate_to_min` | | Rotate the plot such that the smallest genomic coordinate resides at the 0 degree position in the first quadrant (3 o'clock).                                                                             |
+| `--no_PDF` | | Do not save a PDF version of the plot.                                                                                                                                                                    |
 
 #### Specifying properties related to interior data track features
 | Argument      | Default | Description |
