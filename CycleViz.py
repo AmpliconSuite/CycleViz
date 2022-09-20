@@ -1041,7 +1041,7 @@ def construct_cycle_ref_placements(cycle, segSeqD, raw_cycle_length, prev_seg_in
 
 
 parser = argparse.ArgumentParser(description="Circular visualizations of genome structures")
-group = parser.add_mutually_exclusive_group(required=True)
+group = parser.add_mutually_exclusive_group()
 group.add_argument("--input_yaml_file", help="Specifiy all desired arguments in this file, OR use the options below\n")
 group.add_argument("--structure_bed", help="bed file specifying the structure of the regions to be plotted. To use a "
                                            "standard reference genome as the structure, specify 'hg19, GRCh37, hg38, "
