@@ -971,7 +971,7 @@ def plot_alignment(contig_locs, segment_locs, total_length):
 def compute_min_seg_offset(cycle, segSeqD, spacing_bp, prev_seg_index_is_adj, isCycle):
     minChrom = sys.maxsize
     chromLook = {"X": 23, "Y": 24, "M": 25}
-    minLoc = np.float('inf')
+    minLoc = float('inf')
     curr_start = 0.0 if isCycle else spacing_bp
     next_start = 0
     minSegCStart = curr_start
