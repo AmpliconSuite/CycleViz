@@ -1,0 +1,7 @@
+gene_fontsize: 8
+tick_fontsize: 6
+label_segs: False
+tick_type: ends
+center_hole: 7
+rotate_to_min: True
+# figure_size_style: small
