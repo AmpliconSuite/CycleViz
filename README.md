@@ -1,10 +1,13 @@
 # CycleViz
 
+Latest version: **0.1.3**.
+
 Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) & 
 [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. 
-CycleViz can also produce more general visualizations of genomic regions. 
+
+CycleViz can also produce more general circular visualizations of genomic regions using only a bed file. 
 Supports hg19, hg38, and GRCh37. CycleViz is implemented in python and compatible with both python2 and python3. 
-CycleViz has been tested on Ubuntu 16.04+ and MacOS 10+.
+CycleViz has been tested on Ubuntu 16.04 and later, and MacOS 10 and later.
 
 **Examples**: Left, a cycles file visualization without AR-reconstruction data. Right, a cycles file visualization with Bionano data. 
 
@@ -21,21 +24,17 @@ Seperate instructions [are available](#running-cycleviz-with-an-aa-generated-cyc
 Requires matplotlib version 2.0.0 or higher and intervaltree python module, both of which are in some cases 
 non-standard in Conda.
 
-To check your matplotlib version in python, type
-```python
-import matplotlib
-print(matplotlib.__version__)
+
+To install relevant python packages. 
+```
+pip install intervaltree pyyaml matplotlib
 ```
 
-To upgrade to latest matplotlib from command line, do 
+If you have matplotlib, but the version is not above 2.0.0, you can try the following:
 ```
 pip install --upgrade matplotlib
 ```
 
-To install intervaltree python package. 
-```
-pip install intervaltree
-```
 
 [optional] To get the Microsoft fonts on Ubuntu (CycleViz defaults to Arial font)
 ```bash

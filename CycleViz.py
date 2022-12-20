@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 import argparse
 from collections import defaultdict
@@ -26,6 +26,7 @@ import VizUtil as vu
 
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
+rcParams['pdf.fonttype'] = 42
 
 CV_RESOURCES = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 print("Using resources in " + CV_RESOURCES)
@@ -1076,7 +1077,7 @@ parser.add_argument("--gene_fontsize", help="font size for gene names", type=flo
 parser.add_argument("--gene_spacing", help="How far from reference to plot gene names. Default 1.7", type=float,
                     default=1.7)
 parser.add_argument("--tick_type", help="Represent ticks only at segment ends, or throughout ('standard' is default)",
-                    choices=["ends", "standard", "none"], default="standard")
+                    choices=["ends", "standard", "none"], default="ends")
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float)
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
                     "specifying additional data. Will be plotted from inside to outside given the order the filenames "

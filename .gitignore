@@ -6,4 +6,5 @@ test_files/
 *_graph.txt
 *_key.txt
 .idea
+.DS_Store
 GBM39KT.py

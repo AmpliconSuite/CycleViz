@@ -24,6 +24,8 @@ import VizUtil as vu
 
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
+rcParams['pdf.fonttype'] = 42
+
 
 CV_RESOURCES = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 print("Using resources in " + CV_RESOURCES)
