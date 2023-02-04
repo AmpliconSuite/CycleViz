@@ -444,13 +444,15 @@ def plot_track_legend(refObj, ofpre, outer_bar, bar_width, noPDF):
     for f_ind, cfc in enumerate(refObj.feature_tracks):
         # p_color = cfc.track_props['primary_color']
         # s_color = cfc.track_props['secondary_color']
+        rh = cfc.top - cfc.base + intertrack_spacing
+        rb = cfc.base - intertrack_spacing / 2
+        ax_l.text(-2, rb + rh / 2.0, str(cfc.track_props["name"]), rotation=90, ha='center', va='center', color='k',
+                  fontsize=cfc.track_props['grid_legend_fontsize'] + 2)
+
         if cfc.track_props['tracktype'] == 'standard':
             height_scale_factor = (cfc.top - cfc.base) / float(cfc.track_max - cfc.track_min)
-
             # plot a background
             # lcolor = 'lightgrey'
-            rh = cfc.top - cfc.base + intertrack_spacing
-            rb = cfc.base - intertrack_spacing/2
             ax_l.add_patch(mpatches.Rectangle((0, rb), legw, rh, zorder=-1, **cfc.track_props['background_kwargs']))
 
             # plot the legends lines
