@@ -1078,7 +1078,7 @@ parser.add_argument("--gene_highlight_list", help="list of gene names to highlig
 parser.add_argument("--gene_fontsize", help="font size for gene names", type=float, default=7)
 parser.add_argument("--gene_spacing", help="How far from reference to plot gene names. Default 1.7", type=float,
                     default=1.7)
-parser.add_argument("--tick_type", help="Represent ticks only at segment ends, or throughout ('standard' is default)",
+parser.add_argument("--tick_type", help="Represent ticks only at segment ends, or throughout ('ends' is default)",
                     choices=["ends", "standard", "none"], default="ends")
 parser.add_argument("--tick_fontsize", help="font size for genomic position ticks", type=float)
 parser.add_argument("--feature_yaml_list", nargs='+', help="list of the input yamls for bedgraph file feature "
