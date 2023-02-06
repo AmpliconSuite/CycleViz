@@ -535,8 +535,6 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance, 
 
     fullspace_a = np.arange(shift, shift + 2*total_length, marker_freq)
     fullspace_b = np.arange(shift + marker_freq/slant, shift + 2*total_length + marker_freq/slant, marker_freq)
-    print(s, e, shift, len(fullspace_a), len(fullspace_b), drop)
-
 
     trim = drop / 4.0
     if drop < 0:
@@ -548,7 +546,6 @@ def plot_gene_direction_indicator(s, e, total_length, drop, flanked, gInstance, 
     in_range_indices = np.where(boolean_array)[0]
     # put one down if it's too skinny
     if len(in_range_indices) == 0 and not flanked:
-        print("HIT")
         posns_a = [(e + s)/2.0]
         posns_b = [(e + s)/2.0 + marker_freq/slant]
         if drop < 0:
