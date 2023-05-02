@@ -1,0 +1,15 @@
+name: "WGS"
+primary_feature_bedgraph: "track_data/T41_amplicon1_graph_position_coverage_merged.bedgraph"
+secondary_feature_bedgraph: "track_data/T41_hg19_hpv.cs_chromosome_coverage.bedgraph"
+end_trim: 250
+# normalize by the number of times the element appears in the circle (e.g. duplicated)
+normalize_by_count: True
+show_segment_copy_count: False
+hide_secondary: 'viral'
+primary_smoothing: 50
+primary_kwargs:
+  linewidth: 0.2
+  s: 1.0
+secondary_kwargs:
+  linewidth: 0.2
+  s: 1.0

@@ -1,5 +1,4 @@
-*.pdf
-*.png
+*BPG_converted_cycles*
 *.pyc
 test_files/
 *.cmap

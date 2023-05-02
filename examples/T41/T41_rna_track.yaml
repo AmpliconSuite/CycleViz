@@ -1,0 +1,20 @@
+name: "RNA"
+primary_feature_bedgraph: "track_data/T41_amplicon1_graph_position_RNA_coverage_merged.bedgraph"
+secondary_feature_bedgraph: "track_data/T41rna_fc.bedgraph"
+indicate_zero: True
+zero_facecolor: "purple"
+end_trim: 150
+secondary_style: 'points'
+normalize_by_count: True
+show_segment_copy_count: False
+primary_smoothing: 15
+secondary_upper_cap: 7
+secondary_lower_cap: -1
+rescale_secondary_to_primary: True
+primary_kwargs:
+  linewidth: 0.2
+  s: 1.2
+secondary_kwargs:
+  linewidth: 0.2
+  s: 1.2
+  facecolors: "orange" 

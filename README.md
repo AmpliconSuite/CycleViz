@@ -1,6 +1,6 @@
 # CycleViz
 
-Latest version: **0.1.3**.
+Latest version: **0.1.4**.
 
 Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) & 
 [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. 
@@ -13,10 +13,9 @@ CycleViz has been tested on Ubuntu 16.04 and later, and MacOS 10 and later.
 
 Seperate instructions [are available](#running-cycleviz-with-an-aa-generated-cycles-file) if using an AA cycles file without AR reconstruction.
 
-<!---![AA example](images/exampleAA.png){:height="300px" width="300px"}
-![AR example](images/exampleAR.png){:height="300px" width="300px"} --->
+Below, examples of AA-derived simple structures, and an AmpliconReconstructor-derived structure supported by optical map data.
 
-<img src="images/exampleAA.png" height="45%" width="45%"> <img src="images/exampleAR.png" height="45%" width="45%">
+<img src="images/T41_example.png" width=350px><img src="images/exampleAR.png" width=375px>
 
 
 ## Installation
@@ -52,6 +51,8 @@ After cloning the CycleViz repo consider running the following to add a line to 
 
 ## Usage
 
+The examples directory provides two worked examples and sample datasets as a jumping-off point for users.
+
 ### Running CycleViz with an AA-generated cycles file
 If using an AA-generated cycles file instead of AR, whose segments are merged across adjacent breakpoint graph segments, you will first need to unmerge the segments in the cycles file. We provide a script, `convert_cycles_file.py` which can be run on an AA cycles file and AA breakpoint graph. This script must be run to generate a BPG-converted cycles file, prior to running CycleViz. Many thanks to Siavash R. Dehkordi for providing this script.
 
@@ -59,7 +60,7 @@ If using an AA-generated cycles file instead of AR, whose segments are merged ac
 
 ### Command line arguments
 
-There are two modes of visualization, circular and linear. Currently there are separate scripts to run each mode, but we intend to merge these in the future.
+There are two modes of visualization, CycleViz and LinearViz.
 
 using the `--help` command will output a specific description of each argument below.
 
@@ -82,12 +83,12 @@ The structure of the visualized regions can be specified with either an AA cycle
 
 #### Annotation arguments
 
-| Argument | Default | Description |
-| :---  | :----: |  :----  |
-| `--ref [hg19, GRCh37, hg38, GRCh38]` |  `hg19` | Reference coordinate system used |
-| `--sname [filename prefix]` \[optional\] | | Output filename prefix |
+| Argument                                                  | Default | Description                                                                                                                                                                                                                                              |
+|:----------------------------------------------------------| :----: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--ref [hg19, GRCh37, hg38, GRCh38, mm10, GRCm38]`        | | Reference build                                                                                                                                                                                                                                          |
+| `--sname [filename prefix]` \[optional\]                  | | Output filename prefix                                                                                                                                                                                                                                   |
 | `--gene_subset_file [filename or "BUSHMAN"]` \[optional\] | | File giving a list of genes show in the plot (as GFF or textfile with RefGene name in last column), or use the [Bushman oncogene list](http://www.bushmanlab.org/links/genelists). If no file is specified, all overlapping RefGene genes will be shown. |
-| `--gene_subset_list [string] [string] ...` \[optional\] | | Alternative to `--gene_subset_list`. Directly specify a list of RefGene gene names to show in plot.| 
+| `--gene_subset_list [string] [string] ...` \[optional\]   | | Alternative to `--gene_subset_list`. Directly specify a list of RefGene gene names to show in plot.                                                                                                                                                      | 
 
 
 #### Specifying optional properties related to plot appearance
@@ -143,6 +144,7 @@ The arguments that can be specified inside a YAML file for each data track.
 | `rescale_by_count`             |  `False`   |                                                                                   `[True, False]`                                                                                   | Rescale the data track by the number of times that structure segment (identified by segment ID/name) appears.                                                                                                                                                                                                                   |
 | `hide_secondary`               |  `False`   |                                                                                   `[True, False]`                                                                                   | Do not show the secondary data, however still applies all other rescaling operations specified.                                                                                                                                                                                                                                 |
 | `indicate_zero`                |  `False`   |                                                                                   `[True, False]`                                                                                   | Plot a line in the data track corresponding to the value 0.                                                                                                                                                                                                                                                                     |
+| `zero_facecolor`               |    `k`     |                                                                              a matplotlib named color                                                                               | Color of the line in the data track corresponding to the value 0.                                                                                                                                                                                                                                                               |
 | `num_hlines`                   |    `5`     |                                                                                    integer >= 0                                                                                     | Number of horizontal grid lines in the track (only for `standard` tracktype).                                                                                                                                                                                                                                                   |
 | `nice_hlines`                  |   `True`   |                                                                                   `[True, False]`                                                                                   | Automatically select reasonable min and max values for the gridlines. Turning off uses raw min and max from track as the hline min/max.                                                                                                                                                                                         |
 | `grid_legend_fontsize`         |    `4`     |                                                                                     number > 0                                                                                      | Fontsize for gridline value ticks in track legend plot.                                                                                                                                                                                                                                                                         |
@@ -166,6 +168,8 @@ The arguments that can be specified inside a YAML file for each data track.
 
 
 ### Examples
+
+Please see the examples folder for worked examples with demo data.
  
 For circular visualizations
 

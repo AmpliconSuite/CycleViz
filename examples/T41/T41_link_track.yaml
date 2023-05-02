@@ -1,0 +1,5 @@
+name: "RNA split-reads"
+tracktype: 'link'
+primary_feature_bedgraph: "track_data/T41_split_reads.bedpe"
+link_kwargs:
+  facecolors: "red"

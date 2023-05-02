@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 import argparse
 from collections import defaultdict
@@ -295,9 +295,8 @@ def plot_standard_IF_track(currStart, currEnd, seg_dir, pTup, cfc, curr_chrom, t
         # plt.plot(x_v, y_v, zorder=1, **cfc.track_props['hline_kwargs'])
 
     if cfc.track_props['indicate_zero']:
-        zh = (-cfc.track_min)/(cfc.track_max - cfc.track_min) * (cfc.top - cfc.base) \
-             + cfc.base
-        zeroline_kwargs = vu.create_kwargs(kwtype="Patch", facecolors="k")
+        zh = (-cfc.track_min)/(cfc.track_max - cfc.track_min) * (cfc.top - cfc.base) + cfc.base
+        zeroline_kwargs = vu.create_kwargs(kwtype="Patch", facecolors=cfc.track_props['zero_facecolor'])
         ax.add_patch(mpatches.Wedge((0, 0), zh, legend_start_angle, legend_end_angle, zorder=1, width=0.12,
                                     **zeroline_kwargs))
 
@@ -1049,8 +1048,7 @@ group.add_argument("--structure_bed", help="bed file specifying the structure of
 parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
 parser.add_argument("--cycle", help="cycle number to visualize [required with --cycles_file]", type=int)
 parser.add_argument("-g", "--graph", help="breakpoint graph file [required with --cycles_file]")
-parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCm38"],
-                    required=True)
+parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCm38"])
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
@@ -1109,6 +1107,15 @@ if args.input_yaml_file:
 
 if not args.cycles_file and not args.input_yaml_file and not args.structure_bed:
     print("One of --input_yaml_file, --cycles_file, --structure_bed required!")
+
+
+ref_choices = ["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCm38"]
+if not args.ref:
+    print("--ref is required")
+
+elif args.ref not in ref_choices:
+    print("--ref must be one of " + str(ref_choices))
+
 
 if args.ref == "GRCh38":
     args.ref = "hg38"
@@ -1274,7 +1281,8 @@ if args.interior_segments_cycle:
         IS_cycle, IS_isCircular = IS_cycles[IS_cnum], IS_circular_D[IS_cnum]
         IS_rObj_placements, new_IS_cycle, new_IS_links = vu.handle_IS_data(ref_placements, IS_cycle, IS_segSeqD,
                                                                            IS_isCircular, IS_bh)
-        plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, 'none', 1.1)
+        plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, 'none',
+                        bar_width)
 
         plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links)
 
@@ -1292,6 +1300,7 @@ if args.annotate_structure != "genes":
 
 if args.feature_yaml_list:
     for ind, yaml_file in enumerate(args.feature_yaml_list):
+        print("Processing " + yaml_file)
         cfc = vu.parse_feature_yaml(yaml_file, ind + 1, len(args.feature_yaml_list))
         cfc.base, cfc.top = fbases[ind], ftops[ind]
         vu.store_bed_data(cfc, ref_placements, cfc.track_props['end_trim'])

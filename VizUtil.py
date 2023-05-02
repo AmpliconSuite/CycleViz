@@ -494,7 +494,17 @@ def parse_bed(bedfile, store_all_additional_fields=False):
                     startA, endA = float(fields[1]), float(fields[2])
                     chromB = fields[3]
                     startB, endB = float(fields[4]), float(fields[5])
-                    data = (float(fields[6]), fields[7])
+                    if len(fields) > 6:
+                        score = float(fields[6])
+                    else:
+                        score = 1.0
+
+                    if len(fields) > 7:
+                        color = fields[7]
+                    else:
+                        color = 'red'
+
+                    data = (score, color)
                     data_dict[(chromA, chromB)].append((startA, endA, startB, endB, data))
 
         else:
@@ -1299,6 +1309,7 @@ def parse_feature_yaml(yaml_file, index, totfiles, path_prefix=""):
             'secondary_style': 'points',
             'hide_secondary': False,
             'indicate_zero': None,
+            'zero_facecolor': 'k',
             'num_hlines': 5,
             'nice_hlines': True,
             'grid_legend_fontsize': 4,

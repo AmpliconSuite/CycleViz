@@ -1,0 +1,9 @@
+Interval	1	hpv16ref_1	95	4226
+Interval	2	chr5	40713918	40730447
+List of cycle segments
+Segment	1	hpv16ref_1	95	879
+Segment	2	hpv16ref_1	3951	4226
+Segment	3	chr5	40713918	40716599
+Segment 4	chr5	40728446	40728577
+Segment	5	chr5	40730363	40730447
+Cycle=1;Copy_count=1;Segments=0+,2-,3+,4+,5+,1-,0+

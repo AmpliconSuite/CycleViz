@@ -1,0 +1,12 @@
+ref: "hg19"
+cycles_file: "T41_amplicon1_BPG_converted_cycles.txt"
+cycle: 7
+graph: "T41_amplicon1_graph.txt"
+gene_fontsize: 8
+tick_fontsize: 5
+label_segs: False
+segment_end_ticks: True
+center_hole: 0
+# alignment of a long read
+interior_segments_cycle: "track_data/i3_HQ_sample32f85d_c3314_f3p3_3947_cycles.txt" 
+rotate_to_min: True
