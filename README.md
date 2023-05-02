@@ -5,15 +5,11 @@ Latest version: **0.1.4**.
 Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) & 
 [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. 
 
-CycleViz can also produce more general circular visualizations of genomic regions using only a bed file. 
-Supports hg19, hg38, and GRCh37. CycleViz is implemented in python and compatible with both python2 and python3. 
+CycleViz can also produce general circular visualizations of genomic regions using only a bed file. 
+Supports hg19, GRCh37, hg38, and mm10. CycleViz is implemented in python and compatible with both python2 and python3. 
 CycleViz has been tested on Ubuntu 16.04 and later, and MacOS 10 and later.
 
-**Examples**: Left, a cycles file visualization without AR-reconstruction data. Right, a cycles file visualization with Bionano data. 
-
-Seperate instructions [are available](#running-cycleviz-with-an-aa-generated-cycles-file) if using an AA cycles file without AR reconstruction.
-
-Below, examples of AA-derived simple structures, and an AmpliconReconstructor-derived structure supported by optical map data.
+**Examples**: Left, visualization of a simple AA-derived structure with multiple interior data tracks. Right, a cycles file visualization with Bionano data, generated from output of AmpliconReconstructor. 
 
 <img src="images/T41_example.png" width=350px><img src="images/exampleAR.png" width=375px>
 
