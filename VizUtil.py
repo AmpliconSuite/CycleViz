@@ -1256,7 +1256,7 @@ def parse_main_args_yaml(args):
         if "seg_label_fontsize" in sample_data:
             args.seg_label_fontsize = sample_data.get("seg_label_fontsize")
         if "gene_subset_file" in sample_data:
-            args.gene_subset_files = sample_data.get("gene_subset_file")
+            args.gene_subset_file = sample_data.get("gene_subset_file")
         if "gene_subset_list" in sample_data:
             args.gene_subset_list = sample_data.get("gene_subset_list")
             print(args.gene_subset_list)
