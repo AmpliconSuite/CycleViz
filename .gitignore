@@ -3,7 +3,6 @@
 test_files/
 test.txt
 *.cmap
-*_graph.txt
 *_key.txt
 .idea
 .DS_Store
