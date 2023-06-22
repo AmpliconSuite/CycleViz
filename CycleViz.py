@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 import argparse
 from collections import defaultdict

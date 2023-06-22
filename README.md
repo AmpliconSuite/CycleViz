@@ -1,13 +1,13 @@
 # CycleViz
 
-Latest version: **0.1.4**.
+Latest version: **0.1.5**.
 
 Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) & 
 [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. 
 
 CycleViz can also produce general circular visualizations of genomic regions using only a bed file. 
 Supports hg19, GRCh37, hg38, and mm10. CycleViz is implemented in python and compatible with both python2 and python3. 
-CycleViz has been tested on Ubuntu 16.04 and later, and MacOS 10 and later.
+CycleViz has been tested on Ubuntu 16.04+, and macOS 10+.
 
 **Examples**: Left, visualization of a simple AA-derived structure with multiple interior data tracks. Right, a cycles file visualization with Bionano data, generated from output of AmpliconReconstructor. 
 
@@ -16,34 +16,45 @@ CycleViz has been tested on Ubuntu 16.04 and later, and MacOS 10 and later.
 
 ## Installation
 
-Requires matplotlib version 2.0.0 or higher and intervaltree python module, both of which are in some cases 
-non-standard in Conda.
+Requires matplotlib version 2.0.0 or higher and intervaltree python module.
 
 
 To install relevant python packages. 
+```bash
+pip install intervaltree pyyaml 'matplotlib>=2.0.0'
 ```
-pip install intervaltree pyyaml matplotlib
+or
+```bash
+conda install intervaltree pyyaml 'matplotlib-base>=2.0.0'
 ```
 
-If you have matplotlib, but the version is not above 2.0.0, you can try the following:
-```
-pip install --upgrade matplotlib
-```
+**Optional: install Arial font in Linux**
 
-
-[optional] To get the Microsoft fonts on Ubuntu (CycleViz defaults to Arial font)
+CycleViz defaults to Arial font and will fall back to Deja Vu Sans if Arial is not present. Arial is already included on macOS. To get the Microsoft fonts on Ubuntu, do
 ```bash
 sudo apt-get install ttf-mscorefonts-installer fontconfig
 sudo fc-cache -f  # rebuilds the font cache
 ```
 
+Alternatively, you can do this using conda by running
+
+`conda install mscorefonts` 
+
+then launch python and do
+```python
+import matplotlib.font_manager
+matplotlib.font_manager._load_fontmanager(try_read_cache=False)
+```
+
+**Optional: Setting a bash variable for CycleViz** 
+
 After cloning the CycleViz repo consider running the following to add a line to your `.bashrc` file:
 
-`cd CycleViz/`
-
-`echo export CV_SRC=$PWD >> ~/.bashrc`
-
-`source ~/.bashrc`
+```bash
+cd CycleViz/
+echo export CV_SRC=$PWD >> ~/.bashrc
+source ~/.bashrc
+```
 
 ## Usage
 

@@ -511,12 +511,12 @@ def parse_bed(bedfile, store_all_additional_fields=False):
             for entry_index, line in enumerate(infile):
                 line = line.rstrip("\n")
                 if not line.startswith("#") and len(line) > 0:
-                    fields = line.rsplit('\t')
+                    fields = line.rsplit()
                     chrom = fields[0]
                     begin, end = float(fields[1]), float(fields[2])
                     if not store_all_additional_fields:
                         if len(fields) > 3:
-                            data = float(fields[-1])
+                            data = float(fields[3])
                             # if np.isinf(data):
                             #     data = None
                         else:
