@@ -30,7 +30,7 @@ conda install intervaltree pyyaml 'matplotlib-base>=2.0.0'
 
 Then download the CycleViz repo
 ```
-git clone AmpliconSuite/CycleViz
+git clone https://github.com/AmpliconSuite/CycleViz
 ```
 
 **Recommended: Setting a bash variable for CycleViz** 
