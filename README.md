@@ -2,7 +2,7 @@
 
 Latest version: **0.1.5**.
 
-Visualize outputs of [AmpliconArchitect](https://github.com/virajbdeshpande/AmpliconArchitect/) & 
+Visualize outputs of [AmpliconArchitect](https://github.com/AmpliconSuite/AmpliconArchitect/) & 
 [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. 
 
 CycleViz can also produce general circular visualizations of genomic regions using only a bed file. 
@@ -28,6 +28,21 @@ or
 conda install intervaltree pyyaml 'matplotlib-base>=2.0.0'
 ```
 
+Then download the CycleViz repo
+```
+git repo clone AmpliconSuite/CycleViz
+```
+
+**Recommended: Setting a bash variable for CycleViz** 
+
+After cloning the CycleViz repo consider running the following to add a line to your `.bashrc` file:
+
+```bash
+cd CycleViz/
+echo export CV_SRC=$PWD >> ~/.bashrc
+source ~/.bashrc
+```
+
 **Optional: install Arial font in Linux**
 
 CycleViz defaults to Arial font and will fall back to Deja Vu Sans if Arial is not present. Arial is already included on macOS. To get the Microsoft fonts on Ubuntu, do
@@ -44,16 +59,6 @@ then launch python and do
 ```python
 import matplotlib.font_manager
 matplotlib.font_manager._load_fontmanager(try_read_cache=False)
-```
-
-**Optional: Setting a bash variable for CycleViz** 
-
-After cloning the CycleViz repo consider running the following to add a line to your `.bashrc` file:
-
-```bash
-cd CycleViz/
-echo export CV_SRC=$PWD >> ~/.bashrc
-source ~/.bashrc
 ```
 
 ## Usage
