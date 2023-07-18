@@ -1048,7 +1048,7 @@ group.add_argument("--structure_bed", help="bed file specifying the structure of
 parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file")
 parser.add_argument("--cycle", help="cycle number to visualize [required with --cycles_file]", type=int)
 parser.add_argument("-g", "--graph", help="breakpoint graph file [required with --cycles_file]")
-parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCm38"])
+parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCh38_viral"])
 parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
@@ -1109,7 +1109,7 @@ if not args.cycles_file and not args.input_yaml_file and not args.structure_bed:
     print("One of --input_yaml_file, --cycles_file, --structure_bed required!")
 
 
-ref_choices = ["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCm38"]
+ref_choices = ["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCh38_viral"]
 if not args.ref:
     print("--ref is required")
 
@@ -1117,7 +1117,7 @@ elif args.ref not in ref_choices:
     print("--ref must be one of " + str(ref_choices))
 
 
-if args.ref == "GRCh38":
+if args.ref == "GRCh38" or args.ref == "GRCh38_viral":
     args.ref = "hg38"
 
 print("Plots will use reference " + args.ref)
