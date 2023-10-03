@@ -1,6 +1,6 @@
 # CycleViz
 
-Latest version: **0.1.5**.
+Latest version: **0.1.6**.
 
 Visualize outputs of [AmpliconArchitect](https://github.com/AmpliconSuite/AmpliconArchitect/) & 
 [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. 
@@ -50,8 +50,9 @@ CycleViz defaults to Arial font and will fall back to Deja Vu Sans if Arial is n
 sudo apt-get install ttf-mscorefonts-installer fontconfig
 sudo fc-cache -f  # rebuilds the font cache
 ```
+Then reset the matplotlib font cache using the instructions [here](https://stackoverflow.com/questions/37920935/matplotlib-cant-find-font-installed-in-my-linux-machine).
 
-Alternatively, you can do this using conda by running
+Alternatively, you can do this process using conda by running
 
 `conda install mscorefonts` 
 
@@ -114,17 +115,18 @@ The structure of the visualized regions can be specified with either an AA cycle
 | `--gene_highlight_list [string] [string] ...`                  |            | List of RefGene gene names to give alternate color (default red)                                                                                                                                          |
 | `--print_dup_names`                                            |            | Print gene name each time it is split across segments. Default, print gene name once if split across multiple segments.                                                                                   | 
 | `--tick_fontsize`                                              |     7      | Fontsize for coordinate ticks or endpoint coordinates.                                                                                                                                                    |
-| `--tick_type`                                                  |   'ends'    | Represent ticks only at segment ends, or throughout ('ends' is default).                                                                                                                                  |
+| `--tick_type`                                                  |   `'ends'`    | Represent ticks only at segment ends, or throughout ('ends' is default).                                                                                                                                  |
 | `--hide_chrom_color_legend [True/False]`                       |  `False`   | Do not print a map of color to chromosome name on the left side. Perhaps set to `True` if showing more than ~10 chroms.                                                                                   |
 | `--rotate_to_min`                                              |            | Rotate the plot such that the smallest genomic coordinate resides at the 0 degree position in the first quadrant (3 o'clock).                                                                             |
 | `--no_PDF`                                                     |            | Do not save a PDF version of the plot.                                                                                                                                                                    |
 
 #### Specifying properties related to interior data track features
-| Argument      | Default | Description |
-| :---        |    :----:   | :--- |
-| `--feature_yaml_list [filename] [filename] ...` |  | List of interior feature track yaml files (**ordered from inner to outer**). |
-| `--interior_segments_cycle [filename]` | | An AA cycles-formatted file indicating regions to draw an inlaid structure beneath the reference (e.g. a transcript structure from a rearranged genome). Subset segments should be ordered consistently with the outer structure. | 
-| `--center_hole [float]` | 1.25 | Radius of center hole in CycleViz plot where no data appears (if interior features are used). |
+| Argument                                                 | Default | Description                                                                                                                                                                                                                       |
+|:---------------------------------------------------------|:-------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--feature_yaml_list [filename] [filename] ...`          |         | List of interior feature track yaml files (**ordered from inner to outer**).                                                                                                                                                      |
+| `--interior_segments_cycle [filename]`                   |         | An AA cycles-formatted file indicating regions to draw an inlaid structure beneath the reference (e.g. a transcript structure from a rearranged genome). Subset segments should be ordered consistently with the outer structure. | 
+| `--interior_segments_cycle_connect_width ["full", "auto"` |  `'auto'`  | Defines how the segments should be connected visually in the interior cycle (full height (`full`) or `auto`, which is just a small connector line).                                                                               |
+| `--center_hole [float]`                                  |  1.25   | Radius of center hole in CycleViz plot where no data appears (if interior features are used).                                                                                                                                     |
 
 #### Specifying properties related to Bionano data & AmpliconReconstructor output
 | Argument      | Default | Description |

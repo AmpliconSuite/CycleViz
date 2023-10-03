@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 import argparse
 from collections import defaultdict
@@ -62,15 +62,22 @@ def start_end_angle(normStart, normEnd, total_length):
 
 
 def plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj=None, bpg_dict=None, seg_end_pos_d=None,
-                        manual_links=None):
-    if prev_seg_index_is_adj and bpg_dict and seg_end_pos_d:
-        connect_width = bar_width / 2.
-        ch = bar_width/4.
+                        manual_links=None, connect_width="auto"):
+
+    if connect_width == "full":
+        connect_width = bar_width
+        ch = 0
+        prev_seg_index_is_adj = defaultdict(bool)
 
     else:
-        connect_width = bar_width/15.0
-        ch = bar_width/2.
-        prev_seg_index_is_adj = defaultdict(bool)
+        if prev_seg_index_is_adj and bpg_dict and seg_end_pos_d:
+            connect_width = bar_width / 2.
+            ch = bar_width/4.
+
+        else:
+            connect_width = bar_width/15.0
+            ch = bar_width/2.
+            prev_seg_index_is_adj = defaultdict(bool)
 
     for ind, refObj in ref_placements.items():
         if refObj.custom_bh:
@@ -1053,8 +1060,9 @@ parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
 parser.add_argument("--interior_segments_cycle",
-                    help="Enable visualization of an interior segment (e.g. long read transcript, etc.",
-                    type=str, default="")
+                    help="Enable visualization of an interior segments from an AA cycles filec(e.g. long read", type=str, default="")
+parser.add_argument("--interior_segments_cycle_connect_width", help="Width of drawn junction between segments of interior cycle",
+                    choices=["full", "auto"], default="auto")
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("--AR_path_alignment", help="AR path alignment file")
@@ -1284,7 +1292,8 @@ if args.interior_segments_cycle:
         plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, 'none',
                         bar_width)
 
-        plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links)
+        plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links,
+                            connect_width=args.interior_segments_cycle_connect_width)
 
 # cytobanding
 if args.annotate_structure != "genes":

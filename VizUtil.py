@@ -1282,6 +1282,8 @@ def parse_main_args_yaml(args):
             args.trim_contigs = sample_data.get("trim_contigs")
         if "interior_segments_cycle" in sample_data:
             args.interior_segments_cycle = sample_data.get("interior_segments_cycle")
+        if "interior_segments_cycle_connect_width" in sample_data:
+            args.interior_segments_cycle_connect_width = sample_data.get("interior_segments_cycle_connect_width")
         if "hide_chrom_color_legend" in sample_data:
             args.hide_chrom_color_legend = sample_data.get("hide_chrom_color_legend")
         if "structure_color" in sample_data:
