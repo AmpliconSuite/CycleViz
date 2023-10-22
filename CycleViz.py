@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 import argparse
 from collections import defaultdict
@@ -10,6 +10,7 @@ import os
 import sys
 
 from ast import literal_eval as make_tuple
+from intervaltree import IntervalTree
 import matplotlib
 matplotlib.use('Agg')  # this import must happen immediately after importing matplotlib
 from matplotlib import pyplot as plt
@@ -81,13 +82,13 @@ def plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj=None
 
     for ind, refObj in ref_placements.items():
         if refObj.custom_bh:
-            curr_bh = refObj.custom_bh
+            curr_bh = refObj.custom_bh + refObj.track_height_shift
         else:
             curr_bh = outer_bar
 
         # this is for interior segment tracks
-        if refObj.custom_color:
-            connect_col = refObj.custom_color
+        if refObj.custom_face_color:
+            connect_col = refObj.custom_face_color
 
         else:
             connect_col = 'grey'
@@ -103,6 +104,7 @@ def plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj=None
                 bpg_adjacency = manual_links[ind]
 
             if not bpg_adjacency:
+                # print("No link", refObj.to_string(), next_refObj.to_string())
                 continue
 
             start_angle, end_angle = start_end_angle(next_refObj.abs_start_pos, refObj.abs_end_pos, total_length)
@@ -712,10 +714,11 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
     prev_was_skinny = False
     length_since_last_bp = 0
     for ind, refObj in ref_placements.items():
+        # print(ind, refObj.to_string())
         if refObj.custom_bh:
-            curr_bh = refObj.custom_bh
+            curr_bh = refObj.custom_bh + refObj.track_height_shift
         else:
-            curr_bh = outer_bar
+            curr_bh = outer_bar + refObj.track_height_shift
 
         # seg_coord_tup = segSeqD[cycle[ind][0]]
         # print(ind, refObj.to_string())
@@ -724,7 +727,7 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
         start_angle, end_angle = start_end_angle(refObj.abs_end_pos, refObj.abs_start_pos, total_length)
 
         # makes the reference genome wedges
-        if not refObj.custom_color:
+        if not refObj.custom_face_color:
             if args.structure_color == "auto":
                 if chrom not in chromosome_colors:
                     print("Color not found for " + chrom + ". Using red.")
@@ -739,8 +742,8 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
 
         # this happens with the interior track!
         else:
-            f_color = refObj.custom_color
-            e_color = 'k'
+            f_color = refObj.custom_face_color
+            e_color = refObj.custom_edge_color
 
         # lw_v.append(0.2)
         ax.add_patch(mpatches.Wedge((0, 0), curr_bh, end_angle, start_angle, facecolor=f_color, edgecolor=e_color,
@@ -1063,6 +1066,8 @@ parser.add_argument("--interior_segments_cycle",
                     help="Enable visualization of an interior segments from an AA cycles filec(e.g. long read", type=str, default="")
 parser.add_argument("--interior_segments_cycle_connect_width", help="Width of drawn junction between segments of interior cycle",
                     choices=["full", "auto"], default="auto")
+parser.add_argument("--interior_segments_cycle_matching", help="Specifying matching of interior cycle to outer cycle should be exact or relaxed (local matches with shared start)",
+                    choices=["exact", "relaxed"])
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("--AR_path_alignment", help="AR path alignment file")
@@ -1115,6 +1120,10 @@ if args.input_yaml_file:
 
 if not args.cycles_file and not args.input_yaml_file and not args.structure_bed:
     print("One of --input_yaml_file, --cycles_file, --structure_bed required!")
+
+if args.cycles_file and not args.cycle:
+    print("Error: must specify --cycle [number] if providing --cycles_file")
+    sys.exit(1)
 
 
 ref_choices = ["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCh38_viral"]
@@ -1282,18 +1291,90 @@ if args.annotate_structure == 'genes' or gene_set:
 
 # Interior segments
 if args.interior_segments_cycle:
-    IS_cycles, IS_segSeqD, IS_circular_D = vu.parse_cycles_file(args.interior_segments_cycle)
-    print("Interior segment cycles must be non-overlapping for proper visualization.")
+    if not args.interior_segments_cycle_matching:
+        print("Must set --interior_segments_cycle_matching [exact, relaxed] if providing --interior_segments_cycle_matching")
+        sys.exit(1)
 
-    for IS_cnum in sorted(IS_cycles.keys()):
-        IS_cycle, IS_isCircular = IS_cycles[IS_cnum], IS_circular_D[IS_cnum]
-        IS_rObj_placements, new_IS_cycle, new_IS_links = vu.handle_IS_data(ref_placements, IS_cycle, IS_segSeqD,
-                                                                           IS_isCircular, IS_bh)
-        plot_ref_genome(IS_rObj_placements, new_IS_cycle, total_length, [False] * len(new_IS_cycle), False, 'none',
-                        bar_width)
+    covered_posns = IntervalTree()
+    interior_cycles, interior_segSeqD, IS_circular_D = vu.parse_cycles_file(args.interior_segments_cycle)
 
-        plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links,
-                            connect_width=args.interior_segments_cycle_connect_width)
+    n_cycles = len(interior_cycles.keys())
+    visualized_cycles = 0
+    for IS_cnum in sorted(interior_cycles.keys()):
+        interior_cycle, IS_isCircular = interior_cycles[IS_cnum], IS_circular_D[IS_cnum]
+
+        # NEED TO ALSO CHECK REVERSE DIR
+        hit = False
+        for curr_interior_cycle in [interior_cycle, vu.reverse_cycle(interior_cycle)]:
+            if args.interior_segments_cycle_matching == "relaxed":
+                IS_rObj_placements, new_interior_cycle, new_IS_links = vu.handle_IS_data_relaxed(ref_placements,
+                                                                                          curr_interior_cycle,
+                                                                                          interior_segSeqD,
+                                                                                          IS_isCircular, IS_bh)
+
+                if IS_rObj_placements:
+                    visualized_cycles+=1
+                    plot_ref_genome(IS_rObj_placements, new_interior_cycle, total_length, [False] * len(new_interior_cycle),
+                                    False, 'none',
+                                    bar_width)
+
+                    # print(IS_rObj_placements.keys())
+                    plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links,
+                                        connect_width=args.interior_segments_cycle_connect_width)
+
+                else:
+                    print(IS_cnum, "no hit")
+
+            else: # strict mode
+                print("\nTrying to match", curr_interior_cycle)
+                for IS_rObj_placements, new_interior_cycle, new_IS_links in vu.handle_IS_data(ref_placements, cycle, isCycle,
+                                                                        curr_interior_cycle, interior_segSeqD, IS_isCircular, IS_bh):
+                    # print(new_interior_cycle)
+                    # print(len(IS_rObj_placements), len(new_interior_cycle))
+                    hit = True
+                    max_olaps = 0
+                    used_rows = set()
+                    for currObj in IS_rObj_placements.values():
+                        abs_start, abs_end = int(currObj.abs_start_pos)-1, int(currObj.abs_end_pos) + 1
+                        olaps = covered_posns[abs_start:abs_end]
+                        for o in olaps:
+                            used_rows.add(o.data)
+                        max_olaps = max(len(olaps), max_olaps)
+
+                    openings = sorted(list(set(range(0, max_olaps+1)).difference(used_rows)))
+                    # print(used_rows)
+                    # print(max_olaps)
+                    # print(openings)
+                    if openings:
+                        max_olaps = openings[0]
+
+                    temp_interval_tree = IntervalTree()
+                    for currObj in IS_rObj_placements.values():
+                        currObj.track_height_shift = max_olaps * -1
+                        abs_start, abs_end = int(currObj.abs_start_pos)-1, int(currObj.abs_end_pos) + 1
+                        temp_interval_tree.addi(abs_start, abs_end, max_olaps)
+
+                    temp_interval_tree.merge_overlaps()
+                    new_interval_tree = IntervalTree()
+                    for x in temp_interval_tree:
+                        new_interval_tree.addi(x.begin, x.end, max_olaps)
+
+                    # print(new_interval_tree)
+                    covered_posns |= new_interval_tree
+
+                    plot_ref_genome(IS_rObj_placements, new_interior_cycle, total_length, [False] * len(new_interior_cycle), False, 'none',
+                                    bar_width)
+
+                    # print(IS_rObj_placements.keys())
+                    plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links,
+                                        connect_width=args.interior_segments_cycle_connect_width)
+
+                if hit:
+                    visualized_cycles+=1
+                else:
+                    print(IS_cnum, "no hit")
+
+            print(str(visualized_cycles) + " paths of the " + str(n_cycles) + " given interior paths were visualized")
 
 # cytobanding
 if args.annotate_structure != "genes":

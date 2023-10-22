@@ -53,6 +53,14 @@ def convert_gpos_to_ropos(cgpos, ro_start, ro_end, g_start, cdir):
         return ro_end - (cgpos - g_start)
 
 
+def reverse_cycle(cycle):
+    rcycle = []
+    for s, d in cycle[::-1]:
+        nd = "-" if d == "+" else "+"
+        rcycle.append((s, nd))
+
+    return rcycle
+
 class CycleVizElemObj(object):
     def __init__(self, m_id, chrom, ref_start, ref_end, direction, s, t, seg_count, padj, nadj, cmap_vect=None):
         if cmap_vect is None: cmap_vect = []
@@ -75,7 +83,8 @@ class CycleVizElemObj(object):
         self.feature_tracks = []
         self.prev_is_adjacent = padj
         self.next_is_adjacent = nadj
-        self.custom_color = None
+        self.custom_face_color = None
+        self.custom_edge_color = 'k'
         self.custom_bh = None
 
     def compute_label_posns(self):
@@ -107,8 +116,8 @@ class CycleVizElemObj(object):
             self.label_posns = self.label_posns[::-1]
 
     def to_string(self):
-        return "{}{} | Chrom: {} | Start: {} | End: {} | scaling {}".format(self.id, self.direction, self.chrom,
-                                            str(self.abs_start_pos), str(self.abs_end_pos), str(self.scaling_factor))
+        return "{}{} | GenomePos: {}:{}-{} | Circle Start: {} | Circle End: {} | scaling {}".format(self.id, self.direction, self.chrom,
+                str(self.ref_start), str(self.ref_end), str(self.abs_start_pos), str(self.abs_end_pos), str(self.scaling_factor))
 
     # trim visualized contig if it's long and unaligned
     def trim_obj_ends(self, total_length):
@@ -717,15 +726,15 @@ def store_bed_data(cfc, ref_placements, primary_end_trim=0, secondary_end_trim=0
 # to represent the interior track data
 
 # TODO: What if the segments in the inside track are scrambled w.r.t the reference track?
-def handle_IS_data(ref_placements, IS_cycle, IS_segSeqD, IS_isCircular, IS_bh, cycleColor='lightskyblue'):
-    cycle_seg_counts = get_seg_amplicon_count(IS_cycle)
-    prev_seg_index_is_adj, next_seg_index_is_adj = adjacent_segs(IS_cycle, IS_segSeqD, IS_isCircular)
+def handle_IS_data_relaxed(ref_placements, interior_cycle, interior_segSeqD, IS_isCircular, IS_bh, cycleColor='lightskyblue'):
+    cycle_seg_counts = get_seg_amplicon_count(interior_cycle)
+    prev_seg_index_is_adj, next_seg_index_is_adj = adjacent_segs(interior_cycle, interior_segSeqD, IS_isCircular)
     # need to match to the ref_placements
-    valid_link_pairs = set(zip(IS_cycle[:-1],IS_cycle[1:]))
+    valid_link_pairs = set(zip(interior_cycle[:-1],interior_cycle[1:]))
     if IS_isCircular:
-        valid_link_pairs.add((IS_cycle[-1],IS_cycle[0]))
+        valid_link_pairs.add((interior_cycle[-1],interior_cycle[0]))
 
-    new_IS_cycle = []
+    new_interior_cycle = []
     new_IS_links = []
     # lastIndHit = -1
     IS_rObj_placements = {}
@@ -734,10 +743,10 @@ def handle_IS_data(ref_placements, IS_cycle, IS_segSeqD, IS_isCircular, IS_bh, c
         s_to_add = []
         c_to_add = []
         seg_len = obj.ref_end - obj.ref_start
-        for ind, (segID, segdir) in enumerate(IS_cycle):
+        for ind, (segID, segdir) in enumerate(interior_cycle):
             padj, nadj = prev_seg_index_is_adj[ind], next_seg_index_is_adj[ind]
             seg_id_count = cycle_seg_counts[segID]
-            c, s, e = IS_segSeqD[segID]
+            c, s, e = interior_segSeqD[segID]
             if c != obj.chrom:
                 continue
 
@@ -749,12 +758,13 @@ def handle_IS_data(ref_placements, IS_cycle, IS_segSeqD, IS_isCircular, IS_bh, c
                     normEnd = obj.abs_start_pos + min(seg_len, e - obj.ref_start)
 
                 else:
-                    normEnd = obj.abs_start_pos + min(seg_len, obj.ref_end - s)
-                    normStart = obj.abs_start_pos + max(0, obj.ref_end - e)
+                    normStart = obj.abs_start_pos + min(0, obj.ref_end - e)
+                    normEnd = obj.abs_start_pos + max(seg_len, obj.ref_end - s)
+
 
                 # make a refobj
                 currObj = CycleVizElemObj(segID, c, s, e, obj.direction, normStart, normEnd, seg_id_count, padj, nadj)
-                currObj.custom_color = cycleColor
+                currObj.custom_face_color = cycleColor
                 currObj.custom_bh = IS_bh
                 s_to_add.append(currObj)
                 c_to_add.append((segID, segdir))
@@ -763,26 +773,246 @@ def handle_IS_data(ref_placements, IS_cycle, IS_segSeqD, IS_isCircular, IS_bh, c
             continue
 
         ssta, scta = zip(*sorted(zip(s_to_add, c_to_add), key=lambda x: x[0].abs_start_pos))
-        new_IS_cycle.extend(scta)
+        new_interior_cycle.extend(scta)
         for rObj, ct in zip(ssta, scta):
             IS_rObj_placements[u_ind] = rObj
             u_ind+=1
 
-    for a, b in zip(new_IS_cycle[:-1], new_IS_cycle[1:]):
+    print(new_interior_cycle)
+    for a, b in zip(new_interior_cycle[:-1], new_interior_cycle[1:]):
         if (a,b) in valid_link_pairs or (b,a) in valid_link_pairs:
             new_IS_links.append(True)
 
         else:
             new_IS_links.append(False)
 
-    if (new_IS_cycle[-1], new_IS_cycle[0]) in valid_link_pairs or (new_IS_cycle[0], new_IS_cycle[-1]) in valid_link_pairs:
+    if (new_interior_cycle[-1], new_interior_cycle[0]) in valid_link_pairs or (new_interior_cycle[0], new_interior_cycle[-1]) in valid_link_pairs:
         new_IS_links.append(True)
     else:
         new_IS_links.append(False)
 
     # print(new_IS_links)
-    # print(new_IS_cycle)
-    return IS_rObj_placements, new_IS_cycle, new_IS_links
+    # print(new_interior_cycle)
+    return IS_rObj_placements, new_interior_cycle, new_IS_links
+
+
+def cycles_match(ref_placements, cycle, isCycle, start_ref_ind, interior_cycle, interior_segSeqD, IS_isCircular):
+    ref_start_seg = start_ref_ind
+    start_offset = 0
+    ref_end_seg = None
+    end_offset = 0
+
+    interior_cumulative_bounds = [0, ]
+    prev_seg_index_is_adj, next_seg_index_is_adj = adjacent_segs(interior_cycle, interior_segSeqD, IS_isCircular)
+    # print(prev_seg_index_is_adj)
+    # print(next_seg_index_is_adj)
+    for ind, (segID, intdir) in enumerate(interior_cycle):
+        c, s, e = interior_segSeqD[segID]
+        cumulative_pos = interior_cumulative_bounds[-1] + e - s
+        interior_cumulative_bounds.append(cumulative_pos)
+
+    # print(interior_cumulative_bounds)
+
+    left_interior_cycle_index = 0
+    segID, intdir = interior_cycle[left_interior_cycle_index]
+    c, s, e = interior_segSeqD[segID]
+    rObj = ref_placements[start_ref_ind]
+    if rObj.chrom != c or rObj.direction != intdir or not (rObj.ref_start <= s <= rObj.ref_end):
+        return False, ref_start_seg, ref_end_seg, start_offset, end_offset
+
+    print("found initial matching seg: ", rObj.to_string())
+    if intdir == "+":
+        curr_interior_offset = rObj.ref_end - s
+    else:
+        curr_interior_offset = e - rObj.ref_start
+
+    start_offset = curr_interior_offset
+
+    ref_ind = start_ref_ind
+    while left_interior_cycle_index < len(interior_cumulative_bounds) - 1:
+        tb = False
+        print("RID", ref_ind, ref_placements[ref_ind].to_string())
+        if ref_ind > len(cycle) and isCycle:
+            ref_ind = 0
+
+        right_interior_cycle_index_hit = bisect.bisect(interior_cumulative_bounds, curr_interior_offset) - 1
+        print("Right index", right_interior_cycle_index_hit)
+
+        ref_end_seg = ref_ind
+        segID, intdir = interior_cycle[left_interior_cycle_index]
+        c, s, e = interior_segSeqD[segID]
+        if rObj.direction == "+":
+            end_offset = e - rObj.ref_start
+        else:
+            end_offset = s - rObj.ref_start
+        interior_contains_ref = s <= rObj.ref_start <= rObj.ref_end <= e
+        overlaps = (rObj.ref_start <= s <= rObj.ref_end or rObj.ref_start <= e <= rObj.ref_end)
+        if c != rObj.chrom or intdir != rObj.direction or not any([interior_contains_ref, overlaps]):
+            print("different chrom, dir or bounds")
+            return False, ref_start_seg, ref_end_seg, start_offset, end_offset
+
+        if right_interior_cycle_index_hit != left_interior_cycle_index:
+            if right_interior_cycle_index_hit == len(interior_cumulative_bounds) - 1:
+                for x in range(left_interior_cycle_index, right_interior_cycle_index_hit-1):
+                    if not next_seg_index_is_adj[x]:
+                        print(x, "was not adjacent")
+                        return False, ref_start_seg, ref_end_seg, start_offset, end_offset
+
+                if rObj.direction == "+":
+                    end_offset = e - rObj.ref_start
+                else:
+                    end_offset = s - rObj.ref_start
+
+                print("Reached end of interior cycle")
+                return True, ref_start_seg, ref_end_seg, start_offset, end_offset
+
+            else:
+                if rObj.direction == "+" and abs(rObj.ref_end - e) < 2:
+                    print("both uptick positive")
+                    left_interior_cycle_index+=1
+                    ref_ind += 1
+                    rObj = ref_placements[ref_ind]
+                    curr_interior_offset += (rObj.ref_end - rObj.ref_start)
+                elif rObj.direction == "-" and abs(rObj.ref_start - s) < 2:
+                    print("both uptick negative")
+                    left_interior_cycle_index+=1
+                    ref_ind += 1
+                    rObj = ref_placements[ref_ind]
+                    curr_interior_offset += (rObj.ref_end - rObj.ref_start)
+                else:
+                    for x in range(left_interior_cycle_index, right_interior_cycle_index_hit):
+                        if not next_seg_index_is_adj[x]:
+                            print(x, "was not adjacent")
+                            return False, ref_start_seg, ref_end_seg, start_offset, end_offset
+
+                    print("ends were not aligned")
+                    left_interior_cycle_index = right_interior_cycle_index_hit
+
+        else:
+            # it was the same interior seg
+            print("same interior segment")
+            print(c,s,e)
+            if rObj.direction == "+" and abs(rObj.ref_end - e) < 2:
+                print("uptick both positive")
+                left_interior_cycle_index += 1
+                tb = True
+
+            elif rObj.direction == "-" and abs(rObj.ref_start - s) < 2:
+                print("uptick both negative")
+                left_interior_cycle_index += 1
+                tb = True
+
+            ref_ind += 1
+            rObj = ref_placements[ref_ind]
+            curr_interior_offset += (rObj.ref_end - rObj.ref_start)
+
+            # if ref_ind == start_ref_ind:
+            #     print("went full circle")
+            #     return False, ref_start_seg, ref_end_seg, start_offset, end_offset
+            # print(left_interior_cycle_index, right_interior_cycle_index_hit, len(interior_cumulative_bounds))
+            if right_interior_cycle_index_hit == len(interior_cumulative_bounds) - 1 and tb:
+                print("Finished matching")
+                return True, ref_start_seg, ref_end_seg, start_offset, end_offset
+
+
+def handle_IS_data(ref_placements, cycle, isCycle, interior_cycle, interior_segSeqD, IS_isCircular, IS_bh, cycleColor='lightskyblue'):
+    # find all the locations where the IS matches the ref perfectly
+    # cycle_seg_counts = get_seg_amplicon_count(interior_cycle)
+    # prev_seg_index_is_adj, next_seg_index_is_adj = adjacent_segs(interior_cycle, interior_segSeqD, IS_isCircular)
+    # need to match to the ref_placements
+    # valid_link_pairs = set(zip(interior_cycle[:-1], interior_cycle[1:]))
+    # if IS_isCircular:
+    #     valid_link_pairs.add((interior_cycle[-1], interior_cycle[0]))
+
+    # covered_to = 0
+    for ind, obj in ref_placements.items():
+        s_to_add = []
+        c_to_add = []
+        # seg_len = obj.ref_end - obj.ref_start
+
+        segID, segdir = interior_cycle[0]
+        c, s, e = interior_segSeqD[segID]
+        if segdir == "+":
+            spoint = s
+        else:
+            spoint = e
+
+        # print(segID, c, obj.chrom, segdir, obj.direction, obj.ref_start, spoint, obj.ref_end, obj.to_string())
+        if c == obj.chrom and obj.direction == segdir and obj.ref_start <= spoint <= obj.ref_end:
+            # launch a matching search
+            matched, ref_start_ind, ref_end_ind, ref_start_offset, ref_end_offset = cycles_match(ref_placements, cycle,
+                    isCycle, ind, interior_cycle, interior_segSeqD, IS_isCircular)
+
+            print(matched, ref_start_ind, ref_end_ind, ref_start_offset, ref_end_offset)
+            if not matched:
+                continue
+
+            for matched_ref_ind in range(ref_start_ind, ref_end_ind+1):
+                curr_rObj = ref_placements[matched_ref_ind]
+                if matched_ref_ind == ref_start_ind:
+                    normStart = curr_rObj.abs_start_pos + ref_start_offset
+                    if ref_start_ind == ref_end_ind:
+                        normEnd = curr_rObj.abs_start_pos + ref_end_offset
+                    else:
+                        normEnd = curr_rObj.abs_end_pos
+                    seg_chrom, seg_s, seg_e = interior_segSeqD[interior_cycle[0][0]]
+                # else:
+                #     normStart = curr_rObj.abs_start_pos
+                #     seg_chrom, seg_s, seg_e = curr_rObj.chrom, curr_rObj.ref_start, curr_rObj.ref_end
+
+                elif matched_ref_ind == ref_end_ind:
+                    normStart = curr_rObj.abs_start_pos
+                    normEnd = curr_rObj.abs_start_pos + ref_end_offset
+                    seg_chrom, seg_s, seg_e = interior_segSeqD[interior_cycle[-1][0]]
+
+                else:
+                    normStart = curr_rObj.abs_start_pos
+                    normEnd = curr_rObj.abs_end_pos
+                    seg_chrom, seg_s, seg_e = curr_rObj.chrom, curr_rObj.ref_start, curr_rObj.ref_end
+
+                # currObj = CycleVizElemObj(segID, c, s, e, obj.direction, normStart, normEnd, curr_rObj.seg_count, curr_rObj.prev_is_adjacent, curr_rObj.next_is_adjacent)
+                newObj = copy.deepcopy(curr_rObj)
+                newObj.abs_start_pos = normStart
+                newObj.abs_end_pos = normEnd
+                newObj.chrom = seg_chrom
+                newObj.ref_start = seg_s
+                newObj.ref_end = seg_e
+                newObj.custom_face_color = cycleColor
+                newObj.custom_edge_color = cycleColor
+                newObj.custom_bh = IS_bh
+                s_to_add.append(newObj)
+                c_to_add.append((newObj.id, newObj.direction))
+
+            ssta, scta = zip(*sorted(zip(s_to_add, c_to_add), key=lambda x: x[0].abs_start_pos))
+            new_interior_cycle = scta
+
+            IS_rObj_placements = {}
+            u_ind = 0
+            for rObj, ct in zip(ssta, scta):
+                IS_rObj_placements[u_ind] = rObj
+                u_ind += 1
+
+            print(new_interior_cycle)
+            valid_link_pairs = set(zip(new_interior_cycle[:-1], new_interior_cycle[1:]))
+            if IS_isCircular:
+                valid_link_pairs.add((new_interior_cycle[-1], new_interior_cycle[0]))
+
+            new_IS_links = []
+            for a, b in zip(new_interior_cycle[:-1], new_interior_cycle[1:]):
+                if (a,b) in valid_link_pairs or (b,a) in valid_link_pairs:
+                    new_IS_links.append(True)
+
+                else:
+                    new_IS_links.append(False)
+
+            if (new_interior_cycle[-1], new_interior_cycle[0]) in valid_link_pairs or (new_interior_cycle[0], new_interior_cycle[-1]) in valid_link_pairs:
+                new_IS_links.append(True)
+            else:
+                new_IS_links.append(False)
+
+            # print(new_IS_links)
+            yield IS_rObj_placements, new_interior_cycle, new_IS_links
+
 
 
 # -----------------------------------------
@@ -1284,6 +1514,8 @@ def parse_main_args_yaml(args):
             args.interior_segments_cycle = sample_data.get("interior_segments_cycle")
         if "interior_segments_cycle_connect_width" in sample_data:
             args.interior_segments_cycle_connect_width = sample_data.get("interior_segments_cycle_connect_width")
+        if "interior_segments_cycle_matching" in sample_data:
+            args.interior_segments_cycle_matching = sample_data.get("interior_segments_cycle_matching")
         if "hide_chrom_color_legend" in sample_data:
             args.hide_chrom_color_legend = sample_data.get("hide_chrom_color_legend")
         if "structure_color" in sample_data:
