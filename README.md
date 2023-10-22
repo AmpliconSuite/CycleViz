@@ -1,6 +1,6 @@
 # CycleViz
 
-Latest version: **0.1.6**.
+Latest version: **0.1.7**.
 
 Visualize outputs of [AmpliconArchitect](https://github.com/AmpliconSuite/AmpliconArchitect/) & 
 [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. 
@@ -121,12 +121,13 @@ The structure of the visualized regions can be specified with either an AA cycle
 | `--no_PDF`                                                     |            | Do not save a PDF version of the plot.                                                                                                                                                                    |
 
 #### Specifying properties related to interior data track features
-| Argument                                                 | Default | Description                                                                                                                                                                                                                       |
-|:---------------------------------------------------------|:-------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--feature_yaml_list [filename] [filename] ...`          |         | List of interior feature track yaml files (**ordered from inner to outer**).                                                                                                                                                      |
-| `--interior_segments_cycle [filename]`                   |         | An AA cycles-formatted file indicating regions to draw an inlaid structure beneath the reference (e.g. a transcript structure from a rearranged genome). Subset segments should be ordered consistently with the outer structure. | 
-| `--interior_segments_cycle_connect_width ["full", "auto"` |  `'auto'`  | Defines how the segments should be connected visually in the interior cycle (full height (`full`) or `auto`, which is just a small connector line).                                                                               |
-| `--center_hole [float]`                                  |  1.25   | Radius of center hole in CycleViz plot where no data appears (if interior features are used).                                                                                                                                     |
+| Argument                                                   | Default  | Description                                                                                                                                                                                                                       |
+|:-----------------------------------------------------------|:--------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--feature_yaml_list [filename] [filename] ...`            |          | List of interior feature track yaml files (**ordered from inner to outer**).                                                                                                                                                      |
+| `--interior_segments_cycle [filename]`                     |          | An AA cycles-formatted file indicating regions to draw an inlaid structure beneath the reference (e.g. a transcript structure from a rearranged genome). Subset segments should be ordered consistently with the outer structure. | 
+| `--interior_segments_cycle_connect_width ["full", "auto"]` | `'auto'` | Defines how the segments should be connected visually in the interior cycle (full height (`full`) or `auto`, which is just a small connector line).                                                                               |
+| `--interior_segments_cycle_matching ["exact", "relaxed"]`  |          | Specifying matching of interior cycle to outer cycle should be `exact` or `relaxed` (relaxed for local matches with shared start). Required if --interior_segments_cycle set                                                      |
+| `--center_hole [float]`                                    |   1.25   | Radius of center hole in CycleViz plot where no data appears (if interior features are used).                                                                                                                                     |
 
 #### Specifying properties related to Bionano data & AmpliconReconstructor output
 | Argument      | Default | Description |

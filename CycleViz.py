@@ -1063,11 +1063,11 @@ parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
 parser.add_argument("--interior_segments_cycle",
-                    help="Enable visualization of an interior segments from an AA cycles filec(e.g. long read", type=str, default="")
+                    help="Enable visualization of an interior segments from an AA cycles file (e.g. long read", type=str, default="")
 parser.add_argument("--interior_segments_cycle_connect_width", help="Width of drawn junction between segments of interior cycle",
                     choices=["full", "auto"], default="auto")
-parser.add_argument("--interior_segments_cycle_matching", help="Specifying matching of interior cycle to outer cycle should be exact or relaxed (local matches with shared start)",
-                    choices=["exact", "relaxed"])
+parser.add_argument("--interior_segments_cycle_matching", help="Specifying matching of interior cycle to outer cycle should be"
+                    " exact or relaxed (local matches with shared start). Required if --interior_segments_cycle set", choices=["exact", "relaxed"])
 parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--om_segs", help="segments cmap file")
 parser.add_argument("--AR_path_alignment", help="AR path alignment file")
