@@ -70,6 +70,9 @@ def plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj=None
         ch = 0
         prev_seg_index_is_adj = defaultdict(bool)
 
+    elif connect_width == "none":
+        return
+
     else:
         if prev_seg_index_is_adj and bpg_dict and seg_end_pos_d:
             connect_width = bar_width / 2.
@@ -79,6 +82,7 @@ def plot_bpg_connection(ref_placements, total_length, prev_seg_index_is_adj=None
             connect_width = bar_width/15.0
             ch = bar_width/2.
             prev_seg_index_is_adj = defaultdict(bool)
+
 
     for ind, refObj in ref_placements.items():
         if refObj.custom_bh:
@@ -1065,7 +1069,7 @@ parser.add_argument("--om_alignments",
 parser.add_argument("--interior_segments_cycle",
                     help="Enable visualization of an interior segments from an AA cycles file (e.g. long read", type=str, default="")
 parser.add_argument("--interior_segments_cycle_connect_width", help="Width of drawn junction between segments of interior cycle",
-                    choices=["full", "auto"], default="auto")
+                    choices=["full", "thin", "none"], default="full")
 parser.add_argument("--interior_segments_cycle_matching", help="Specifying matching of interior cycle to outer cycle should be"
                     " exact or relaxed (local matches with shared start). Required if --interior_segments_cycle set", choices=["exact", "relaxed"])
 parser.add_argument("-c", "--contigs", help="contig cmap file")
@@ -1369,12 +1373,12 @@ if args.interior_segments_cycle:
                     plot_bpg_connection(IS_rObj_placements, total_length, manual_links=new_IS_links,
                                         connect_width=args.interior_segments_cycle_connect_width)
 
-                if hit:
-                    visualized_cycles+=1
-                else:
-                    print(IS_cnum, "no hit")
+        if hit:
+            visualized_cycles+=1
+        else:
+            print(IS_cnum, "no hit")
 
-            print(str(visualized_cycles) + " paths of the " + str(n_cycles) + " given interior paths were visualized")
+        print(str(visualized_cycles) + " paths of the " + str(n_cycles) + " given interior paths were visualized")
 
 # cytobanding
 if args.annotate_structure != "genes":

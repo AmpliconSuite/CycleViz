@@ -832,8 +832,8 @@ def cycles_match(ref_placements, cycle, isCycle, start_ref_ind, interior_cycle, 
     while left_interior_cycle_index < len(interior_cumulative_bounds) - 1:
         tb = False
         print("RID", ref_ind, ref_placements[ref_ind].to_string())
-        if ref_ind > len(cycle) and isCycle:
-            ref_ind = 0
+        if ref_ind >= len(cycle) - 1 and isCycle:
+            ref_ind = -1
 
         right_interior_cycle_index_hit = bisect.bisect(interior_cumulative_bounds, curr_interior_offset) - 1
         print("Right index", right_interior_cycle_index_hit)
@@ -947,7 +947,14 @@ def handle_IS_data(ref_placements, cycle, isCycle, interior_cycle, interior_segS
             if not matched:
                 continue
 
-            for matched_ref_ind in range(ref_start_ind, ref_end_ind+1):
+            if ref_end_ind < ref_start_ind:
+                ref_inds_hit = list(range(ref_start_ind, len(cycle))) + list(range(0, ref_end_ind+1))
+            else:
+                ref_inds_hit = range(ref_start_ind, ref_end_ind+1)
+
+            # print("RIH", ref_inds_hit)
+
+            for matched_ref_ind in ref_inds_hit:
                 curr_rObj = ref_placements[matched_ref_ind]
                 if matched_ref_ind == ref_start_ind:
                     normStart = curr_rObj.abs_start_pos + ref_start_offset
@@ -983,7 +990,8 @@ def handle_IS_data(ref_placements, cycle, isCycle, interior_cycle, interior_segS
                 s_to_add.append(newObj)
                 c_to_add.append((newObj.id, newObj.direction))
 
-            ssta, scta = zip(*sorted(zip(s_to_add, c_to_add), key=lambda x: x[0].abs_start_pos))
+            # ssta, scta = zip(*sorted(zip(s_to_add, c_to_add), key=lambda x: x[0].abs_start_pos))
+            ssta, scta = s_to_add, c_to_add
             new_interior_cycle = scta
 
             IS_rObj_placements = {}
