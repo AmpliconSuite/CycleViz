@@ -822,11 +822,12 @@ def cycles_match(ref_placements, cycle, isCycle, start_ref_ind, interior_cycle, 
 
     print("found initial matching seg: ", rObj.to_string())
     if intdir == "+":
-        curr_interior_offset = rObj.ref_end - s
+        curr_interior_offset = s - rObj.ref_start
     else:
-        curr_interior_offset = e - rObj.ref_start
+        curr_interior_offset = rObj.ref_end - e
 
     start_offset = curr_interior_offset
+    print(start_offset, "start offset")
 
     ref_ind = start_ref_ind
     while left_interior_cycle_index < len(interior_cumulative_bounds) - 1:
@@ -836,7 +837,7 @@ def cycles_match(ref_placements, cycle, isCycle, start_ref_ind, interior_cycle, 
             ref_ind = -1
 
         right_interior_cycle_index_hit = bisect.bisect(interior_cumulative_bounds, curr_interior_offset) - 1
-        print("Right index", right_interior_cycle_index_hit)
+        # print("Right index", right_interior_cycle_index_hit, curr_interior_offset, interior_cumulative_bounds)
 
         ref_end_seg = ref_ind
         segID, intdir = interior_cycle[left_interior_cycle_index]
@@ -844,14 +845,18 @@ def cycles_match(ref_placements, cycle, isCycle, start_ref_ind, interior_cycle, 
         if rObj.direction == "+":
             end_offset = e - rObj.ref_start
         else:
-            end_offset = s - rObj.ref_start
+            end_offset = e - rObj.ref_start
+
         interior_contains_ref = s <= rObj.ref_start <= rObj.ref_end <= e
         overlaps = (rObj.ref_start <= s <= rObj.ref_end or rObj.ref_start <= e <= rObj.ref_end)
+        # print(c, rObj.chrom, intdir, rObj.direction, overlaps)
         if c != rObj.chrom or intdir != rObj.direction or not any([interior_contains_ref, overlaps]):
             print("different chrom, dir or bounds")
             return False, ref_start_seg, ref_end_seg, start_offset, end_offset
 
+        # print(right_interior_cycle_index_hit, left_interior_cycle_index)
         if right_interior_cycle_index_hit != left_interior_cycle_index:
+            # print(right_interior_cycle_index_hit, len(interior_cumulative_bounds) - 1)
             if right_interior_cycle_index_hit == len(interior_cumulative_bounds) - 1:
                 for x in range(left_interior_cycle_index, right_interior_cycle_index_hit-1):
                     if not next_seg_index_is_adj[x]:
@@ -859,26 +864,31 @@ def cycles_match(ref_placements, cycle, isCycle, start_ref_ind, interior_cycle, 
                         return False, ref_start_seg, ref_end_seg, start_offset, end_offset
 
                 if rObj.direction == "+":
+                    # print(s,e, rObj.ref_start, rObj.ref_end)
                     end_offset = e - rObj.ref_start
+                    print(end_offset, "+ end offset")
                 else:
-                    end_offset = s - rObj.ref_start
+                    # print(s,e, rObj.ref_start, rObj.ref_end)
+                    end_offset = e - rObj.ref_start
+                    print(end_offset, "- end offset")
 
                 print("Reached end of interior cycle")
                 return True, ref_start_seg, ref_end_seg, start_offset, end_offset
 
             else:
+                # print("not hitting end yet")
                 if rObj.direction == "+" and abs(rObj.ref_end - e) < 2:
                     print("both uptick positive")
                     left_interior_cycle_index+=1
+                    curr_interior_offset += (rObj.ref_end - rObj.ref_start)
                     ref_ind += 1
                     rObj = ref_placements[ref_ind]
-                    curr_interior_offset += (rObj.ref_end - rObj.ref_start)
                 elif rObj.direction == "-" and abs(rObj.ref_start - s) < 2:
                     print("both uptick negative")
                     left_interior_cycle_index+=1
+                    curr_interior_offset += (rObj.ref_end - rObj.ref_start)
                     ref_ind += 1
                     rObj = ref_placements[ref_ind]
-                    curr_interior_offset += (rObj.ref_end - rObj.ref_start)
                 else:
                     for x in range(left_interior_cycle_index, right_interior_cycle_index_hit):
                         if not next_seg_index_is_adj[x]:
@@ -891,7 +901,10 @@ def cycles_match(ref_placements, cycle, isCycle, start_ref_ind, interior_cycle, 
         else:
             # it was the same interior seg
             print("same interior segment")
-            print(c,s,e)
+            # print(c,s,e)
+            #
+            # print(rObj.direction, s, e, rObj.ref_start, rObj.ref_end)
+
             if rObj.direction == "+" and abs(rObj.ref_end - e) < 2:
                 print("uptick both positive")
                 left_interior_cycle_index += 1
@@ -902,15 +915,15 @@ def cycles_match(ref_placements, cycle, isCycle, start_ref_ind, interior_cycle, 
                 left_interior_cycle_index += 1
                 tb = True
 
+            curr_interior_offset += (rObj.ref_end - rObj.ref_start)
             ref_ind += 1
             rObj = ref_placements[ref_ind]
-            curr_interior_offset += (rObj.ref_end - rObj.ref_start)
 
             # if ref_ind == start_ref_ind:
             #     print("went full circle")
             #     return False, ref_start_seg, ref_end_seg, start_offset, end_offset
-            # print(left_interior_cycle_index, right_interior_cycle_index_hit, len(interior_cumulative_bounds))
-            if right_interior_cycle_index_hit == len(interior_cumulative_bounds) - 1 and tb:
+            # print(right_interior_cycle_index_hit, len(interior_cumulative_bounds)-1, tb)
+            if right_interior_cycle_index_hit == len(interior_cumulative_bounds) - 2 and tb:
                 print("Finished matching")
                 return True, ref_start_seg, ref_end_seg, start_offset, end_offset
 
@@ -944,6 +957,7 @@ def handle_IS_data(ref_placements, cycle, isCycle, interior_cycle, interior_segS
                     isCycle, ind, interior_cycle, interior_segSeqD, IS_isCircular)
 
             print(matched, ref_start_ind, ref_end_ind, ref_start_offset, ref_end_offset)
+            print("")
             if not matched:
                 continue
 
@@ -957,7 +971,11 @@ def handle_IS_data(ref_placements, cycle, isCycle, interior_cycle, interior_segS
             for matched_ref_ind in ref_inds_hit:
                 curr_rObj = ref_placements[matched_ref_ind]
                 if matched_ref_ind == ref_start_ind:
-                    normStart = curr_rObj.abs_start_pos + ref_start_offset
+                    if curr_rObj.direction == "+":
+                        normStart = curr_rObj.abs_start_pos + ref_start_offset
+                    else:
+                        normStart = curr_rObj.abs_start_pos + ref_start_offset
+
                     if ref_start_ind == ref_end_ind:
                         normEnd = curr_rObj.abs_start_pos + ref_end_offset
                     else:
@@ -970,6 +988,11 @@ def handle_IS_data(ref_placements, cycle, isCycle, interior_cycle, interior_segS
                 elif matched_ref_ind == ref_end_ind:
                     normStart = curr_rObj.abs_start_pos
                     normEnd = curr_rObj.abs_start_pos + ref_end_offset
+                    if curr_rObj.direction == "+":
+                        normEnd = curr_rObj.abs_start_pos + ref_end_offset
+                    else:
+                        normStart = curr_rObj.abs_start_pos + ref_end_offset
+
                     seg_chrom, seg_s, seg_e = interior_segSeqD[interior_cycle[-1][0]]
 
                 else:
@@ -1013,7 +1036,7 @@ def handle_IS_data(ref_placements, cycle, isCycle, interior_cycle, interior_segS
                 else:
                     new_IS_links.append(False)
 
-            if (new_interior_cycle[-1], new_interior_cycle[0]) in valid_link_pairs or (new_interior_cycle[0], new_interior_cycle[-1]) in valid_link_pairs:
+            if ((new_interior_cycle[-1], new_interior_cycle[0]) in valid_link_pairs or (new_interior_cycle[0], new_interior_cycle[-1]) in valid_link_pairs) and IS_isCircular:
                 new_IS_links.append(True)
             else:
                 new_IS_links.append(False)
