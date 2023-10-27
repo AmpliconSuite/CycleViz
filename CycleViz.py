@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 __author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 
 import argparse
 from collections import defaultdict
@@ -782,7 +782,10 @@ def plot_ref_genome(ref_placements, cycle, total_length, imputed_status, label_s
             # if it's very small, just put one marker in the center
             if skinny and not refObj.prev_is_adjacent and not refObj.next_is_adjacent:
                 skinny = False
-                tm = (str(ts[0]) + "-" + str(te[0]), np.mean((ts[1],te[1])), 0)
+                if cycle[ind][1] == "+":
+                    tm = (str(int(round(ts[0] - ts[2]))) + "-" + str(int(round(te[0] - te[2]))), np.mean((ts[1],te[1])), 0)
+                else:
+                    tm = (str(int(round(te[0] - te[2]))) + "-" + str(int(round(ts[0] - ts[2]))), np.mean((ts[1],te[1])), 0)
                 newposns.append(tm)
 
             else:
@@ -1304,6 +1307,7 @@ if args.interior_segments_cycle:
 
     n_cycles = len(interior_cycles.keys())
     visualized_cycles = 0
+    visualized_elements = 0
     for IS_cnum in sorted(interior_cycles.keys()):
         interior_cycle, IS_isCircular = interior_cycles[IS_cnum], IS_circular_D[IS_cnum]
 
@@ -1318,6 +1322,7 @@ if args.interior_segments_cycle:
 
                 if IS_rObj_placements:
                     visualized_cycles+=1
+                    visualized_elements+=len(IS_rObj_placements)
                     plot_ref_genome(IS_rObj_placements, new_interior_cycle, total_length, [False] * len(new_interior_cycle),
                                     False, 'none',
                                     bar_width)
@@ -1331,15 +1336,17 @@ if args.interior_segments_cycle:
 
             else: # strict mode
                 print("\nTrying to match", curr_interior_cycle)
+                ic_pad = total_length*0.01
                 for IS_rObj_placements, new_interior_cycle, new_IS_links in vu.handle_IS_data(ref_placements, cycle, isCycle,
                                                                         curr_interior_cycle, interior_segSeqD, IS_isCircular, IS_bh):
                     # print(new_interior_cycle)
                     # print(len(IS_rObj_placements), len(new_interior_cycle))
+                    visualized_elements+=1
                     hit = True
                     max_olaps = 0
                     used_rows = set()
                     for currObj in IS_rObj_placements.values():
-                        abs_start, abs_end = int(currObj.abs_start_pos)-1, int(currObj.abs_end_pos) + 1
+                        abs_start, abs_end = int(currObj.abs_start_pos)-ic_pad, int(currObj.abs_end_pos) + ic_pad
                         olaps = covered_posns[abs_start:abs_end]
                         for o in olaps:
                             used_rows.add(o.data)
@@ -1379,6 +1386,7 @@ if args.interior_segments_cycle:
             print(IS_cnum, "no hit")
 
         print(str(visualized_cycles) + " paths of the " + str(n_cycles) + " given interior paths were visualized")
+        print(str(visualized_elements) + " elements were placed counting all occurrences of the interior cycles")
 
 # cytobanding
 if args.annotate_structure != "genes":
