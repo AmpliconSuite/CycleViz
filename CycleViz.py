@@ -29,6 +29,7 @@ rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
 rcParams['pdf.fonttype'] = 42
 
+print("CycleViz " + str(__version__))
 CV_RESOURCES = os.path.dirname(os.path.abspath(__file__)) + "/resources/"
 print("Using resources in " + CV_RESOURCES)
 
