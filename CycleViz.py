@@ -1337,7 +1337,7 @@ if args.interior_segments_cycle:
 
             else: # strict mode
                 print("\nTrying to match", curr_interior_cycle)
-                ic_pad = total_length*0.01
+                ic_pad = total_length*0.007
                 for IS_rObj_placements, new_interior_cycle, new_IS_links in vu.handle_IS_data(ref_placements, cycle, isCycle,
                                                                         curr_interior_cycle, interior_segSeqD, IS_isCircular, IS_bh):
                     # print(new_interior_cycle)
@@ -1347,7 +1347,7 @@ if args.interior_segments_cycle:
                     max_olaps = 0
                     used_rows = set()
                     for currObj in IS_rObj_placements.values():
-                        abs_start, abs_end = int(currObj.abs_start_pos)-ic_pad, int(currObj.abs_end_pos) + ic_pad
+                        abs_start, abs_end = int(currObj.abs_start_pos)-1, int(currObj.abs_end_pos) + 1
                         olaps = covered_posns[abs_start:abs_end]
                         for o in olaps:
                             used_rows.add(o.data)
@@ -1363,7 +1363,7 @@ if args.interior_segments_cycle:
                     temp_interval_tree = IntervalTree()
                     for currObj in IS_rObj_placements.values():
                         currObj.track_height_shift = max_olaps * -1
-                        abs_start, abs_end = int(currObj.abs_start_pos)-1, int(currObj.abs_end_pos) + 1
+                        abs_start, abs_end = int(currObj.abs_start_pos)-ic_pad, int(currObj.abs_end_pos) + ic_pad
                         temp_interval_tree.addi(abs_start, abs_end, max_olaps)
 
                     temp_interval_tree.merge_overlaps()
