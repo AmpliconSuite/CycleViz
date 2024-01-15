@@ -16,7 +16,7 @@ CycleViz has been tested on Ubuntu 16.04+, and macOS 10+.
 
 ## Installation
 
-Requires matplotlib version 2.0.0 or higher and intervaltree python module.
+Requires matplotlib version 2.0.0 or higher, intervaltree and pyyaml python modules.
 
 
 To install relevant python packages. 

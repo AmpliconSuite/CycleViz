@@ -21,6 +21,8 @@ import numpy as np
 
 from bionanoUtil import *
 import VizUtil as vu
+from _version import __version__
+
 
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
@@ -142,17 +144,14 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
     if onco_set is None:
         onco_set = set()
     font0 = FontProperties()
-    p_end = 0
     for ind, refObj in ref_placements.items():
         print(ind,refObj.to_string(),ref_bar_height)
         seg_coord_tup = segSeqD[path[ind][0]]
         # print(refObj.to_string())
-        # start_angle, end_angle = start_end_angle(refObj.abs_end_pos,refObj.abs_start_pos,total_length)
         box_len = refObj.abs_end_pos - refObj.abs_start_pos
         # print start_angle,end_angle
 
         # makes the reference genome wedges
-        # patches.append(mpatches.Wedge((0,0), seg_bar_height, end_angle, start_angle, width=bar_width))
         patches.append(mpatches.Rectangle((refObj.abs_start_pos, ref_bar_height), box_len, bar_width))
         chrom = segSeqD[path[ind][0]][0]
         if color_map == "standard":
@@ -172,23 +171,26 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
 
         # makes the ticks on the reference genome wedges
         if path[ind][1] == "+":
-            # posns = zip(range(seg_coord_tup[1],seg_coord_tup[2]+1),np.arange(refObj.abs_end_pos,refObj.abs_start_pos,-1))
-            posns = zip(range(seg_coord_tup[1], seg_coord_tup[2] + 1),
-                        np.arange(refObj.abs_start_pos, refObj.abs_end_pos))
-        else:
-            # posns = zip(np.arange(seg_coord_tup[2],seg_coord_tup[1]-1,-1),np.arange(refObj.abs_end_pos,refObj.abs_start_pos,-1))
-            posns = zip(np.arange(seg_coord_tup[2], seg_coord_tup[1] - 1, -1),
-                        np.arange(refObj.abs_start_pos, refObj.abs_end_pos))
+            ts = (seg_coord_tup[1], refObj.abs_start_pos, 0)
+            te = (seg_coord_tup[2] + 1, refObj.abs_end_pos+1, 1)
+            s = 1
 
-        tick_freq = max(40000, 80000 * int(np.floor(total_length / 1000000)))
-        # segment too small, nothing gets ticked
-        if (not any(j[0] % tick_freq == 0 for j in posns)) and abs(refObj.abs_start_pos - p_end) > 1:
-            tens = [j[0] for j in posns if j[0] % 10000 == 0]
-            middleIndex = (len(tens) - 1) // 2  # do integer division
-            if tens:
-                tick_freq = tens[middleIndex]
-            else:
-                tick_freq = 10000
+        else:
+            ts = (seg_coord_tup[2], refObj.abs_start_pos, 0)
+            te = (seg_coord_tup[1] - 1, refObj.abs_end_pos + 1, -1)
+            s = -1
+
+        tick_freq = max(20000, 40000 * int(np.floor(total_length / 1000000)))
+        print("Tick frequency set to " + str(tick_freq) + "bp")
+        posns = []
+        a = ts[0]
+        b = te[0]
+        # print(a, b, ts[0], te[0], step)
+        for j in np.arange(a, b, s):
+            if j % tick_freq == 0:
+                rpos = vu.convert_gpos_to_ropos(j, refObj.abs_start_pos, refObj.abs_end_pos, seg_coord_tup[1],
+                                                path[ind][1])
+                posns.append((j, rpos, 0))
 
         for j in posns:
             if j[0] % tick_freq == 0:
@@ -199,9 +201,9 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
                 # txt = str(j[0])
                 x_t, y_t = j[1], ref_bar_height - bar_width * 0.4
                 ax.text(x_t, y_t, txt, color='grey', rotation=-90, rotation_mode="anchor",
-                        ha="left", va="center", fontsize=12)
+                        ha="left", va="center", fontsize=7)
 
-        p_end = refObj.abs_end_pos
+        # p_end = refObj.abs_end_pos
         # gene_tree = vu.parse_genes(seg_coord_tup[0], args.ref)
         relGenes = vu.rel_genes(gene_tree, seg_coord_tup, copy.copy(onco_set))
 
@@ -211,7 +213,6 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
         # label the segments by number in path
         mid_sp = (refObj.abs_end_pos + refObj.abs_start_pos) / 2
         # text_angle = mid_sp/total_length*360.
-        # x,y = pol2cart((seg_bar_height-2*bar_width),(text_angle/360.*2.*np.pi))
         font = font0.copy()
         if imputed_status[ind]:
             font.set_style('italic')
@@ -226,7 +227,7 @@ def plot_ref_genome(ref_placements, path, total_length, segSeqD, imputed_status,
             if label_segs == "id":
                 label_text = path[ind][0] + label_text
 
-            ax.text(mid_sp, ref_bar_height + 0.25 * bar_width, label_text, fontsize=8, fontproperties=font, ha='center')
+            ax.text(mid_sp, ref_bar_height + 0.25 * bar_width, label_text, color='grey', fontsize=8, fontproperties=font, ha='center')
 
 
 # plot cmap track
@@ -319,12 +320,14 @@ parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file", r
 parser.add_argument("--path", help="path number to visualize", type=int, required=True)
 parser.add_argument("--AR_path_alignment", help="AR path alignment file")
 parser.add_argument("--outname", help="output prefix")
-parser.add_argument("--label_segs", help="label segs with graph IDs", choices=["id", "dir"], default=None)
+parser.add_argument("--label_segs", help="label segs with graph IDs and direction (id) or just direction (dir). Default: no labeling", choices=["id", "dir"], default=None)
 parser.add_argument("--reduce_path", help="Number of path elements to remove from left and right ends. Must supply both values, \
                     default 0 0", nargs=2, type=int, default=[0, 0])
 parser.add_argument("--print_dup_genes", help="If a gene appears multiple times print name every time.",
                     action='store_true', default=False)
 parser.add_argument("--color_map", help="Set a matplotlib named color pallete (e.g. Blues, Purples), default is a custom chromosomal map", default="standard")
+parser.add_argument("-v", "--version", action='version', version='LinearViz {version} \n Author: Jens Luebeck '
+                    '(jluebeck [at] ucsd.edu)'.format(version=__version__))
 group2 = parser.add_mutually_exclusive_group(required=False)
 group2.add_argument("--gene_subset_file", help="File containing subset of genes to plot (e.g. oncogene genelist file)",
                     default="")

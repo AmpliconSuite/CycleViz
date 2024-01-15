@@ -1,7 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 __author__ = "Jens Luebeck (jluebeck [at] ucsd.edu)"
-__version__ = "0.1.8"
 
 import argparse
 from collections import defaultdict
@@ -24,6 +23,7 @@ import numpy as np
 
 from bionanoUtil import *
 import VizUtil as vu
+from _version import __version__
 
 rcParams['font.family'] = 'sans-serif'
 rcParams['font.sans-serif'] = ['Arial']
@@ -1115,7 +1115,7 @@ parser.add_argument("--noPDF", help="Do not generate PDF file of visualization (
                     default=False)
 parser.add_argument("--hide_chrom_color_legend", help="Do not show a legend of the chromosome colors",
                     action='store_true', default=False)
-parser.add_argument("--trim_contigs", help="Trim unaligned OM contig regions from visualization (defauly unset)",
+parser.add_argument("--trim_contigs", help="Trim unaligned OM contig regions from visualization (default unset)",
                     default='both', choices=['start', 'end', 'both', 'none'])
 parser.add_argument("-v", "--version", action='version', version='CycleViz {version} \n Author: Jens Luebeck '
                     '(jluebeck [at] ucsd.edu)'.format(version=__version__))
