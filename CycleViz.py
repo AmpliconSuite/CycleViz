@@ -44,7 +44,7 @@ contig_bar_height = -13.5 / 3
 segment_bar_height = -8.0 / 3
 gene_to_locations = defaultdict(list)
 overlap_genes = []
-all_relGenes = []
+# all_relGenes = []
 
 
 # get the start and end angle from the linear start and end
@@ -599,7 +599,6 @@ def plot_gene_bars(currStart, currEnd, relGenes, pTup, total_length, seg_dir, in
         # e_posns is a list of tuples of exon (start,end)
         # these can be plotted similarly to how the coding region is marked
         gname, gstart, gend, e_posns = gObj.gname, gObj.gstart, gObj.gend, gObj.eposns
-        # print(gname, gstart, gend, pTup, len(gObj.gdrops))
         seg_len = pTup[2] - pTup[1]
         hasStart = False
         hasEnd = False
@@ -704,7 +703,7 @@ def plot_genes(ref_placements, cycle, isCycle, onco_set=None):
     for ind, refObj in ref_placements.items():
         seg_coord_tup = (refObj.chrom, refObj.ref_start, refObj.ref_end)
         relGenes = vu.rel_genes(gene_tree, seg_coord_tup, copy.copy(onco_set))
-        all_relGenes.extend(relGenes)
+        # all_relGenes.extend(relGenes)
         # plot the gene track
         # print(ind, refObj.to_string(), len(relGenes))
         flanked = refObj.next_is_adjacent or refObj.prev_is_adjacent
@@ -1137,9 +1136,11 @@ if args.cycles_file and not args.cycle:
 ref_choices = ["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCh38_viral"]
 if not args.ref:
     print("--ref is required")
+    sys.exit(1)
 
 elif args.ref not in ref_choices:
     print("--ref must be one of " + str(ref_choices))
+    sys.exit(1)
 
 
 if args.ref == "GRCh38" or args.ref == "GRCh38_viral":

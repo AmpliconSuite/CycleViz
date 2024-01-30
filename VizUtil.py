@@ -225,7 +225,7 @@ class gene(object):
         self.highlight_name = highlight_name
         estarts = [int(x) for x in gdata[9].rsplit(",") if x]
         eends = [int(x) for x in gdata[10].rsplit(",") if x]
-        self.eposns = zip(estarts, eends)
+        self.eposns = list(zip(estarts, eends))
         self.gdrops = []
         self.gdrops_go_to_link = set()
 
@@ -430,7 +430,7 @@ def rel_genes(chrIntTree, pTup, gene_set=None):
                 oldTStart = currGenes[gname].gstart
                 oldTEnd = currGenes[gname].gend
                 if gObj.gend - gObj.gstart > oldTEnd - oldTStart:
-                    currGenes[gname] = copy.copy(gObj)
+                    currGenes[gname] = copy.deepcopy(gObj)
 
                 else:
                     if gObj.gstart < oldTStart:

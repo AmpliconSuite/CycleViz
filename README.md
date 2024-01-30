@@ -1,6 +1,6 @@
 # CycleViz
 
-Latest version: **0.1.8**.
+Latest version: **0.1.10**.
 
 Visualize outputs of [AmpliconArchitect](https://github.com/AmpliconSuite/AmpliconArchitect/) & 
 [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. 
