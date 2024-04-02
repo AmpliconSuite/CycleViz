@@ -22,6 +22,7 @@ from matplotlib.path import Path
 import numpy as np
 
 from bionanoUtil import *
+from convert_cycles_file import *
 import VizUtil as vu
 from _version import __version__
 
@@ -1190,6 +1191,13 @@ if args.cycles_file:
     if not args.outname:
         args.outname = os.path.splitext(os.path.basename(args.cycles_file))[0]
     fname = args.outname + "_cycle_" + str(args.cycle)
+    # convert the cycles file and reset the arg cycles_file arg
+    bpg_cf = os.path.basename(args.cycles_file).rsplit("_cycles.txt")[0] + "_BPG_converted_cycles.txt"
+    print("Converting cycles file segment boundaries to graph file segment boundaries")
+    make_new_cycle(args.graph, args.cycles_file, bpg_cf)
+    print(bpg_cf)
+    args.cycles_file = bpg_cf
+
     cycles, segSeqD, circular_D = vu.parse_cycles_file(args.cycles_file)
     isCycle = circular_D[args.cycle]
     cycle = cycles[args.cycle]

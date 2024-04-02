@@ -1,5 +1,5 @@
 ref: "hg19"
-cycles_file: "T41_amplicon1_BPG_converted_cycles.txt"
+cycles_file: "T41_amplicon1_cycles.txt"
 cycle: 7
 graph: "T41_amplicon1_graph.txt"
 gene_fontsize: 8

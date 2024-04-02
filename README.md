@@ -1,11 +1,10 @@
 # CycleViz
 
-Latest version: **0.1.10**.
+Latest version: **0.2.0**.
 
-Visualize outputs of [AmpliconArchitect](https://github.com/AmpliconSuite/AmpliconArchitect/) & 
-[AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor) (AR) in Circos-style images. 
+Visualize outputs of [AmpliconArchitect](https://github.com/AmpliconSuite/AmpliconArchitect/), [CoRAL](https://github.com/AmpliconSuite/CoRAL), [ecSimulator](https://github.com/AmpliconSuite/ecSimulator), or [AmpliconReconstructor](https://github.com/jluebeck/AmpliconReconstructor)  in Circos-style images. 
 
-CycleViz can also produce general circular visualizations of genomic regions using only a bed file. 
+CycleViz can also produce circular visualizations of general genomic regions using only a bed file. 
 Supports hg19, GRCh37, hg38, and mm10. CycleViz is implemented in python and compatible with both python2 and python3. 
 CycleViz has been tested on Ubuntu 16.04+, and macOS 10+.
 
@@ -21,11 +20,11 @@ Requires matplotlib version 2.0.0 or higher, intervaltree and pyyaml python modu
 
 To install relevant python packages. 
 ```bash
-pip install intervaltree pyyaml 'matplotlib>=2.0.0'
+pip install intervaltree 'matplotlib>=2.0.0' numpy pyyaml
 ```
 or
 ```bash
-conda install intervaltree pyyaml 'matplotlib-base>=2.0.0'
+conda install intervaltree 'matplotlib-base>=2.0.0' numpy pyyaml
 ```
 
 Then download the CycleViz repo
@@ -43,7 +42,7 @@ echo export CV_SRC=$PWD >> ~/.bashrc
 source ~/.bashrc
 ```
 
-**Optional: install Arial font in Linux**
+**Optional: Install Arial font in Linux**
 
 CycleViz defaults to Arial font and will fall back to Deja Vu Sans if Arial is not present. Arial is already included on macOS. To get the Microsoft fonts on Ubuntu, do
 ```bash
@@ -66,10 +65,8 @@ matplotlib.font_manager._load_fontmanager(try_read_cache=False)
 
 **The [examples directory](https://github.com/jluebeck/CycleViz/tree/master/examples) provides two worked examples and sample datasets as a jumping-off point for users.**
 
-### Running CycleViz with an AA-generated cycles file
-If using an AA-generated cycles file instead of AR, whose segments are merged across adjacent breakpoint graph segments, you will first need to unmerge the segments in the cycles file. We provide a script, `convert_cycles_file.py` which can be run on an AA cycles file and AA breakpoint graph. This script must be run to generate a BPG-converted cycles file, prior to running CycleViz. Many thanks to Siavash R. Dehkordi for providing this script.
-
-`$CV_SRC/convert_cycles_file.py -c sample_amplicon1_cycles.txt -g sample_amplicon1_graph.txt`
+A very basic visualization would go like so:
+>`$CV_SRC/CycleViz.py -g sample_amplicon1_graph.txt --cycles_file sample_amplicon1_cycles.txt --cycle 1 --ref GRCh38`
 
 ### Command line arguments
 
@@ -82,9 +79,9 @@ using the `--help` command will output a specific description of each argument b
 #### Specifying the genomic structure
 The structure of the visualized regions can be specified with either an AA cycles file, or a bed file listing the regions (called a 'structure bed')
 
-| Argument | Description |
-| :--- | :---- |
-| `--cycles_file [filename]`   | Specify structure with an AA-formatted cycles file (converted to graph segment annotation using instructions above).                                                                       |
+| Argument | Description                                                                                                                                                                                |
+| :--- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--cycles_file [filename]`   | Specify structure with an AA-formatted cycles file                                                                                                                                         |
 | `--structure_bed [filename]` | Specify structure with a bed file listing the segments and their orientations. Some predefined reference genome structures are available by specifying `hg19`, `GRCh37`, `hg38`, `GRCh38`. |
 
 **If `--cycles_file` is used for the structure, the following two additional arguments should be specified**

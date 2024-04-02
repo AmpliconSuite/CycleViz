@@ -7,12 +7,9 @@ This simple example does not use a YAML file to specify plot parameters.
 
 1. Enter GBM39 example directory
 >`cd $CV_SRC/examples/GBM39`
-
-2. Convert AA cycles file to format usable by CycleViz
->`$CV_SRC/convert_cycles_file.py -c FF-4_amplicon1_cycles.txt -g FF-4_amplicon1_graph.txt`  
-
-3. Call CycleViz 
->`$CV_SRC/CycleViz.py --ref hg19 --cycles_file FF-4_amplicon1_BPG_converted_cycles.txt --cycle 1 -g FF-4_amplicon1_graph.txt --rotate_to_min --figure_size_style small`
+ 
+2. Call CycleViz 
+>`$CV_SRC/CycleViz.py --ref hg19 --cycles_file FF-4_amplicon1_cycles.txt --cycle 1 -g FF-4_amplicon1_graph.txt --rotate_to_min --figure_size_style small`
 
 Recall from the documentation that `--figure_size_style small` rescales the image to enable better sizing of the image at reduced scales.
 
@@ -22,10 +19,7 @@ Data derived from oropharyngeal squamous cell carinoma with hybrid human-viral e
 1. Enter the T41 example directory
 >`cd $CV_SRC/examples/T41`
 
-2. Convert AA cycles file to format usable by CycleViz
->`$CV_SRC/convert_cycles_file.py -c T41_amplicon1_cycles.txt -g T41_amplicon1_graph.txt`
-
-3. Call CycleViz
+2. Call CycleViz
 
 **Note that the order in which the feature YAML files are provided specifies the order in which the interior tracks appear (first is innermost, last is outermost).**
 >`$CV_SRC/CycleViz.py --input_yaml_file t41_CV.yaml --feature_yaml_list T41_link_track.yaml T41_wgs_track.yaml T41_rna_track.yaml`
