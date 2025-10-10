@@ -7,3 +7,5 @@ test.txt
 .idea
 .DS_Store
 GBM39KT.py
+examples/*/*.png
+examples/*/*.pdf

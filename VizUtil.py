@@ -1424,7 +1424,7 @@ def create_kwargs(kwtype="Collection", facecolors=None, edgecolors=None, marker=
     if kwtype == "Scatter":
         curr_kwargs = {
             'edgecolors': edgecolors,
-            'facecolor': facecolors,
+            'facecolors': facecolors,
             'marker': marker,
             's': markersize,
             'linewidth': linewidth
