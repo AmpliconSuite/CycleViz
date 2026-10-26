@@ -314,9 +314,10 @@ parser.add_argument("--om_alignments",
                     help="Enable Bionano visualizations (requires contigs,segs,key,path_alignment args)",
                     action='store_true')
 parser.add_argument("-s", "--om_segs", help="segments cmap file")
-parser.add_argument("-g", "--graph", help="breakpoint graph file")
+parser.add_argument("-g", "--graph", help="breakpoint graph file", required=True)
 parser.add_argument("-c", "--contigs", help="contig cmap file")
-parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38"], default="hg19")
+parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCm38"],
+                    default="hg19")
 parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file", required=True)
 parser.add_argument("--path", help="path number to visualize", type=int, required=True)
 parser.add_argument("--AR_path_alignment", help="AR path alignment file")
@@ -403,7 +404,7 @@ elif args.gene_subset_list:
     gene_set = set(args.gene_subset_list)
 
 if not args.color_map == "standard":
-    args.color_map = cm.get_cmap(args.color_map)
+    args.color_map = vu.get_cmap(args.color_map)
 
 # ----------------------
 
