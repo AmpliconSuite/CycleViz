@@ -135,8 +135,13 @@ The structure of the visualized regions can be specified with either an AA cycle
 | `-i/--path_alignment [filename]` | | AR path alignment file |
 
 #### Arguments specific to LinearViz
+LinearViz takes the same `--cycles_file` and `-g/--graph` files as CycleViz, but uses `--path` in place of `--cycle`.
+
 | Argument      | Default | Description |
 | :---        |    :----:   | :--- |
+| `--path [int]` \[required\] | | Number of the cycle or path to draw, i.e. the `N` in a `Cycle=N;...` line of the AA cycles file. It may be a cycle or a non-cyclic path (one that begins and ends with segment `0`). |
+| `-g`/`--graph [filename]` \[required\] | | AA graph file for the amplicon. |
+| `--ref [hg19, GRCh37, hg38, GRCh38, mm10, GRCm38]` | `hg19` | Reference build. Set this to match the build the AA run used. |
 | `--reduce_path [int] [int]` | `0 0` | Trim the following number of segments from path beginning and end, respectively. |
 
 
@@ -193,16 +198,19 @@ For circular visualizations
 
 For linear visualizations do 
 
-` LinearViz.py [-h] [--om_alignments] [-s SEGS] [-g GRAPH] [-c CONTIGS]
-                    --cycles_file CYCLES_FILE --path PATH [-i PATH_ALIGNMENT]
-                    [--sname SNAME] [--label_segs]
+` LinearViz.py [-h] [--om_alignments] [-s OM_SEGS] -g GRAPH [-c CONTIGS]
+                    [--ref {hg19,hg38,GRCh37,GRCh38,mm10,GRCm38}]
+                    --cycles_file CYCLES_FILE --path PATH [--AR_path_alignment AR_PATH_ALIGNMENT]
+                    [--outname OUTNAME] [--label_segs {id,dir}]
                     [--reduce_path REDUCE_PATH REDUCE_PATH]
                     [--gene_subset_file GENE_SUBSET_FILE | --gene_subset_list GENE_SUBSET_LIST [GENE_SUBSET_LIST]
                     `
 
-The `--gene_subset_file` or `--gene_subset_list` arguments can be used to reduce the genes shown in the visualization. By default all genes (except ncRNAs, lncRNAs, microRNAs, etc.) will be shown. An cancer-related genelist file is provided: `Bushman_group_allOnco_May2018.tsv`, provided on the [Bushman Lab website](http://www.bushmanlab.org/links/genelists). This can be specified simply by setting `--gene_subset_file Bushman`.
+e.g. `LinearViz.py --ref mm10 --cycles_file sample_amplicon1_cycles.txt -g sample_amplicon1_graph.txt --path 2 --gene_subset_list Myc Pvt1`
 
-Note that the structure bed or the cycles file/cycle number (or "path number", in the linear case) are the only required arguments. It is highly recommended to use the Bushman oncogene file for the gene_subset_file to make more readable plots
+The `--gene_subset_file` or `--gene_subset_list` arguments can be used to reduce the genes shown in the visualization. By default all genes (except ncRNAs, lncRNAs, microRNAs, etc.) will be shown. An cancer-related genelist file is provided: `Bushman_group_allOnco_May2018.tsv`, provided on the [Bushman Lab website](http://www.bushmanlab.org/links/genelists). This can be specified simply by setting `--gene_subset_file Bushman`. Gene names are matched exactly (case-sensitive), and the Bushman list uses human gene symbols, so for mm10 use `--gene_subset_list` (e.g. `Myc Pvt1`) or your own mouse gene list instead.
+
+Note that the structure bed or the cycles file/cycle number (or "path number" and graph file, in the linear case) are the only required arguments. It is highly recommended to use the Bushman oncogene file for the gene_subset_file to make more readable plots
 
 ### Creating your own structure.bed file
 If you would like to specify a collection of region of the genome to show please create a file formatted as follows

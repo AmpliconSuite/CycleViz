@@ -319,7 +319,8 @@ parser.add_argument("-c", "--contigs", help="contig cmap file")
 parser.add_argument("--ref", help="reference genome", choices=["hg19", "hg38", "GRCh37", "GRCh38", "mm10", "GRCm38"],
                     default="hg19")
 parser.add_argument("--cycles_file", help="AA/AR cycles-formatted input file", required=True)
-parser.add_argument("--path", help="path number to visualize", type=int, required=True)
+parser.add_argument("--path", help="cycle/path number to visualize (the N in 'Cycle=N' in the cycles file)", type=int,
+                    required=True)
 parser.add_argument("--AR_path_alignment", help="AR path alignment file")
 parser.add_argument("--outname", help="output prefix")
 parser.add_argument("--label_segs", help="label segs with graph IDs and direction (id) or just direction (dir). Default: no labeling", choices=["id", "dir"], default=None)
