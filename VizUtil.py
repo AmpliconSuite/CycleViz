@@ -258,9 +258,20 @@ class feature_track(object):
             self.posB_hits = []
 
 
+def get_cmap(name=None, lut=None):
+    # matplotlib.cm.get_cmap was removed in matplotlib 3.9
+    if name is None:
+        name = matplotlib.rcParams["image.cmap"]
+    try:
+        cmap = matplotlib.colormaps[name]
+        return cmap.resampled(lut) if lut else cmap
+    except AttributeError:
+        return plt.cm.get_cmap(name, lut)
+
+
 # Set colors for chromosomes
 def get_chr_colors():
-    to_add = plt.cm.get_cmap(None, 4).colors[1:]
+    to_add = get_cmap(None, 4).colors[1:]
     # color_vect = ["#ffe8ed","indianred","salmon","burlywood",'#d5b60a',"xkcd:algae",to_add[0],"darkslateblue",
     #              to_add[2],"#017374","#734a65","#bffe28","xkcd:darkgreen","#910951","xkcd:stone",
     #              "xkcd:purpley","xkcd:brown","lavender","darkseagreen","powderblue","#ff073a",to_add[1],
